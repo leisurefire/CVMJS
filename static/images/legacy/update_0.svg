@@ -1,0 +1,11 @@
+<svg
+        xmlns:xlink="http://www.w3.org/1999/xlink"
+        xmlns="http://www.w3.org/2000/svg"
+        width="210px" height="210px">
+    <path fill-rule="evenodd" stroke="rgb(255, 255, 255)" stroke-width="20px" stroke-linecap="round"
+          stroke-linejoin="round" fill="none"
+          d="M100.0,56.999 L100.0,157.999 "/>
+    <path fill-rule="evenodd" stroke="rgb(255, 255, 255)" stroke-width="20px" stroke-linecap="round"
+          stroke-linejoin="round" fill="none"
+          d="M125.455,67.999 L100.0,42.544 L74.544,67.999 "/>
+</svg>

@@ -1,0 +1,29 @@
+<svg id="组_1" data-name="组 1" xmlns="http://www.w3.org/2000/svg" width="1200" height="240" viewBox="0 0 1200 240">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #ff2f56;
+      }
+
+      .cls-2, .cls-3 {
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 42px;
+        fill-rule: evenodd;
+      }
+
+      .cls-2 {
+        stroke: #fff;
+      }
+
+      .cls-3 {
+        stroke: #ffadbb;
+        opacity: 0.6;
+      }
+    </style>
+  </defs>
+  <rect id="矩形_1" data-name="矩形 1" class="cls-1" width="1200" height="240"/>
+  <path id="形状_1" data-name="形状 1" class="cls-2" d="M706,151c-9.059,7.916-14.691,11.945-25,14-65.757,13.11-55.456-95.4-163-92S378.189,173.957,398,243,554,463.434,614,464,785.831,318.136,813,244c24.274-66.237,22.748-202.16-146-158"/>
+  <path id="形状_2" data-name="形状 2" class="cls-3" d="M472,215s-9.131-30.665,22-55,67,6,67,6"/>
+</svg>

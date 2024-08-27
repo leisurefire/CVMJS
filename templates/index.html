@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" name="viewport">
+    <title>{{ GAME_NAME }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link href="{{ url_for('static', filename='css/Style.css') }}" rel="stylesheet" type="text/css"/>
+    <script type="module" src="{{ url_for('static', filename='js/language/Chinese.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/Core.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/Foods.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/Mice.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/Bullets.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/Level.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/EventHandler.js') }}"></script>
+</head>
+
+<body>
+<material-loader id="loader"></material-loader>
+{#<div class="connecting" id="connecting">#}
+{#    <p>请求提交中，请稍候</p>#}
+{#    <div></div>#}
+{#    <div></div>#}
+{#    <div></div>#}
+{#    <div></div>#}
+{#    <div></div>#}
+{#    <div></div>#}
+{#</div>#}
+<div id="town">
+    <div id="offline">在线服务临时关闭</div>
+    <div id="logo"></div>
+
+{#    <div id="login">#}
+{#        <label><input type="text" id="username" placeholder="{{ USERNAME }}"></label>#}
+{#        <label><input type="password" id="password" placeholder="{{ PASSWORD }}"></label>#}
+{#        <p id="loginAlert"></p>#}
+{#        <button id="submit">{{ LOGIN }}</button>#}
+{#        <a>{{ LOGIN_HELP }}</a>#}
+{#    </div>#}
+
+{#    <div id="EpicTask" class="dungeon"></div>#}
+{#    <div id="MeiWei" class="dungeon" onclick="showMap()"></div>#}
+    <div id="MeiWeiFlip" class="dungeon_flip"></div>
+
+    <div id="compose">
+        <div id="composeFrame">
+            <div id="CBag"></div>
+            <div id="CInfo">
+                <div id="CInfoBack"></div>
+                <div id="CInfoPro"></div>
+                <h2 id="CInfoName"></h2>
+                <div id="CInfoDes"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="store">
+        <h2>商店</h2>
+        <div id="storeTips">
+            说明<br>
+            1.购买商店内的任意卡片后，其所在行、所在列的所有卡片都会被更换<br>
+            2.卡片按出现概率排列为好卡、中卡和差卡；<br>
+            3.商店总是倾向于提供您目前没有的卡片；<br>
+            4.购买已有卡片会获得升级。<br>
+        </div>
+{#        <div id="navbar"></div>#}
+        <div id="storeBox"></div>
+    </div>
+    <div id="coinBar"></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,208 @@
+#town #login {
+	position: absolute;
+	bottom: 65px;
+	left: 10px;
+	z-index: 14;
+	padding: 56px 12px 24px;
+	width: 360px;
+	border-radius: 12px;
+	background-color: rgba(255, 255, 255, 1);
+	background-image: url("../images/interface/account.png");
+	background-position: center 24px;
+	background-size: 180px 20px;
+	background-repeat: no-repeat;
+	box-shadow: rgba(0, 0, 0, .32) 0 0 24px;
+	opacity: 1;
+	transform: scale(0);
+	transform-origin: left bottom;
+}
+
+#town #login label {
+	display: block;
+	padding: 10px;
+	text-align: center;
+}
+
+#town #login input {
+	padding: 4px 4px 4px 12px;
+	width: 280px;
+	height: 28px;
+	outline: none;
+	border: solid rgba(0, 0, 0, .12) 1px;
+	border-radius: 8px;
+	color: black;
+	font-size: 1.16667rem;
+	transition: all .32s ease-in-out;
+}
+
+#town #login input:hover {
+	border: solid rgba(0, 0, 0, .32) 1px;
+}
+
+#town #login input:focus {
+	border: solid black 1px;
+	box-shadow: rgba(0, 0, 0, .42) 0 0 0 2px;
+}
+
+#town #login button + a {
+	margin-top: -34px;
+	margin-left: 18px;
+	background: none;
+	color: rgba(208, 160, 98, 1);
+	cursor: pointer;
+}
+
+#town #login button + a:hover {
+	text-decoration: underline rgba(208, 160, 98, 1);
+}
+
+#town #login p + button {
+	display: inline-block;
+	margin-top: -10px;
+	margin-right: 10px;
+	margin-left: 32px;
+	padding: 6px;
+	width: 120px;
+	border: none;
+	border-radius: 24px;
+	background-color: rgba(208, 160, 98, 1);
+	color: white;
+	font-size: 1.33333rem;
+	line-height: 2rem;
+	cursor: pointer;
+	transition: all .24s ease-in-out;
+}
+
+#town #login p + button:hover {
+	background-color: rgba(208, 160, 98, .9);
+}
+
+#town #login p + button:focus {
+	outline: none;
+	box-shadow: rgba(212, 168, 113, .72) 0 0 0 2px;
+}
+
+#town #login p {
+	margin-left: 10%;
+	width: 80%;
+	background-color: rgb(245, 245, 245);
+	color: black;
+	text-align: center;
+	line-height: 2.66667rem;
+}
+
+#town #festival {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 10;
+	display: none;
+	margin: 0;
+	padding: 64px 32px 32px;
+	width: 100%;
+	height: 100%;
+	background-color: rgb(237, 230, 215);
+	background-image: url("../images/interface/festival.png");
+	background-size: cover;
+	background-repeat: no-repeat;
+	text-align: left;
+	font-weight: 600;
+	transition: all, .32s ease-in-out;
+}
+
+#town #festival div {
+	position: relative;
+	display: block;
+	padding: 12px;
+	width: 866px;
+	background-color: rgba(255, 255, 255, .24);
+	background-position: right center;
+	background-repeat: no-repeat;
+	color: black;
+	font-size: 1.33333rem;
+	line-height: 1.66667rem;
+	backdrop-filter: saturate(200%);
+}
+
+#town #festival div:first-child {
+	margin-top: 12px;
+	width: 862px;
+	border: none;
+	border-radius: 12px 12px 0 0;
+	background-color: var(--main_color);
+	background-image: none;
+	color: white;
+	backdrop-filter: blur(20px) saturate(200%);
+}
+
+#town #festival div:nth-child(n+2) {
+	padding-left: 18px;
+	width: 856px;
+}
+
+#town #festival div:nth-child(n+2):after {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 6px;
+	margin: auto;
+	width: 4px;
+	height: 40%;
+	background-color: var(--main_color);
+	box-shadow: var(--main_color) 0 0 12px;
+	content: "";
+}
+
+#town #festival div:nth-child(n + 3):before {
+	position: absolute;
+	top: 0;
+	right: 0;
+	left: 0;
+	margin: auto;
+	width: calc(100% - 24px);
+	height: 1px;
+	background-color: rgba(0, 0, 0, .12);
+	content: "";
+}
+
+#town #festival div:last-child {
+	border-radius: 0 0 12px 12px;
+}
+
+#town #festival div:first-child:last-child {
+	border-radius: 12px;
+}
+
+#town #festival p {
+	margin: 0;
+	color: rgba(0, 0, 0, .64);
+	font-size: 1rem;
+	line-height: 1.16667rem;
+}
+
+#town #festival a {
+	position: absolute;
+	top: calc(50% - 16px);
+	right: 12px;
+	bottom: 0;
+	display: block;
+	margin: 0;
+	padding-right: 16px;
+	padding-left: 16px;
+	height: 32px;
+	border-radius: 16px;
+	background-color: var(--main_color);
+	color: black;
+	font-size: 1rem;
+	line-height: 2.66667rem;
+	cursor: pointer;
+	transition: all .12s ease-in-out;
+}
+
+#town #festival a:hover {
+	background-color: black;
+	color: white;
+	transform: scale(1.05);
+}

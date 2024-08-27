@@ -1,0 +1,227 @@
+@import "Town.css";
+@import "Compose.css";
+@import "Store.css";
+@media screen {
+    
+}
+:root {
+    --main_color: #DC704C;
+    --main_color_32: rgb(220, 112, 76);
+    --main_color_48: rgba(220, 112, 76, .48);
+    --main_color_background: rgb(245,222,215);
+    --background: rgb(250,241,244);
+    --shadow: rgba(0, 0, 0, .32) 0 0.5rem 1rem;;
+    --outline: #53433f;
+    --outline_48: rgba(83, 67, 63, .48);
+    --outline_background: rgb(255,219,208);
+    --box_radius_huge: 2rem;
+    --window_width: 100vw;
+    --window_height: 100vh;
+}
+
+html{
+    font-size: 16px;
+    touch-action: manipulation;
+    font-family: PingFang SC, HarmonyOS Sans SC, Helvetica Neue, Microsoft YaHei, sans-serif;
+}
+
+body {
+    margin: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background-color: black;
+    user-select: none;
+    transform-origin: left top;
+}
+
+h2{
+    font-size: 1.5rem;
+}
+
+p{
+    font-size: 1rem;
+}
+
+::-webkit-scrollbar {
+    display: none;
+}
+
+canvas{
+    z-index: 99;
+    top: 0;
+    left: 0;
+    position: fixed;
+}
+
+button{
+    border: none;
+    padding: 0.75rem 1.5rem;
+    overflow: hidden;
+}
+
+img {
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+#loader {
+    z-index: 99999;
+    margin: 0;
+    position: absolute;
+    height: var(--window_height);
+    width: var(--window_width);
+}
+
+#connecting {
+    display: none;
+    z-index: 99998;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--window_width);
+    height: var(--window_height);
+    background-color: rgba(0, 0, 0, .72);
+}
+
+#connecting p {
+    text-align: center;
+    color: white;
+    margin-top: 400px;
+}
+
+#connecting div {
+    content: '';
+    display: block;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    position: absolute;
+    top: calc(50% - 27px);
+    background-color: white;
+    animation: 3s connecting infinite ease-in-out;
+}
+
+#connecting div:nth-child(2) {
+    opacity: 0.9;
+    animation-delay: calc(0.1s);
+    filter: blur(1px);
+}
+
+#connecting div:nth-child(3) {
+    transition: height 0.24s ease-in-out, width 0.12s ease-in-out;
+    opacity: 0.8;
+    animation-delay: calc(0.2s);
+    filter: blur(2px);
+}
+
+#connecting div:nth-child(4) {
+    opacity: 0.7;
+    animation-delay: calc(0.3s);
+    filter: blur(3px);
+}
+
+#connecting div:nth-child(5) {
+    opacity: 0.6;
+    animation-delay: calc(0.4s);
+    filter: blur(4px);
+}
+
+#connecting div:nth-child(6) {
+    opacity: 0.5;
+    animation-delay: calc(0.5s);
+    filter: blur(5px);
+}
+
+@keyframes connecting {
+    0%, 100% {
+        left: calc(50% - 43px);
+        transform: rotateX(-60deg) rotateY(60deg);
+    }
+    25% {
+        left: calc(50% - 9px);
+        transform: rotateX(60deg) rotateY(-60deg);
+    }
+    50% {
+        left: calc(50% - 43px);
+        transform: rotateX(60deg) rotateY(60deg);
+    }
+    75% {
+        left: calc(50% - 9px);
+        transform: rotateX(-60deg) rotateY(-60deg);
+    }
+}
+
+.achievement {
+    z-index: 99999;
+    pointer-events: none;
+    position: absolute;
+    height: 54px;
+    width: 160px;
+    overflow: hidden;
+    background-color: #390b00;
+    background-image: url("../images/interface/achievement/default.png");
+    background-size: 32px 32px;
+    background-position: 27px center;
+    background-repeat: no-repeat;
+    box-shadow: rgba(0, 0, 0, .12) 0 0 1rem;
+    left: 700px;
+    top: 900px;
+    padding-left: 84px;
+    border-radius: 27px;
+    animation: achievement forwards 5s;
+    transition: all 1s;
+}
+
+.achievement:after {
+    content: "";
+    position: absolute;
+    height: 54px;
+    width: 280px;
+    bottom: 320px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    padding-left: 84px;
+}
+
+.achievement p {
+    color: white;
+}
+
+.overlay {
+    z-index: -1;
+    width: var(--window_width);
+    height: var(--window_height);
+    top:  0;
+    left: 0;
+    margin: 0;
+    display: block;
+    position: fixed;
+    animation: none;
+}
+
+material-description{
+    z-index: 99;
+	position: fixed;
+	bottom: 2rem;
+	right: 2rem;
+}
+
+game-battlefield {
+	position: fixed;
+	overflow: hidden;
+	margin: 0;
+	width: var(--window_width);
+	height: var(--window_height);
+}
+
+.rope {
+    position: absolute;
+    top: -2px;
+    width: 4px;
+    height: 0;
+    border: rgba(0, 0, 0, 0.8) solid 1px;
+    background-image: linear-gradient(to left, #F1B152, #452121);
+    border-radius: 1px;
+}

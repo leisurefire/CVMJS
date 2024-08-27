@@ -1,0 +1,333 @@
+#town {
+	position: fixed;
+	overflow: hidden;
+	margin: auto;
+	width: 100%;
+	height: 100%;
+	background: rgb(209,144,94) url(../images/interface/town.png) no-repeat center right;
+}
+
+#town ::-webkit-scrollbar {
+    display: none !important;
+}
+
+@keyframes townBoxIn {
+    from{
+        top: 1rem;
+        opacity: 0;
+    }
+    to{
+        top: 0;
+        opacity: 1;
+    }
+}
+
+@keyframes achievement {
+    0% {
+        opacity: 1;
+        top: 588px;
+        transform: scale(0.6);
+    }
+    10% {
+        opacity: 1;
+        top: 526px;
+        transform: scale(1);
+    }
+    20% {
+        opacity: 1;
+        top: 538px;
+        transform: scale(1);
+    }
+    80% {
+        opacity: 1;
+        top: 538px;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        top: 588px;
+        transform: scale(0.6);
+    }
+}
+
+@keyframes flipBack {
+    from {
+        background-image: none;
+        width: calc(680px - 52px);
+        transform: rotateY(-180deg);
+    }
+    to {
+        background-image: url("../images/interface/adventure.svg");
+        width: 160px;
+        transform: rotateY(0);
+    }
+}
+
+@keyframes flip {
+    from {
+        width: 160px;
+        transform: rotateY(180deg);
+    }
+    to {
+        width: calc(680px - 52px);
+        transform: rotateY(0);
+    }
+}
+
+#town .overlay {
+	top: 0;
+	z-index: 15;
+	transition: transform, opacity 1.2s ease-in-out;
+}
+
+#town #logo {
+	position: absolute;
+	top: 6rem;
+	left: 2rem;
+	width: 21.6rem;
+	height: 3.6rem;
+	background: center /21.6rem 3.6rem no-repeat url(../images/logo.svg);
+	padding: 1rem;
+	border-radius: 1rem;
+}
+
+#town material-navigation-bar {
+	position: fixed;
+	top: 2rem;
+	left: 2rem;
+	z-index: 12;
+}
+
+#town #coinBar {
+	position: fixed;
+	top: 6rem;
+	right: 2rem;
+	z-index: 10;
+	display: none;
+	margin: auto;
+	padding: 1.125rem 1.5rem 2.125rem 3.5rem;
+	height: 0;
+	border-radius: 2rem;
+	background-color: rgba(0, 0, 0, .48);
+	color: white;
+	text-align: left;
+	line-height: 1rem;
+	transition: all, .32s ease-in-out;
+	backdrop-filter: blur(20px) saturate(200%);
+}
+
+#town #coinBar::after {
+	position: fixed;
+	top: 0;
+	bottom: 0;
+	left: 0.5rem;
+	z-index: -1;
+	margin: auto;
+	width: 2rem;
+	height: 2rem;
+	border-radius: 2rem;
+	content: url("../images/interface/coin.svg");
+}
+
+#town material-icon-button{
+	position: absolute;
+	top: 2rem;
+	z-index: 14;
+}
+
+#town material-icon-button:first-of-type{
+	right: 2rem;
+}
+
+#town material-icon-button:nth-of-type(2){
+	right: 5.5rem;
+}
+
+#town material-icon-button:nth-of-type(3){
+	right: 9rem;
+}
+
+#town #offline {
+	position: absolute;
+	top: 6rem;
+	right: 2rem;
+	z-index: 2;
+	margin: auto;
+	padding: 1rem;
+	width: 8rem;
+	border-radius: 1rem;
+	background-color: rgb(133,70,18);
+	color: white;
+	text-align: left;
+}
+
+#town #offline:before {
+	position: relative;
+	display: block;
+	width: 1.5rem;
+	height: 1.5rem;
+	bottom: 0.25rem;
+	content: url("../images/offline.svg");
+}
+
+#town .dungeon {
+	position: absolute;
+	top: 24rem;
+	display: block;
+	overflow: hidden;
+	padding: 0;
+	width: 160px;
+	height: 265px;
+	border: transparent solid 2px;
+	border-radius: 32px;
+	background-color: rgba(0, 0, 0, .48);
+	background-size: contain;
+	background-repeat: no-repeat;
+	color: white;
+	line-height: 1.5rem;
+	cursor: pointer;
+	transition: all .32s ease-in-out;
+	backdrop-filter: blur(20px) saturate(200%);
+	animation: flipBack .32s;
+}
+
+#town .dungeon:hover {
+	border: white solid 2px;
+	transform: scale(1.1);
+}
+
+#town #MeiWei {
+	background-image: url("../images/interface/adventure.svg");
+}
+
+#town #MeiWei, #town #MeiWeiFlip {
+	left: 2rem;
+}
+
+#town #EpicTask {
+	left: 240px;
+	background-image: url("../images/interface/epictask.svg");
+}
+
+#town .dungeon_flip {
+	position: absolute;
+	bottom: 2rem;
+	display: block;
+	padding: 1rem;
+	width: min(40rem, calc(100% - 6rem));
+	height: fit-content;
+	border: solid 2px transparent;
+	border-radius: var(--box_radius_huge);
+	background-color: rgb(133,70,18);
+	background-image: none;
+}
+
+#town .dungeon_flip material-button {
+	display: inline-block;
+	margin-right: 1rem;
+	overflow: hidden;
+	animation: levelDisplay forwards .32s;
+}
+
+#town material-card{
+	position: absolute;
+	top: 6rem;
+	right: 2rem;
+	z-index: 16;
+	min-width: 18rem;
+}
+
+#town #information {
+	width: 26rem;
+}
+
+#town game-ready-page{
+	position: fixed;
+	z-index: 15;
+	width: min(100%, 45.5rem);
+	height: 100%;
+	top: 0;
+	left: 0;
+}
+
+.description {
+	position: fixed;
+	z-index: 9999;
+	padding: 1rem;
+	max-width: 16rem;
+	border-radius: 1rem;
+	background-color: var(--background);
+	box-shadow: var(--shadow);
+	color: var(--outline);
+	text-align: left;
+	font-size: 1rem;
+	transform-origin: top left;
+	animation: desDisplay 0.24s forwards ease-in-out;
+	pointer-events: none;
+}
+
+.description h1 {
+	padding: 0 0 0.5rem;
+	margin: 0;
+	width: 100%;
+	text-align: center;
+	font-size: 1rem;
+}
+
+.description div{
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	column-gap: 0.375rem;
+	padding: 0;
+	margin: 0.25rem;
+}
+
+.description a {
+	display: inline-block;
+	padding: 0.5rem;
+	min-width: 2.5rem;
+	border-radius: 0.5rem;
+	background-color: var(--main_color_background);
+	color: var(--outline);
+	text-align: center;
+	font-size: 81%;
+}
+
+.description svg{
+	fill: var(--outline);
+	position: relative;
+	left: 50%;
+	transform: translateX(-50%);
+	display: block;
+	margin-bottom: 0.5rem;
+}
+
+.description li{
+	display: flex;
+	gap: 0.5rem;
+}
+
+.description li *:nth-child(n + 2){
+	flex-grow: 1;
+}
+
+.description span {
+	text-align: left;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	min-width: 4rem;
+}
+
+@keyframes desDisplay {
+	from {
+		opacity: 0;
+		margin-top: -0.5rem;
+		transform: scaleY(64%);
+	}
+
+	to {
+		opacity: 1;
+		margin-top: 0;
+		transform: scaleY(100%);
+	}
+}

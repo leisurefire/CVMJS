@@ -1,0 +1,158 @@
+#town #compose{
+	fill: var(--outline);
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 10;
+	display: none;
+	margin: auto;
+	padding: 12px 32px 32px 32px;
+	width: var(--window_width);
+	height: var(--window_height);
+	background-color: var(--background);
+	background-image: url("../images/interface/composeBack.png");
+	background-size: cover;
+	background-repeat: no-repeat;
+	color: black;
+	text-align: left;
+	font-weight: 600;
+	transition: all, .24s ease-in-out;
+    animation: townBoxIn 0.32s ease-in-out;
+}
+
+#town #compose .composeBack {
+	display: inline-block;
+	margin-top: 82px;
+	margin-left: 0;
+	width: 540px;
+	height: 421px;
+	background-image: url("../images/interface/compose.png");
+}
+
+#town #compose #composeFrame {
+	position: absolute;
+	bottom: 4rem;
+	top: 6rem;
+	left: 2rem;
+	width: 58rem;
+	border-radius: 2rem;
+	background-color: var(--background);
+}
+
+#town #compose #CInfoName {
+	position: relative;
+	margin: 18px 18px 0;
+	padding: 0;
+}
+
+#town #compose #CBag {
+	position: relative;
+	top: 1rem;
+	bottom: 1rem;
+	left: 1rem;
+	display: inline-block;
+	overflow-y: scroll;
+	padding: 1rem;
+	width: 33.25rem;
+	height: calc(100% - 4rem);
+	border-radius: 1rem;
+	background-color: #fffbff;
+}
+
+#town #compose #CBag img {
+	margin-right: 0.25rem;
+	margin-left: 0.25rem;
+	width: 6.25rem;
+	border-radius: 0.5rem;
+	box-shadow: rgb(0,0,0,.08) 1px 1px 0 0;
+	cursor: pointer;
+	transition: all 0.32s ease-in-out;
+}
+
+#town #compose #CBag img:hover {
+	box-shadow: var(--outline) 0 0 0 3px;
+	transform: scale(1.05);
+}
+
+#town #compose #CBag img:nth-child(5n+1) {
+	margin-left: 0;
+}
+
+#town #compose #CBag img:nth-child(5n) {
+	margin-right: 0;
+}
+
+#town #compose #CInfo {
+	position: relative;
+	left: 2rem;
+	top: 1rem;
+	bottom: 0;
+	display: inline-block;
+	overflow-y: scroll;
+	width: 20rem;
+	height: calc(100% - 2rem);
+	border-radius: 1rem;
+	background-color: rgb(250,241,244);
+}
+
+#town #compose #CInfo #CInfoBack img {
+	position: absolute;
+}
+
+#town #compose #CInfo #CInfoBack {
+	position: relative;
+	top: 0.5rem;
+	left: 0.5rem;
+	width: calc(100% - 1rem);
+	height: 9rem;
+	border-radius: 0.5rem;
+	background-color: white;
+	background-image: url("../images/interface/compose/0.png");
+	background-position: center;
+}
+
+#town #compose #CInfo #CInfoName {
+	color: var(--outline);
+	text-align: center;
+	padding: 0.5rem 1rem 0;
+}
+
+#town #compose #CInfo #CInfoDes {
+	padding: 0.5rem;
+}
+
+#town #compose #CInfo svg{
+	position: relative;
+	left: 50%;
+	transform: translateX(-50%);
+	margin-bottom: 0.5rem;
+	display: block;
+}
+
+#town #compose #CInfo a {
+	display: inline-block;
+	margin: 0.25rem;
+	padding: 1rem;
+	width: 3.825rem;
+	border-radius: 1rem;
+	background-color: var(--main_color_background);
+	color: var(--outline);
+	text-align: center;
+}
+
+#town #compose #CInfo li{
+	margin: 0;
+	display: flex;
+	gap: 1rem;
+}
+
+#town #compose #CInfo *:nth-child(n + 2){
+	flex-grow: 1;
+}
+
+#town #compose #CInfo span {
+	text-align: left;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	min-width: 4rem;
+}

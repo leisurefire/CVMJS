@@ -1,0 +1,256 @@
+#town #store {
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 10;
+	display: none;
+	margin: auto;
+	width: var(--window_width);
+	height: var(--window_height);
+	background-image: url("../images/interface/festival.png");
+	background-size: cover;
+	background-repeat: no-repeat;
+	color: white;
+	text-align: left;
+	font-weight: 600;
+	transition: all, .32s ease-in-out;
+    animation: townBoxIn 0.32s ease-in-out;
+}
+
+#town #store h2{
+	position: relative;
+	font-size: 3rem;
+	color: var(--outline);
+	margin-top: 7rem;
+	margin-bottom: 0;
+	left: 3rem;
+}
+#town #store #storeBox {
+	position: relative;
+	display: grid;
+	top: 2rem;
+	margin-left: 2rem;
+	padding: 24px;
+	width: calc(140px * 3);
+	border-radius: 2rem;
+	background-color: rgba(0, 0, 0, .48);
+	color: black;
+	grid-template-columns: repeat(3, 1fr);
+	grid-template-rows: repeat(3, max(70px, 3rem));
+	grid-row-gap: 24px;
+	backdrop-filter: blur(20px) saturate(200%);
+}
+
+#town #store #storeBox div {
+	position: relative;
+	display: inline-block;
+	margin: 0;
+	border-radius: 12px;
+	color: black;
+	cursor: pointer;
+	transition: all 0.32s ease-in-out;
+}
+
+#town #store #storeBox div:hover {
+	transform: scale(1.1);
+}
+
+#town #store #storeBox img {
+	position: absolute;
+	top: 8px;
+	right: 0;
+	bottom: 4px;
+	left: 0;
+	display: block;
+	margin: auto;
+	padding: 0;
+	border-radius: 12px;
+	box-shadow: transparent 0 0 0 2px;
+	transition: all 0.32s ease-in-out;
+}
+
+#town #store #storeBox #storeItemBoxX, #town #store #storeBox #storeItemBoxY {
+	position: absolute;
+	z-index: -1;
+	padding: 8px;
+	width: 120px;
+	height: 70px;
+	border-radius: 16px;
+	background-color: white;
+	transition: all 0.24s ease-in-out;
+	pointer-events: none;
+	filter: blur(4px);
+}
+
+#town #store #storeBox div p {
+	position: absolute;
+	right: 0.75rem;
+	bottom: 0;
+	margin: auto;
+	padding: 0.125rem 0.25rem 0.125rem 1.25rem;
+	border-radius: 1rem;
+	background-color: var(--main_color);
+	color: white;
+	font-weight: 600;
+	font-size: 1rem;
+}
+
+#town #store #storeBox div p::before {
+	position: absolute;
+	top: 0;
+	left: 2px;
+	bottom: 0;
+	margin: auto;
+	width: 16px;
+	height: 16px;
+	background-image: url("../images/interface/coin.svg");
+	background-size: contain;
+	content: "";
+}
+
+#town #store #storeTips {
+	position: fixed;
+	display: inline-block;
+    bottom: 2rem;
+    right: 2rem;
+	padding: 2rem;
+	width: 20rem;
+	border-radius: 2rem;
+	background-color: rgba(0,0,0,.48);
+	backdrop-filter: blur(20px) saturate(200%);
+	color: white;
+}
+
+#town #store #navbar {
+	position: absolute;
+	top: 7.125rem;
+	left: 10rem;
+	padding: 0;
+	width: 45px;
+	height: 45px;
+	border: transparent solid 2px;
+	border-radius: 50%;
+	background-color: rgba(0, 0, 0, .48);
+	background-image: url("../images/interface/cards.svg");
+	background-position: center;
+	background-size: 80%;
+	background-repeat: no-repeat;
+	color: black;
+	cursor: pointer;
+	transition: all .24s ease-in-out;
+	backdrop-filter: saturate(200%) blur(20px);
+}
+
+.store_purchase {
+    top: 0;
+    position: fixed;
+    width: var(--window_width);
+    height: var(--window_height);
+    z-index: 9999;
+    text-align: center;
+    transition: all .24s ease-in-out;
+}
+
+.store_purchase div {
+    position: absolute;
+    background-color: var(--background);
+    display: block;
+    bottom: 2rem;
+    left: 2rem;
+    margin: 0;
+    width: 20rem;
+    color: var(--outline);
+    padding: 2rem;
+    border-radius: 2rem;
+    box-shadow: var(--shadow);
+    animation: purchase 0.48s forwards ease-in-out;
+	overflow: hidden;
+	height: 0;
+}
+
+.store_purchase div:before{
+    content: "";
+    position: relative;
+    left: 0;
+    right: 0;
+    margin: auto;
+    display: block;
+    width: 4rem;
+    height: 2.5rem;
+    background-image: url("../images/interface/icons/shopping.svg");
+    background-size: 1.5rem;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #fffbff;
+    border-radius: 3rem;
+}
+
+.store_purchase div img {
+    display: block;
+    position: relative;
+    left: 0;
+    right: 0;
+    margin: auto auto 2rem auto;
+    border-radius: 1rem;
+    box-shadow: #fffbff 0 0 0 0.25rem;
+}
+
+.store_purchase div h2 {
+    font-size: 2rem;
+    font-weight: 400;
+}
+
+.store_purchase div material-button {
+    display: block;
+    margin-top: 2rem;
+}
+
+.store_purchase div p {
+    text-align: left;
+    padding: 1rem 1rem 1rem 3.5rem;
+    border-radius: 2rem;
+    position: relative;
+    top: 1rem;
+    width: calc(100% - 4.5rem);
+    background-color: var(--main_color);
+    font-weight: 600;
+    line-height: 100%;
+    color: white;
+}
+
+.store_purchase div p::before {
+    position: absolute;
+    content: "";
+    top: 0;
+    left: 1rem;
+    height: 100%;
+    width: 1.5rem;
+    background-image: url("../images/interface/coin.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    display: inline-block;
+}
+@keyframes purchase {
+    from {
+        opacity: 0;
+        bottom: -3rem;
+		height: 14.5rem;
+    }
+    to {
+        opacity: 1;
+        bottom: 2rem;
+		height: 22.5rem;
+    }
+}
+
+@keyframes purchaseRemove {
+	from{
+		height: 22.5rem;
+	}
+    to {
+        opacity: 0;
+		height: 14.5rem;
+		bottom: -3rem;
+    }
+}

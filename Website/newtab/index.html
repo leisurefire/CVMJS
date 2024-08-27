@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leisure 新标签页</title>
+
+<link rel="shortcut icon" type="image/x-icon" href="index.ico">
+
+<!-- Style -->
+<link href="assets/css/style.css" rel="stylesheet">
+
+</head>
+
+<aside>
+</aside>
+
+<main>
+<body data-spy="scroll">
+
+<!-- 加载动画开始 -->
+<div class="preloader">
+   <div class="loader">
+        <div class="loader1"></div>
+    </div>
+</div>
+<!-- 加载动画结束 -->
+
+<div id="backblur"></div>
+<section id="container">
+<div id="searchbar">
+	<ul>
+		<input type="" name="" id="box" placeholder="你好，leisure 新标签页">
+		<li class="searchicons"><a id="baidu" href="#">百度</a><a id="google" href="#">Google</a><a id="bing" href="#">必应</a></li>
+	</ul>
+</div>
+<div id="collected"  class="feature">
+	<h2><svg 
+ xmlns="http://www.w3.org/2000/svg"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ width="16px" height="16px">
+<path fill-rule="evenodd"  stroke="rgba(0, 0, 0, .72)" stroke-width="2px" stroke-linecap="round" stroke-linejoin="round" fill="none"
+ d="M8.43,1.570 C6.907,1.658 6.727,3.975 5.474,4.873 C4.91,5.863 2.48,5.135 1.804,6.236 C1.559,7.337 3.600,8.35 4.110,9.749 C4.564,11.272 3.27,13.122 4.425,13.577 C5.823,14.31 14.649,7.390 14.229,6.236 C13.810,5.83 12.17,5.871 10.612,4.873 C9.320,3.956 9.179,1.483 8.43,1.570 Z"/>
+<path fill-rule="evenodd"  stroke="rgba(0, 0, 0, .72)" stroke-width="2px" stroke-linecap="round" stroke-linejoin="round" fill="none"
+ d="M11.420,11.969 L12.198,12.746 "/>
+</svg> 收藏</h2>
+	<button id="pull"></button>
+	<button id="addnew">+</button>
+	<div id="icons">
+	</div>
+	<div id="mask">
+		<button class="border-layer" id="border-layer" data-id="1"></button>
+     	<button class="border-layer" id="border-layer" data-id="2"></button>
+     	<button class="border-layer" id="border-layer" data-id="3"></button>
+     	<button class="border-layer" id="border-layer" data-id="4"></button>
+     	<button class="border-layer" id="border-layer" data-id="5"></button>
+     	<button class="border-layer" id="border-layer" data-id="6"></button>
+     	<button class="border-layer" id="border-layer" data-id="7"></button>
+     	<button class="border-layer" id="border-layer" data-id="8"></button>
+     	<button class="border-layer" id="border-layer" data-id="9"></button>
+     	<button class="border-layer" id="border-layer" data-id="10"></button>
+     	<button class="border-layer" id="border-layer" data-id="11"></button>
+     	<button class="border-layer" id="border-layer" data-id="12"></button>
+    </div>
+</div>
+<div id="recommended" class="feature">
+	<h2>常用网站</h2>
+		<button id="content">https://www.google.com/</button>
+		<button id="content">https://www.deepl.com/</button>
+		<button id="content">https://www.baidu.com/</button>
+		<button id="content">https://www.apple.com/</button>
+</div>
+<div id="image"></div>
+<div id="menu">
+	<ul>
+		<li id="id" class="division"></li>
+		<!-- leisure 捷径是以后要开发的功能，旨在一步跳转到需要的位置 <li id="shortcut" class="division">leisure 捷径</li> -->
+		<li id="open" class="division">访问<p>Enter</p></li>
+		<li id="url_copy">拷贝链接</li>
+		<!-- 分享是以后要开发的功能，能将选中应用的名称、链接及图标一次复制下来以便转移和分享 <li id="share">分享</li> -->
+		<li id="icon_edit" class="division">编辑</li>
+		<!-- <li>向前移动</li>
+		<li class="division">向后移动</li> -->
+		<li id="icon_remove">移除<p>Delete</p></li>
+	</ul>
+</div>
+<div id="default_menu">
+	<ul>
+		<li id="settings" class="division">设置</li>
+		<li id="icon_add">添加收藏</li>
+		<li id="change" class="division">展开收藏</li>
+		<li id="refresh">重新加载</li>
+	</ul>
+</div>
+<div id="alert">
+	<ul>
+		<li class="icon"></li>
+		<li class="title">要移除“”吗？</li>
+		<li class="description">您随时可以再次添加。</li>
+		<li class="button"><button class="no">取消</button><button class="yes">移除</button></li>
+	</ul>
+</div>
+<div id="edit">
+	<ul>
+		<li class="title">编辑“”的应用信息...</li>
+		<li class="name">应用名称<input placeholder="过长的名称在展示时会被省略"></li>
+		<li class="url" id="division">应用链接<input placeholder="包含 https:// 的完整链接"></li>
+		<hr>
+		<li class="ico">应用图标<button class="file">选择图像</button><a class="preview"></a><input type='file' accept="image/png, image/jpeg, image/webp" id='ico_file'/></li>
+		<li class="button"><button class="no">取消</button><button class="yes">确定</button></li>
+	</ul>
+</div>
+<div id="service">
+	<ul>
+		<li class="icon"></li>
+		<li class="subtitle">欢迎使用</li>
+		<li class="title"></li>
+		<li class="subtitle" id="division">由闲惬提供的现代、简明且易用的新标签页服务。</li>
+		<li class="description" id="division">在某些情况下，服务需要联网。请考虑将该本服务运行在较高版本的、基于 Chromium 项目的浏览器中，否则会出现不兼容的问题。闲惬保留此服务的所有权利（包括非开放源代码的程序、美术资料、设计风格或其他法律允许的版权归属），并对此服务的所有细则保留合法阐述的权利。继续使用，则表明您同意我们的《服务协议》。</li>
+		<li class="button"><button class="no">退出</button><button class="yes">继续</button></li>
+	</ul>
+</div>
+<div id="setting">
+	<ul>
+		<li class="menu">
+			<h2>设置<button>X</button></h2>
+			<div class="container">
+			<div>
+				<button><div></div><p>壁纸</p></button>
+				<button><div></div><p>搜索</p></button>
+				<button><div></div><p>收藏</p></button>
+				<button><div></div><p>常用</p></button>
+			</div>
+			<div>
+				<button><div></div><p>链接打开方式</p></button>
+				<button><div></div><p>备份与分享</p></button>
+				<button><div></div><p>深色模式</p></button>
+				<button><div></div><p>高级显示调节</p></button>
+			</div>
+			<div>
+				<button><div></div><p>leisureweb</p></button>
+				<button><div></div><p>赞赏</p></button>
+				<button><div></div><p>关于</p></button>
+				<button><div></div><p>致谢</p></button>
+			</div>
+		</div>
+		</li>
+		<li class="detail"></li>
+	</ul>
+</div>
+<div id="error">
+	<ul>
+		<li class="title">您的收藏已满。</li>
+	</ul>
+</div>
+</section>
+</main>
+<!-- window 结束 -->
+
+<!-- jQuery -->
+<script src="assets/js/jquery.min.js"></script>
+
+<!-- Bootstrap -->
+<script src="assets/js/bootstrap.min.js"></script>
+
+<!-- Easing -->
+<script src="assets/js/jquery.easing.min.js"></script>
+
+<!-- Hotkeys -->
+<script src="assets/js/jquery.hotkeys.js"></script>
+
+<!-- Display -->
+<script  src="assets/js/display.js"></script>
+
+<!-- Storage-->
+<script src="assets/js/storage.js"></script>
+
+<!-- Drag-->
+<script src="assets/js/sortable.js"></script>
+
+</body>
+</html>

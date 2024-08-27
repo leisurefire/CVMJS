@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="482" height="482" viewBox="0 0 482 482">
+  <defs>
+    <filter id="filter" filterUnits="userSpaceOnUse">
+      <feFlood result="flood" flood-color="#fff"/>
+      <feComposite result="composite" operator="in" in2="SourceGraphic"/>
+      <feBlend result="blend" in2="SourceGraphic"/>
+    </filter>
+  </defs>
+  <g filter="url(#filter)">
+    <path fill="none" stroke="#000" stroke-width="24px" fill-rule="evenodd" d="M319.453,160.072L157.526,322"/>
+    <path fill="none" stroke="#000" stroke-width="24px" fill-rule="evenodd" d="M318.858,160.05H231.4"/>
+    <path fill="none" stroke="#000" stroke-width="24px" fill-rule="evenodd" d="M319.453,147.689v100.46"/>
+  </g>
+</svg>
