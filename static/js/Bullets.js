@@ -14,6 +14,7 @@ export class Bullet {
     entity;
     hitCheck;
     birthPosition;
+    _defaultCanBoost;
     get positionX() {
         return EventHandler.getPositionX(this.x);
     }
@@ -43,6 +44,24 @@ export class Bullet {
                 && mouse.canBeHit
                 && (this.target = mouse || true)) ? (this.target) : null;
         };
+    }
+    restoreBoostFlag() {
+        if (this._defaultCanBoost === undefined) {
+            this._defaultCanBoost = this.CanBoost;
+        }
+        this.CanBoost = this._defaultCanBoost;
+    }
+    // reset for object pooling reuse
+    reset(x = 0, y = 0, dam = 20, angle = 0, parameter_1 = null, parameter_2 = null) {
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.damage = dam;
+        this.target = null;
+        this.birthPosition = undefined;
+        this.restoreBoostFlag();
+        // subclass-specific defaults are not handled here; subclasses can override
+        return this;
     }
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity);
@@ -91,10 +110,72 @@ export class Bullet {
         }
     }
     duplicate() {
-        return;
+        return undefined;
     }
     fireBoost() {
-        return;
+        return undefined;
+    }
+    onAcquire() {
+        // Reserved for pooling lifecycle customization.
+    }
+    onRelease() {
+        // Reserved for pooling lifecycle customization.
+    }
+}
+/**
+ * Bullet 对象池实现
+ * - 使用构造函数的 `poolKey`（若有）或构造函数名作为池 key
+ * - acquireBullet: 尝试从池中复用实例（默认允许复用），否则 new 新实例
+ * - releaseBullet: 调用实例的 onRelease 并回收到池中（池大小有上限）
+ *
+ * 设计说明：将对象池放在 Bullets 模块中以便所有生产子弹的逻辑统一复用，
+ * 通过 Bullet.reset/onAcquire/onRelease 支持子类进行自定义重置/回收处理。
+ */
+const _bulletPool = new Map();
+const BULLET_POOL_MAX = 200;
+/**
+ * 获取/创建子弹实例
+ */
+export function acquireBullet(ctor, x = 0, y = 0, dam = 20, angle = 0, parameter_1 = null, parameter_2 = null, options) {
+    const key = (ctor.poolKey || ctor.name);
+    const pool = _bulletPool.get(key) || [];
+    let instance;
+    if (options?.reuse !== false && pool.length > 0) {
+        instance = pool.pop();
+        // 通用 reset 支持；子类可覆盖 reset 做额外初始化
+        instance.reset(x, y, dam, angle, parameter_1, parameter_2);
+    }
+    else {
+        // 尝试将参数透传给构造函数（兼容不同子类签名）
+        instance = new ctor(x, y, dam, angle, parameter_1, parameter_2);
+    }
+    // 生命周期钩子
+    if (typeof instance.onAcquire === "function") {
+        instance.onAcquire();
+    }
+    if (options?.setup) {
+        options.setup(instance);
+    }
+    return instance;
+}
+/**
+ * 回收子弹实例到对象池
+ */
+export function releaseBullet(instance) {
+    try {
+        if (typeof instance.onRelease === "function") {
+            instance.onRelease();
+        }
+    }
+    catch (e) {
+        // 忽略回收钩子中可能的异常，保证回收流程稳定
+    }
+    const ctor = instance.constructor;
+    const key = (ctor.poolKey || ctor.name);
+    const pool = _bulletPool.get(key) || [];
+    if (pool.length < BULLET_POOL_MAX) {
+        pool.push(instance);
+        _bulletPool.set(key, pool);
     }
 }
 class BunPrototype extends Bullet {
@@ -109,10 +190,10 @@ class BunPrototype extends Bullet {
         }
     }
     duplicate() {
-        return;
+        return undefined;
     }
     fireBoost() {
-        return;
+        return undefined;
     }
 }
 class MissilePrototype extends Bullet {
@@ -120,9 +201,16 @@ class MissilePrototype extends Bullet {
     front;
     notarget;
     getFront;
+    startX;
     startY;
-    speedY = 0;
-    accelerationY = 0;
+    targetX;
+    targetY;
+    totalDistanceX = 0;
+    flightProgress = 0;
+    arcHeight = 0;
+    lingerFrames = 0;
+    hasTrajectory = false;
+    horizontalDirection = 1;
     get positionY() {
         return this.#positionY;
     }
@@ -151,42 +239,134 @@ class MissilePrototype extends Bullet {
                 && mouse.canBeThrown
                 && (this.target = mouse || true)) ? (this.target) : null;
         };
+        this.resetTrajectory();
     }
-    move() {
-        if (this.front == null && level.Mice[this.positionY]) {
-            let targetX;
-            let targetY;
-            for (let i = Math.floor(this.positionX); i < level.Mice[this.positionY].length; i++) {
-                if (level.Mice[this.positionY][i] != null) {
-                    level.Mice[this.positionY][i].forEach(this.getFront);
+    resetTrajectory() {
+        this.startX = this.x;
+        this.startY = this.y;
+        this.targetX = undefined;
+        this.targetY = undefined;
+        this.totalDistanceX = 0;
+        this.flightProgress = 0;
+        this.arcHeight = 0;
+        this.lingerFrames = 0;
+        this.hasTrajectory = false;
+        this.horizontalDirection = 1;
+    }
+    computeArcHeight(distanceX) {
+        const minHeight = 128;
+        const maxHeight = 256;
+        const scaled = distanceX * 0.3;
+        return Math.max(minHeight, Math.min(maxHeight, scaled));
+    }
+    establishTrajectory() {
+        if (this.hasTrajectory) {
+            return false;
+        }
+        const laneIndex = this.positionY;
+        if (laneIndex >= 0 && level.Mice[laneIndex]) {
+            for (let i = Math.floor(this.positionX); i < level.Mice[laneIndex].length; i++) {
+                const miceStack = level.Mice[laneIndex][i];
+                if (miceStack != null) {
+                    miceStack.forEach(this.getFront);
                     if (this.front != null) {
                         break;
                     }
                 }
             }
-            if (this.front == null) {
-                if (this.notarget != null) {
-                    this.createHitAnim();
-                    return true;
-                }
-                targetX = level.column_end;
-                targetY = this.y;
-                this.front = true;
-            }
-            else {
-                const front = this.front;
-                targetX = level.column_start + 60 * (front.positionX);
-                targetY = this.y + 30;
-            }
-            const t = (targetX - this.x) / this.speed;
-            this.startY = this.y;
-            this.speedY = this.speed / 1.2;
-            this.accelerationY = Math.abs(2 * (this.speedY * t - this.y + targetY) / t / t);
         }
-        this.x = this.x + this.speed;
-        this.y = this.y - this.speedY;
-        this.speedY -= this.accelerationY;
-        return this.y >= this.startY + 30 || this.x <= level.column_start - level.column_gap || this.x >= level.column_end + level.row_gap;
+        let nextTargetX;
+        let nextTargetY;
+        if (this.front == null) {
+            if (this.notarget != null) {
+                this.createHitAnim();
+                this.resetTrajectory();
+                this.hasTrajectory = true;
+                this.flightProgress = 1;
+                return true;
+            }
+            nextTargetX = level.column_end;
+            nextTargetY = this.y;
+            this.front = true;
+        }
+        else if (this.front === true) {
+            nextTargetX = level.column_end;
+            nextTargetY = this.y;
+        }
+        else {
+            const front = this.front;
+            nextTargetX = level.column_start + 60 * (front.positionX);
+            nextTargetY = this.y + 30;
+        }
+        this.startX = this.x;
+        this.startY = this.y;
+        this.targetX = nextTargetX;
+        this.targetY = nextTargetY;
+        const rawDistanceX = (this.targetX ?? this.x) - this.x;
+        this.horizontalDirection = rawDistanceX >= 0 ? 1 : -1;
+        this.totalDistanceX = Math.max(1, Math.abs(rawDistanceX));
+        this.arcHeight = this.computeArcHeight(this.totalDistanceX);
+        this.flightProgress = 0;
+        this.lingerFrames = 0;
+        this.hasTrajectory = true;
+        return false;
+    }
+    reset(x = 0, y = 0, dam = 20, angle = 0, parameter_1 = null, parameter_2 = null) {
+        super.reset(x, y, dam, 0, parameter_1, parameter_2);
+        let resolvedLane;
+        if (parameter_1 !== null && parameter_1 !== undefined) {
+            resolvedLane = parameter_1;
+        }
+        else if (angle !== null && angle !== undefined) {
+            resolvedLane = angle;
+        }
+        if (resolvedLane !== undefined) {
+            this.positionY = resolvedLane;
+        }
+        this.front = null;
+        this.notarget = parameter_2 ?? null;
+        this.resetTrajectory();
+        return this;
+    }
+    onAcquire() {
+        this.resetTrajectory();
+    }
+    move() {
+        if (this.establishTrajectory()) {
+            return true;
+        }
+        if (!this.hasTrajectory || this.startX === undefined || this.startY === undefined || this.targetX === undefined || this.targetY === undefined) {
+            this.x += this.speed;
+            return this.y >= level.row_end + level.row_gap
+                || this.x <= level.column_start - level.column_gap
+                || this.x >= level.column_end + level.row_gap;
+        }
+        let nextX = this.x + this.speed * this.horizontalDirection;
+        if ((this.horizontalDirection > 0 && nextX > this.targetX) || (this.horizontalDirection < 0 && nextX < this.targetX)) {
+            nextX = this.targetX;
+        }
+        this.x = nextX;
+        const traveledX = Math.abs(this.x - this.startX);
+        this.flightProgress = Math.min(1, traveledX / this.totalDistanceX);
+        const progress = this.flightProgress;
+        const baseY = this.startY + (this.targetY - this.startY) * progress;
+        const arcOffset = this.arcHeight * 4 * progress * (1 - progress);
+        this.y = baseY - arcOffset;
+        if (progress >= 1) {
+            this.lingerFrames += 1;
+            if (this.front === true && this.lingerFrames === 1) {
+                this.createHitAnim();
+            }
+            if (this.front === true || this.lingerFrames > 6) {
+                return true;
+            }
+        }
+        else {
+            this.lingerFrames = 0;
+        }
+        return this.y >= level.row_end + level.row_gap
+            || this.x <= level.column_start - level.column_gap
+            || this.x >= level.column_end + level.row_gap;
     }
     createHitAnim() {
         level?.createSpriteAnimation(this.x - 8, this.y - 6, "../static/images/bullets/salad_hit.png", 4);
@@ -206,7 +386,7 @@ export class Bun extends BunPrototype {
         super(x, y, dam, angle);
     }
     duplicate() {
-        return;
+        return this;
     }
     fireBoost() {
         return new FireBullet(this.x, this.y, this.damage * 2, this.angle);
@@ -232,7 +412,7 @@ export class FreezingBun extends BunPrototype {
         }
     }
     duplicate() {
-        return true;
+        return this;
     }
     fireBoost() {
         return new Bun(this.x, this.y, this.damage, this.angle);
@@ -272,7 +452,7 @@ export class FireBullet extends BunPrototype {
         }
     }
     duplicate() {
-        return true;
+        return this;
     }
     createHitAnim() {
         level?.createSpriteAnimation(this.x - 5, this.y - 35, "../static/images/bullets/firebullet_hit.png", 5);
@@ -307,7 +487,7 @@ export class WaterBullet extends BunPrototype {
         this.entity = "../static/images/bullets/waterbullet.png";
     }
     duplicate() {
-        return true;
+        return this;
     }
     fireBoost() {
         return new FireBullet(this.x, this.y, this.damage * 2, this.angle);
@@ -330,13 +510,24 @@ export class WineBullet extends BunPrototype {
         this.width = 42;
         this.offsetX = this.width;
         this.offsetY = this.height;
+        this.line = line;
         this.targetY = this.y;
+        this.times = line ? 0 : undefined;
         if (line) {
-            this.line = line;
-            this.times = 0;
             this.targetY = this.y + 64 * this.line;
         }
         this.entity = "../static/images/bullets/winebullet.png";
+    }
+    reset(x = 0, y = 0, dam = 20, angle = 0, parameter_1 = null, parameter_2 = null) {
+        super.reset(x, y, dam, angle, parameter_1, parameter_2);
+        this.tick = 0;
+        this.line = parameter_1 ?? 0;
+        this.targetY = y;
+        this.times = this.line ? 0 : undefined;
+        if (this.line) {
+            this.targetY = y + 64 * this.line;
+        }
+        return this;
     }
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity, this.angle === 180 ? "mirror" : null);
@@ -362,7 +553,7 @@ export class WineBullet extends BunPrototype {
         }
     }
     duplicate() {
-        return true;
+        return this;
     }
     fireBoost() {
         return new FireBullet(this.x, this.targetY, this.damage * 2, this.angle);
@@ -379,7 +570,7 @@ export class Star extends BunPrototype {
         this.entity = "../static/images/bullets/star.png";
     }
     duplicate() {
-        return true;
+        return this;
     }
     createHitAnim() {
         return false;
@@ -440,6 +631,11 @@ export class SausageAir extends Bullet {
                 && (this.target = mouse || true)) ? (this.target) : null;
         };
     }
+    reset(x = 0, y = 0, dam = 20, angle = 0, parameter_1 = null, parameter_2 = null) {
+        super.reset(x, y, dam, 0, parameter_1, parameter_2);
+        this.positionY = parameter_1 ?? -1;
+        return this;
+    }
     move(pos = null) {
         this.x = this.x + this.speed * Math.cos(this.angle * 2 * Math.PI / 360);
         this.y = this.y + this.speed * Math.sin(this.angle * 2 * Math.PI / 360);
@@ -457,7 +653,7 @@ export class SausageLand extends BunPrototype {
         this.entity = "../static/images/bullets/sausage.png";
     }
     duplicate() {
-        return true;
+        return undefined;
     }
     createHitAnim() {
         level?.createSpriteAnimation(this.x - 24, this.y - 20, "../static/images/bullets/salad_hit.png", 4);
@@ -547,6 +743,16 @@ export class Missile extends MissilePrototype {
         this.times = times;
         this.notarget = noTarget;
     }
+    reset(x = 0, y = 0, dam = 20, angle = 0, parameter_1 = null, parameter_2 = null) {
+        const reusePositionY = parameter_1 ?? this.positionY;
+        const reuseNotarget = parameter_2 ?? null;
+        const reuseTimes = Number.isFinite(angle) ? Math.floor(Number(angle)) : 0;
+        super.reset(x, y, dam, 0, reusePositionY, reuseNotarget);
+        this.positionY = reusePositionY;
+        this.times = Math.max(0, reuseTimes);
+        this.notarget = reuseNotarget;
+        return this;
+    }
     hit(target) {
         if (target == null || target === this.notarget) {
             return null;
@@ -571,7 +777,7 @@ export class ChocolateDot extends MissilePrototype {
         this.entity = "../static/images/bullets/chocolate_0.png";
     }
     createHitAnim() {
-        return true;
+        return false;
     }
 }
 export class Chocolate extends MissilePrototype {
@@ -584,7 +790,7 @@ export class Chocolate extends MissilePrototype {
         this.entity = "../static/images/bullets/chocolate_1.png";
     }
     createHitAnim() {
-        return true;
+        return false;
     }
     hit(target) {
         if (target == null) {
@@ -729,6 +935,19 @@ export class Stone {
         this.targetPositionX = targetPositionX;
         this.positionY = positionY;
         this.damage = dam;
+    }
+    reset(x = 0, y = 0, dam = 20, angle = 0, parameter_1 = null, parameter_2 = null) {
+        this.x = x;
+        this.y = y;
+        this.startY = y;
+        this.damage = dam;
+        this.speedY = 0;
+        this.accelerationY = undefined;
+        if (typeof angle === "number" && !Number.isNaN(angle)) {
+            this.positionY = angle;
+        }
+        this.targetPositionX = parameter_1 ?? null;
+        return this;
     }
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity);

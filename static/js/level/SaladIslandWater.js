@@ -1,4 +1,4 @@
-import {GEH} from "../Core.js";
+import { GEH } from "../Core.js";
 import Level from "../Level.js";
 
 export default class SaladIslandWater extends Level {
@@ -87,11 +87,14 @@ export default class SaladIslandWater extends Level {
         const ANIM = this.constructor.MAP_ANIMATION;
         const IMG = GEH.requestDrawImage(ANIM.SRC);
         if (IMG) {
-            this.Battlefield.Canvas.getContext('2d').drawImage(IMG,
-                0, ANIM.TICK * ANIM.HEIGHT,
-                ANIM.WIDTH, ANIM.HEIGHT,
-                ANIM.X, ANIM.Y,
-                ANIM.WIDTH, ANIM.HEIGHT);
+            const ctx = this.Battlefield.ctxBG;
+            if (ctx) {
+                ctx.drawImage(IMG,
+                    0, ANIM.TICK * ANIM.HEIGHT,
+                    ANIM.WIDTH, ANIM.HEIGHT,
+                    ANIM.X, ANIM.Y,
+                    ANIM.WIDTH, ANIM.HEIGHT);
+            }
             ANIM.TICK = (ANIM.TICK + 1) % ANIM.FRAMES;
         }
     }

@@ -1,6 +1,6 @@
-import {GEH} from "../Core.js";
+import { GEH } from "../Core.js";
 import EventHandler from "../EventHandler.js";
-import Level, {level} from "../Level.js";
+import Level, { level } from "../Level.js";
 
 export default class Abyss extends Level {
     static NAME = "深渊";
@@ -308,11 +308,14 @@ export default class Abyss extends Level {
         const ANIM = this.constructor.MAP_ANIMATION;
         const IMG = GEH.requestDrawImage(ANIM.SRC);
         if (IMG) {
-            this.Battlefield.Canvas.getContext('2d').drawImage(IMG,
-                0, ANIM.TICK * ANIM.HEIGHT,
-                ANIM.WIDTH, ANIM.HEIGHT,
-                ANIM.X, ANIM.Y,
-                ANIM.WIDTH, ANIM.HEIGHT);
+            const ctx = this.Battlefield.ctxBG;
+            if (ctx) {
+                ctx.drawImage(IMG,
+                    0, ANIM.TICK * ANIM.HEIGHT,
+                    ANIM.WIDTH, ANIM.HEIGHT,
+                    ANIM.X, ANIM.Y,
+                    ANIM.WIDTH, ANIM.HEIGHT);
+            }
             ANIM.TICK = (ANIM.TICK + 1) % ANIM.FRAMES;
         }
     }

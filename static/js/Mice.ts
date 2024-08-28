@@ -1,41 +1,43 @@
 //注意，老鼠的行数（.y）属性不是实时变化的，请在尝试移动其位置后改变它的.y属性，否则子弹检测不到
 import EventHandler from "./EventHandler.js";
-import {GEH} from "./Core.js";
-import {Stone} from "./Bullets.js";
-import {Food, TubeIn} from "./Foods.js";
-import {GAME_ERROR_CODE_013} from "./language/Chinese.js";
-import {level, MapGrid} from "./Level.js";
+import { GEH } from "./Core.js";
+import { Stone } from "./Bullets.js";
+import { Food, TubeIn } from "./Foods.js";
+import { level } from "./Level.js";
+import { MapGrid } from "./GameBattlefield.js";
+import { i18n } from "./i18n-preload.js";
 
-class State{
-    #tick:number = 0;
-    #map:Map<string,number>;
-    #name:string;
-    #length:number;
-    get name(){
+
+class State {
+    #tick: number = 0;
+    #map: Map<string, number>;
+    #name: string;
+    #length: number;
+    get name() {
         return this.#name;
     }
-    set name(value: string){
-        if(this.#map.has(value)){
+    set name(value: string) {
+        if (this.#map.has(value)) {
             this.#name = value;
             this.#length = this.#map.get(value) as number;
         }
     }
-    get length(){
+    get length() {
         return this.#length;
     }
-    constructor(name: string, length: number, map:Map<string, number>) {
+    constructor(name: string, length: number, map: Map<string, number>) {
         this.#map = map;
         this.#name = name;
         this.#length = length;
     }
-    behavior(){
+    behavior() {
         this.#tick++;
     }
     toString() {
         return `${this.name}`;
     }
-    update(map:{key: string, value: number}){
-        if(this.#map.has(map.key)){
+    update(map: { key: string, value: number }) {
+        if (this.#map.has(map.key)) {
             this.#map.set(map.key, map.value);
         }
         else {
@@ -43,130 +45,167 @@ class State{
         }
     }
 }
+
 export class Mouse {
-    ctx = level.Battlefield.Canvas.getContext('2d');
+    // ===== 基础属性 =====
+    ctx = level.Battlefield.ctxBG as CanvasRenderingContext2D;
     name = "commonmouse";
-    static alternative: typeof Mouse[] = [];
-    #health = 240;
-    #armorHealth = 0;
+
+    // 位置相关
     x: number;
     y: number;
     row: number = -1;
+    width = 120;
+    height = 105;
+
+    // 基础数值
+    #health = 240;
+    #armorHealth = 0;
+    fullHealth = this.health;
+    speed = 1;
+    damage = 5;
+
+    // 状态标识
+    attackable = true;
+    canBeHit = true;
+    canBeThrown = true;
+    canBeFollowed = true;
+    fly = false;
+    getDamagedTag = 0;
+
+    // UI相关
+    progress?: HTMLDivElement;
+    eyePos = { x: 6, y: 4 };
+
+    // ===== 构造函数 =====
+    constructor(x = 0, y = 0) {
+        this.row = y;
+        this.x = x * 60 + 300;
+        this.y = y * 64 + 74;
+    }
+
+    // ===== 健康值相关 =====
+    get health() {
+        return this.#health;
+    }
+
+    set health(value) {
+        if (value < this.#health) {
+            this.getDamagedTag = 2;
+        }
+        if (this.#health > 0 && value <= 0) {
+            this.die();
+        }
+        this.#health = value;
+    }
+
+    get armorHealth() {
+        return this.#armorHealth;
+    }
+
+    set armorHealth(value) {
+        if (value < this.#armorHealth) {
+            this.getDamagedTag = 2;
+        }
+        this.#armorHealth = value;
+    }
+
+    get critical() {
+        return this.health <= 80;
+    }
+
+    // ===== 位置计算 =====
+    get positionX() {
+        return EventHandler.getPositionX(this.x + 21);
+    }
+
+    get column() {
+        return Math.min(Math.max(Math.floor(this.positionX), 0), 9);
+    }
+
+    // ===== 状态系统 =====
+    #state = "idle";
+    stateSet = ["idle", "attack", "die"];
+    stateLengthSet = new Map([
+        ["idle", 8],
+        ["attack", 4],
+        ["die", 13]
+    ]);
+    tick = 0;
+
+    get state() {
+        return this.#state;
+    }
+
+    set state(value) {
+        if (this.#state !== "die") {
+            this.#state = value;
+        }
+    }
+
+    get stateLength() {
+        return this.stateLengthSet.get(this.state) || 0;
+    }
+
+    get entity() {
+        if (this.state === "die") {
+            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
+        } else {
+            return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "") + ".png";
+        }
+    }
+
+    // ===== 状态效果系统 =====
+    // 减速效果
+    freezingLength = 0;
+    get freezing() {
+        return this.freezingLength > 0;
+    }
+
+    // 冻结效果
+    frozenLength = 0;
+    get frozen() {
+        return this.frozenLength > 0;
+    }
+
+    // 定身效果
+    haltedLength = 0;
+    haltedAttachment: string | null = null;
+    get halted() {
+        return this.haltedLength > 0;
+    }
+
+    // 换行效果
+    changeLineLength = 0;
+    changeLinePos = 0;
+    get changingLine() {
+        return this.changeLineLength > 0;
+    }
+
+    // 爬梯子效果
+    ignoring = false;
     private ignoringTargetPositionX?: number;
     protected ignoringFullDistance?: number;
     private ignoringBeforeSpeed?: number;
     private ignoringBeforeTop?: number;
     private ignoringCurrentDistance?: number;
-    get armorHealth(){
-        return this.#armorHealth;
-    }
-    set armorHealth(value){
-        if(value < this.#armorHealth){
-            this.getDamagedTag = 2;
-        }
-        this.#armorHealth = value;
-    }
-    progress?: HTMLDivElement;
-    get health(){
-        return this.#health;
-    }
-    set health(value){
-        if(value < this.#health){
-            this.getDamagedTag = 2;
-        }
-        if(this.#health > 0 && value <= 0){
-            this.die();
-        }
-        this.#health = value;
-    }
-    get critical(){
-        return this.health <= 80;
-    }
-    fullHealth = this.health;
-    width = 120;
-    height = 105;
-    get entity(){
-        if(this.state === "die"){
-            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
-        }
-        else {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "") + ".png";
-        }
+
+    // ===== 状态判断 =====
+    get CanUpdateEntity() {
+        return !this.frozen && !this.halted && !this.changingLine;
     }
 
-    get CanUpdateEntity(){
-        return !this.frozen
-            && !this.halted
-            && !this.changingLine
-            // && !this.stunned;
-    }
-    get Movable(){      //是否可以移动，动画仍然会更新
+    get Movable() {
         return this.speed !== 0
             && !(this.state === "attack")
             && !(this.state === "die");
     }
-    speed = 1;  //速度，用于调整行为树
-    damage = 5; //一般为5
-    attackable = true;  //是否可以被攻击
-    canBeHit = true;    //是否可以被直线子弹攻击
-    canBeThrown = true;     //是否可以被投掷子弹攻击
-    canBeFollowed = true;   //是否可跟踪
-    fly = false;        //是否属于空中单位
-    getDamagedTag = 0;
-    freezingLength = 0; //剩余减速时长
-    get freezing(){
-        return this.freezingLength > 0;
-    }
-    frozenLength = 0;   //剩余冻结时长
-    get frozen(){
-        return this.frozenLength > 0;
-    }
-    haltedLength = 0;   //剩余定身时长
-    get halted(){
-        return this.haltedLength > 0;
-    }
-    haltedAttachment:string|null = null;    //定身时头上的巧克力贴图
-    changeLineLength = 0;
-    changeLinePos = 0;
-    get changingLine(){
-        return this.changeLineLength > 0;
-    }
-    ignoring = false;   //是否正在爬梯子
-    #state = "idle";
-    get state(){
-        return this.#state;
-    }
-    set state(value){
-        if(this.#state !== "die"){
-            this.#state = value;
-        }
-    }
-    get stateLength(){
-        return this.stateLengthSet.get(this.state) || 0;
-    }
-    stateSet = ["idle", "attack", "die"];
-    stateLengthSet = new Map([["idle", 8],["attack", 4],["die", 13]]);
-    tick = 0;           //动画刻，用于控制动画
-    eyePos = {          //眼睛位置，不过没怎么校准
-        x: 6,
-        y: 4,
-    }
-    constructor(x = 0, y = 0) {
 
-        this.row = y;
-        this.x = x * 60 + 300;
-        this.y = y * 64 + 74;
-    }
-    get positionX(){
-        return EventHandler.getPositionX(this.x + 21);
-    }
-    get column(){
-        return Math.min(Math.max(Math.floor(this.positionX), 0), 9);
-    }
+    // ===== 核心行为方法 =====
     behaviorMove() {
         if (Math.floor(this.positionX) < 0) {
             if (this.speed > 0) {
-                if(level){
+                if (level) {
                     if (level.Guardians[this.row] && !level.Guardians[this.row].onAttack) {
                         level.Guardians[this.row].awake();
                     }
@@ -177,26 +216,34 @@ export class Mouse {
             }
         }
     }
+
     behaviorAnim() {
         this.attackCheck();
     }
-    changeLineProcess(){
-        if(this.changingLine){
-            this.changeLineLength -= 50;
-            if(this.changingLine){
-                if(this.state !== this.stateSet[2]){
-                    this.state = this.stateSet[0];
-                    this.tick = 0;
+
+    attackCheck() {
+        if (this.CanUpdateEntity && this.column <= 8) {
+            const food = level.Foods[this.row * level.column_num + this.column];
+            if (food?.hasTarget) {
+                if (food.ignored) {
+                    this.ignore();
+                    return false;
+                } else {
+                    GEH.requestPlayAudio("ken", this);
+                    this.state = this.stateSet[1];
+                    food.getDamaged(this.damage / (this.freezing ? 2 : 1), this);
+                    return food;
                 }
-                if(this.changeLineLength <= 500){
-                    this.y += 6.4 * this.changeLinePos;
-                }
-            }
-            else {
-                this.row += this.changeLinePos;
+            } else {
+                this.state = this.stateSet[0];
+                this.tick = this.tick % this.stateLength;
+                return false;
             }
         }
+        return false;
     }
+
+    // ===== 换行系统 =====
     changeLine(pos: number, animation = false) {
         if (this.CanUpdateEntity) {
             if (level.waterLine && level.waterLine[this.row]) {
@@ -208,7 +255,7 @@ export class Mouse {
                         pos = 0;
                     }
                 }
-                } else {
+            } else {
                 if (this.row + pos < level.row_num && this.row + pos >= 0 && (!level.waterLine || !level.waterLine[this.row + pos])) {
                 } else {
                     pos = -pos;
@@ -218,78 +265,37 @@ export class Mouse {
                     }
                 }
             }
-            if(pos !== 0){
-                if(animation){
+
+            if (pos !== 0) {
+                if (animation) {
                     this.changeLinePos = pos;
                     this.changeLineLength = 1600;
-                }
-                else {
+                } else {
                     this.y += 64 * pos;
                     this.row += pos;
                 }
             }
         }
     }
-    attackCheck() {
-        if(this.CanUpdateEntity && this.column <= 8){
-            const food = level.Foods[this.row * level.column_num + this.column];
-            if(food?.hasTarget){
-                if (food.ignored) {
-                    this.ignore();
-                    return false;
-                } else {
-                    GEH.requestPlayAudio("ken", this);
-                    this.state = this.stateSet[1];
-                    food.getDamaged(this.damage / (this.freezing ? 2 : 1), this);
-                    return food;
+
+    changeLineProcess() {
+        if (this.changingLine) {
+            this.changeLineLength -= 50;
+            if (this.changingLine) {
+                if (this.state !== this.stateSet[2]) {
+                    this.state = this.stateSet[0];
+                    this.tick = 0;
                 }
-            }
-            else {
-                this.state = this.stateSet[0];
-                this.tick = this.tick % this.stateLength;
-                return false;
+                if (this.changeLineLength <= 500) {
+                    this.y += 6.4 * this.changeLinePos;
+                }
+            } else {
+                this.row += this.changeLinePos;
             }
         }
-        return false;
     }
-    getOverturned(value = 20) {
-        this.getDamaged(value);
-    }
-    getHit(value = 20) {
-        GEH.requestPlayAudio("commonhit");
-        this.getDamaged(value);
-    }
-    getThrown(value = 20) {
-        this.getHit(value);
-    }
-    getFreezingHit(value = 20, length = 10000) {
-        this.getHit(value);
-        this.getFreezing(length);
-    }
-    getBlast(value = 20) {
-        this.getDamaged(value);
-        this.freezingLength = 0;
-        this.frozenLength = 0;
-        this.tick = Math.floor(this.tick);
-        if(this.state === this.stateSet[2]){
-            this.tick = this.stateLength - 1;
-            level?.createSpriteAnimation(this.positionX * 60 + 300, this.row * 64 + 78,
-                    "../static/images/interface/ash.png", 15, {zIndex: this.row * level.column_num + this.column});
-        }
-    }
-    getDamaged(value = 20) {
-        this.health = this.health - value;
-    }
-    getFreezing(length = 10000) {
-        this.freezingLength = Math.max(length, this.freezingLength);
-    }
-    getFrozen(length = 5000) {
-        this.frozenLength = Math.max(length, this.frozenLength);
-    }
-    getHalted(length = 5000, attachment:string|null = null) {
-        this.haltedLength = Math.max(length, this.haltedLength);
-        this.haltedAttachment = attachment;
-    }
+
+    // ===== 爬梯子系统 =====
     ignore() {
         if (this.ignoring) {
             return false;
@@ -303,6 +309,7 @@ export class Mouse {
             return true;
         }
     }
+
     ignoreProcess() {
         if (this.ignoring && this.Movable && this.ignoringTargetPositionX && this.ignoringFullDistance) {
             this.ignoringCurrentDistance = this.positionX - this.ignoringTargetPositionX;
@@ -320,59 +327,122 @@ export class Mouse {
             }
         }
     }
+
+    // ===== 状态效果处理 =====
     freezeProcess() {
         if (this.frozenProcess()) {
-
+            // 冻结状态处理中
         } else {
             if (this.freezing) {
                 this.freezingLength -= 50;
-            }
-            else {
-                this.tick = (Math.floor(this.tick));
+            } else {
+                this.tick = Math.floor(this.tick);
             }
         }
     }
+
     frozenProcess() {
         if (this.frozen) {
             this.frozenLength -= 50;
-            if(this.frozen){
+            if (this.frozen) {
                 const img = GEH.requestDrawImage("../static/images/interface/ice.png");
-                if(img){
-                    this.ctx.drawImage(img, level.column_start + this.positionX * level.row_gap - 12,
+                if (img) {
+                    this.ctx.drawImage(img,
+                        level.column_start + this.positionX * level.row_gap - 12,
                         level.row_start + (this.row + 1) * level.column_gap - 32);
                 }
-            }
-            else {
-                level?.createSpriteAnimation(level.column_start + (this.positionX - 1) * level.row_gap - 24,
+            } else {
+                level?.createSpriteAnimation(
+                    level.column_start + (this.positionX - 1) * level.row_gap - 24,
                     level.row_start + this.row * level.column_gap - 8,
                     "../static/images/interface/ice_break.png",
-                    6, {zIndex: this.row * level.column_num + this.column});
+                    6,
+                    { zIndex: this.row * level.column_num + this.column }
+                );
                 GEH.requestPlayAudio("pobing");
             }
             return true;
         }
         return false;
     }
+
     haltedProcess() {
         if (this.halted) {
             const img = GEH.requestDrawImage(this.haltedAttachment!);
-            if(img){
-                this.ctx.drawImage(img, level.column_start + (this.positionX - 1) * level.row_gap + 42,
+            if (img) {
+                this.ctx.drawImage(img,
+                    level.column_start + (this.positionX - 1) * level.row_gap + 42,
                     level.row_start + this.row * level.column_gap - 32);
             }
             this.haltedLength -= 50;
             return true;
-        }
-        else {
+        } else {
             this.haltedAttachment = null;
             return false;
         }
     }
+
+    // ===== 伤害和状态效果应用 =====
+    getDamaged(value = 20) {
+        this.health = this.health - value;
+    }
+
+    getOverturned(value = 20) {
+        this.getDamaged(value);
+    }
+
+    getHit(value = 20) {
+        GEH.requestPlayAudio("commonhit");
+        this.getDamaged(value);
+    }
+
+    getThrown(value = 20) {
+        this.getHit(value);
+    }
+
+    getFreezingHit(value = 20, length = 10000) {
+        this.getHit(value);
+        this.getFreezing(length);
+    }
+
+    getBlast(value = 20) {
+        this.getDamaged(value);
+        this.freezingLength = 0;
+        this.frozenLength = 0;
+        this.tick = Math.floor(this.tick);
+
+        if (this.state === this.stateSet[2]) {
+            this.tick = this.stateLength - 1;
+            level?.createSpriteAnimation(
+                this.positionX * 60 + 300,
+                this.row * 64 + 78,
+                "../static/images/interface/ash.png",
+                15,
+                { zIndex: this.row * level.column_num + this.column }
+            );
+        }
+    }
+
+    getFreezing(length = 10000) {
+        this.freezingLength = Math.max(length, this.freezingLength);
+    }
+
+    getFrozen(length = 5000) {
+        this.frozenLength = Math.max(length, this.frozenLength);
+    }
+
+    getHalted(length = 5000, attachment: string | null = null) {
+        this.haltedLength = Math.max(length, this.haltedLength);
+        this.haltedAttachment = attachment;
+    }
+
+    // ===== 生命周期管理 =====
     die() {
         this.state = this.stateSet[2];
         this.tick = 0;
         this.attackable = false;
     }
+
     remove() {
         this.stateLengthSet.set("die", 1);
         this.die();
@@ -383,26 +453,26 @@ class ArmoredMouse extends Mouse {
     name = "footballfanmouse";
     armored = true;
     #armorHealth = 240;
-    get armorCritical(){
+    get armorCritical() {
         return this.#armorHealth <= 80;
     }
-    stateSet = ['idle','attack','die','unarmor'];
-    stateLengthSet = new Map([["idle", 8],["attack", 4],["die", 13],["unarmor", 8]]);
-    get entity(){
-        if(this.state === this.stateSet[2]){
-             return "../static/images/mice/" + this.name + "/" + this.state + ".png";
+    stateSet = ['idle', 'attack', 'die', 'unarmor'];
+    stateLengthSet = new Map([["idle", 8], ["attack", 4], ["die", 13], ["unarmor", 8]]);
+    get entity() {
+        if (this.state === this.stateSet[2]) {
+            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
         }
         else {
-            if(this.state === this.stateSet[3]){
-                if(this.unarmoredFrom === 'unarmor'){
+            if (this.state === this.stateSet[3]) {
+                if (this.unarmoredFrom === 'unarmor') {
                     this.unarmoredFrom = 'idle';
                 }
                 return "../static/images/mice/" + this.name + "/" + this.state + "_" + this.unarmoredFrom + ".png";
             }
             else {
-               return "../static/images/mice/" + this.name + "/" + this.state +
-                   (this.critical ? "_critical" : (this.armored ? ("_armored" +
-                       (this.armorCritical ? "_critical" : "")) : "")) + ".png";
+                return "../static/images/mice/" + this.name + "/" + this.state +
+                    (this.critical ? "_critical" : (this.armored ? ("_armored" +
+                        (this.armorCritical ? "_critical" : "")) : "")) + ".png";
             }
         }
     }
@@ -418,7 +488,7 @@ class ArmoredMouse extends Mouse {
         this.fullHealth = this.health + this.armorHealth;
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 60);
     }
 
@@ -439,7 +509,7 @@ class ArmoredMouse extends Mouse {
     getDamaged(value = 20) {
         if (this.armorHealth > 0 && this.armored) {
             this.armorHealth -= value;
-            if(this.armorHealth < 0){
+            if (this.armorHealth < 0) {
                 value = - this.armorHealth;
                 this.armorHealth = 0;
                 this.unarmored();
@@ -451,7 +521,7 @@ class ArmoredMouse extends Mouse {
         }
     }
     unarmored() {
-        if(this.armored){
+        if (this.armored) {
             this.armored = false;
             this.state = this.stateSet[3];
         }
@@ -459,8 +529,8 @@ class ArmoredMouse extends Mouse {
 }
 class WaterMouse extends Mouse {
     name = "paperboatmouse";
-    stateSet = ['idle','attack','die','dive'];
-    stateLengthSet = new Map([["idle", 8],["attack", 4],["die", 13],["dive", 10]]);
+    stateSet = ['idle', 'attack', 'die', 'dive'];
+    stateLengthSet = new Map([["idle", 8], ["attack", 4], ["die", 13], ["dive", 10]]);
     width = 121;
     height = 175;
     inWater = false;
@@ -468,7 +538,7 @@ class WaterMouse extends Mouse {
     rippleTick = 0;
 
     get entity() {
-        if(this.state === this.stateSet[2]){
+        if (this.state === this.stateSet[2]) {
             return "../static/images/mice/" + this.name + "/" + this.state + (this.inWater ? "_inwater" : "") + ".png";
         }
         else {
@@ -485,24 +555,24 @@ class WaterMouse extends Mouse {
 
     behaviorMove() {
         super.behaviorMove();
-        if(this.inWater){
+        if (this.inWater) {
             this.rippleAnim();
             this.rippleTick = (this.rippleTick + 1) % 4;
         }
     }
 
-    rippleAnim(){
+    rippleAnim() {
         const ripple = GEH.requestDrawImage(this.ripple);
-        if(ripple){
+        if (ripple) {
             this.ctx.drawImage(ripple, 72 * this.rippleTick, 0,
-                            72, 39, this.x + 9, this.y + 75,
-                            72, 39);
+                72, 39, this.x + 9, this.y + 75,
+                72, 39);
         }
     }
 
     behaviorAnim() {
-        if(this.inWater){
-            if(this.state === this.stateSet[3]){
+        if (this.inWater) {
+            if (this.state === this.stateSet[3]) {
                 if (this.tick === this.stateLength - 1) {
                     this.stateLengthSet.set("idle", 6);
                     this.tick = 0;
@@ -530,9 +600,9 @@ class WaterMouse extends Mouse {
     }
 
     getBlast(value = 20) {
-        if(this.inWater){
+        if (this.inWater) {
             this.getDamaged(value);
-            if(this.state === this.stateSet[2]){
+            if (this.state === this.stateSet[2]) {
                 this.tick = this.stateLength - 1;
                 return true;
             }
@@ -540,7 +610,7 @@ class WaterMouse extends Mouse {
             this.frozenLength = 0;
             this.tick = Math.floor(this.tick);
         }
-        else{
+        else {
             super.getBlast(value);
         }
     }
@@ -590,9 +660,9 @@ class BossMouse extends Mouse {
 class Obstacle extends Mouse {
     name = "obstacle";
     stateSet = ['idle', 'idle', 'die'];
-    stateLengthSet = new Map([["idle", 1],["die", 1]]);
+    stateLengthSet = new Map([["idle", 1], ["die", 1]]);
     speed = 0;
-    get Movable(){
+    get Movable() {
         return false;
     }
 
@@ -654,7 +724,7 @@ class PanMouse extends ArmoredMouse {
         x: -2,
         y: 38,
     }
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 30);
     }
     constructor(x = 0, y = 0) {
@@ -676,18 +746,18 @@ class PanMouse extends ArmoredMouse {
 class SkatingMouse extends Mouse {
     name = "skatingmouse";
     speed = 2;
-    stateSet = ['idle','attack','die','jump'];
-    stateLengthSet = new Map([["idle", 8],["attack", 4],["die", 14],["jump", 11]]);
-    get entity(){
-        if(this.state === this.stateSet[2]){
+    stateSet = ['idle', 'attack', 'die', 'jump'];
+    stateLengthSet = new Map([["idle", 8], ["attack", 4], ["die", 14], ["jump", 11]]);
+    get entity() {
+        if (this.state === this.stateSet[2]) {
             return "../static/images/mice/" + this.name + "/" + this.state + ".png";
         }
         else {
             return "../static/images/mice/" + this.name + "/" + this.state +
-                (this.jumped ? "_jumped" : "") + (this.critical ? "_critical" : "" ) + ".png";
+                (this.jumped ? "_jumped" : "") + (this.critical ? "_critical" : "") + ".png";
         }
     }
-    get critical(){
+    get critical() {
         return this.health <= 110;
     }
     width = 202;
@@ -708,7 +778,7 @@ class SkatingMouse extends Mouse {
         this.y = y * 64 + 10;
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 110);
     }
 
@@ -756,8 +826,8 @@ class KangarooMouse extends Mouse {
     width = 163;
     height = 157;
 
-    stateSet = ['idle','attack','die','stop'];
-    stateLengthSet = new Map([["idle", 8],["attack", 6],["die", 18],["stop", 11]]);
+    stateSet = ['idle', 'attack', 'die', 'stop'];
+    stateLengthSet = new Map([["idle", 8], ["attack", 6], ["die", 18], ["stop", 11]]);
 
     jumping = false;
     stopped = false;
@@ -765,8 +835,8 @@ class KangarooMouse extends Mouse {
     speed = 2;
 
     get entity() {
-        if(this.state === this.stateSet[2]){
-           return "../static/images/mice/" + this.name + "/" + this.state + (this.stopped ? "_stopped" : "") + ".png";
+        if (this.state === this.stateSet[2]) {
+            return "../static/images/mice/" + this.name + "/" + this.state + (this.stopped ? "_stopped" : "") + ".png";
         }
         else {
             return "../static/images/mice/" + this.name + "/" + this.state + (this.stopped ? "_stopped" : "")
@@ -789,13 +859,13 @@ class KangarooMouse extends Mouse {
         this.y = y * 64 + 20;
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 54);
     }
 
     behaviorAnim() {
         if (this.jumping) {
-            if(this.tick === this.stateLength - 1){
+            if (this.tick === this.stateLength - 1) {
                 if (this.state === 'stop') {
                     this.speed = 1;
                     this.tick = 0;
@@ -822,7 +892,7 @@ class KangarooMouse extends Mouse {
                 }
             }
         } else {
-            if(this.stopped){
+            if (this.stopped) {
                 this.attackCheck();
             }
             else {
@@ -832,7 +902,7 @@ class KangarooMouse extends Mouse {
     }
 
     jumpCheck() {
-        if(this.CanUpdateEntity){
+        if (this.CanUpdateEntity) {
             if (this.column < 9 && level.Foods[this.row * level.column_num + this.column] != null
                 && level.Foods[this.row * level.column_num + this.column].hasTarget) {
                 this.speed = 0;
@@ -862,8 +932,8 @@ class KangarooMouse extends Mouse {
 }
 class FlagMouse extends Mouse {
     name = "flagmouse";
-    stateSet = ['idle','attack','die'];
-    stateLengthSet = new Map([["idle", 8],["attack", 6],["die", 13]]);
+    stateSet = ['idle', 'attack', 'die'];
+    stateLengthSet = new Map([["idle", 8], ["attack", 6], ["die", 13]]);
     width = 75;
     height = 129;
     constructor(x = 0, y = 0) {
@@ -888,8 +958,8 @@ class PaperBoatMouse extends WaterMouse {
 }
 class DiveMouse extends WaterMouse {
     name = "divemouse";
-    stateSet = ['idle','attack','die','dive','float'];
-    stateLengthSet = new Map([["idle", 8],["attack", 4],["die", 13],["dive", 9],["float", 4]]);
+    stateSet = ['idle', 'attack', 'die', 'dive', 'float'];
+    stateLengthSet = new Map([["idle", 8], ["attack", 4], ["die", 13], ["dive", 9], ["float", 4]]);
     width = 141;
     height = 190;
     constructor(x = 0, y = 0) {
@@ -897,19 +967,19 @@ class DiveMouse extends WaterMouse {
         this.x = x * 60 + 280;
         this.y = y * 64 + 30;
     }
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 48);
     }
-    rippleAnim(){
+    rippleAnim() {
         const ripple = GEH.requestDrawImage(this.ripple);
-        if(ripple){
+        if (ripple) {
             this.ctx.drawImage(ripple, 72 * this.rippleTick, 0,
-                                72, 39, this.x + 15, this.y + 110,
-                                72, 39);
+                72, 39, this.x + 15, this.y + 110,
+                72, 39);
         }
     }
     behaviorAnim() {
-        if(this.inWater){
+        if (this.inWater) {
             if (this.state === this.stateSet[0]) {
                 this.canBeHit = false;
                 if (this.column <= 8 && level.Foods[this.row * level.column_num + this.column] != null
@@ -927,9 +997,9 @@ class DiveMouse extends WaterMouse {
                     this.attackCheck();
                 }
             }
-            else if(this.state === this.stateSet[4]){
+            else if (this.state === this.stateSet[4]) {
                 this.canBeHit = true;
-                if(this.tick === this.stateLength - 1) {
+                if (this.tick === this.stateLength - 1) {
                     this.attackCheck();
                 }
             }
@@ -950,15 +1020,15 @@ class DiveMouse extends WaterMouse {
 }
 class FrogMouse extends WaterMouse {
     name = "frogmouse";
-    stateSet = ['idle','attack','die','dive','jump'];
-    stateLengthSet = new Map([["idle", 4],["attack", 6],["die", 13],["dive", 10],["jump", 10]]);
+    stateSet = ['idle', 'attack', 'die', 'dive', 'jump'];
+    stateLengthSet = new Map([["idle", 4], ["attack", 6], ["die", 13], ["dive", 10], ["jump", 10]]);
     width = 99;
     height = 175;
     jumped = false;
     speed = 2;
 
     get entity() {
-        if(this.state === this.stateSet[2]){
+        if (this.state === this.stateSet[2]) {
             return "../static/images/mice/" + this.name + "/" + this.state + (this.inWater ? "_inwater" : "") + ".png";
         }
         else {
@@ -974,24 +1044,24 @@ class FrogMouse extends WaterMouse {
         this.dive();
     }
 
-    rippleAnim(){
+    rippleAnim() {
         const ripple = GEH.requestDrawImage(this.ripple);
-        if(ripple){
+        if (ripple) {
             this.ctx.drawImage(ripple, 72 * this.rippleTick, 0,
-                                72, 39, this.x + 9, this.y + 125,
-                                72, 39);
+                72, 39, this.x + 9, this.y + 125,
+                72, 39);
         }
     }
 
     behaviorAnim() {
-        if(this.inWater){
-            if(this.state === this.stateSet[3]){
+        if (this.inWater) {
+            if (this.state === this.stateSet[3]) {
                 if (this.tick === this.stateLength - 1) {
                     this.tick = 0;
                     this.state = this.stateSet[0];
                 }
             }
-            else if(this.state === this.stateSet[4]){
+            else if (this.state === this.stateSet[4]) {
                 if (this.tick === this.stateLength - 1) {
                     GEH.requestPlayAudio("fangka_w");
                     this.jumped = true;
@@ -1038,30 +1108,30 @@ class FrogMouse extends WaterMouse {
 }
 class FootballFanMouseWater extends WaterMouse {
     name = "footballfanmousewater";
-    stateSet = ['idle','attack','die','dive','unarmor'];
-    stateLengthSet = new Map([["idle", 8],["attack", 4],["die", 12],["dive", 10],["unarmor", 8]]);
+    stateSet = ['idle', 'attack', 'die', 'dive', 'unarmor'];
+    stateLengthSet = new Map([["idle", 8], ["attack", 4], ["die", 12], ["dive", 10], ["unarmor", 8]]);
     width = 102;
     height = 122;
     armored = true;
 
     #armorHealth = 240;
-    get armorHealth(){
+    get armorHealth() {
         return this.#armorHealth;
     }
-    set armorHealth(value){
-        if(value < this.#armorHealth){
+    set armorHealth(value) {
+        if (value < this.#armorHealth) {
             this.getDamagedTag = 2;
         }
         this.#armorHealth = value;
     }
 
-    get armorCritical(){
+    get armorCritical() {
         return this.armorHealth <= 80;
     }
     unarmorFrom = "idle";
 
     get entity() {
-        if(this.state === this.stateSet[2]){
+        if (this.state === this.stateSet[2]) {
             return "../static/images/mice/" + this.name + "/"
                 + this.state + (this.inWater ? "_inwater" : "") + ".png";
         }
@@ -1086,32 +1156,32 @@ class FootballFanMouseWater extends WaterMouse {
         this.fullHealth = this.health + this.armorHealth;
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 24);
     }
 
-    rippleAnim(){
+    rippleAnim() {
         const ripple = GEH.requestDrawImage(this.ripple);
-        if(ripple){
+        if (ripple) {
             this.ctx.drawImage(ripple, 72 * this.rippleTick, 0,
-                                72, 39, this.x + 4, this.y + 100,
-                                72, 39);
+                72, 39, this.x + 4, this.y + 100,
+                72, 39);
         }
     }
 
     behaviorAnim() {
         if (this.inWater) {
             if (this.state === this.stateSet[3]) {
-                if(this.tick === this.stateLength - 1){
+                if (this.tick === this.stateLength - 1) {
                     this.attackCheck();
                 }
             }
             else if (this.state === this.stateSet[4]) {
-                if(this.attackCheck()){
+                if (this.attackCheck()) {
                     this.stateLengthSet.set("unarmor", 4);
                     this.state = this.stateSet[4];
                     this.unarmorFrom = "attack";
-                    if(this.tick >= this.stateLength - 1){
+                    if (this.tick >= this.stateLength - 1) {
                         this.state = this.stateSet[1];
                     }
                 }
@@ -1119,7 +1189,7 @@ class FootballFanMouseWater extends WaterMouse {
                     this.stateLengthSet.set("unarmor", 8);
                     this.state = this.stateSet[4];
                     this.unarmorFrom = "idle";
-                    if(this.tick >= this.stateLength - 1){
+                    if (this.tick >= this.stateLength - 1) {
                         this.state = this.stateSet[0];
                     }
                 }
@@ -1129,7 +1199,7 @@ class FootballFanMouseWater extends WaterMouse {
             }
         } else {
             if (this.state === this.stateSet[4]) {
-                if(this.tick === this.stateLength - 1){
+                if (this.tick === this.stateLength - 1) {
                     this.state = this.stateSet[0];
                 }
             }
@@ -1145,7 +1215,7 @@ class FootballFanMouseWater extends WaterMouse {
     getDamaged(value = 20) {
         if (this.armorHealth > 0 && this.armored) {
             this.armorHealth -= value;
-            if(this.armorHealth < 0){
+            if (this.armorHealth < 0) {
                 value = - this.armorHealth;
                 this.armorHealth = 0;
                 this.unarmored();
@@ -1168,7 +1238,7 @@ class PanMouseWater extends FootballFanMouseWater {
     width = 123;
     height = 150;
 
-    get armorCritical(){
+    get armorCritical() {
         return this.armorHealth <= 320;
     }
 
@@ -1181,16 +1251,16 @@ class PanMouseWater extends FootballFanMouseWater {
         this.fullHealth = this.health + this.armorHealth;
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 30);
     }
 
-    rippleAnim(){
+    rippleAnim() {
         const ripple = GEH.requestDrawImage(this.ripple);
-        if(ripple){
+        if (ripple) {
             this.ctx.drawImage(ripple, 72 * this.rippleTick, 0,
-                                72, 39, this.x + 12, this.y + 110,
-                                72, 39);
+                72, 39, this.x + 12, this.y + 110,
+                72, 39);
         }
     }
 
@@ -1206,25 +1276,25 @@ class PanMouseWater extends FootballFanMouseWater {
 
 class SinkMouse extends ArmoredMouse {
     name = "sinkmouse";
-    stateSet = ['idle','attack','die','unarmor'];
-    stateLengthSet = new Map([["idle", 8],["attack", 6],["die", 12],["unarmor", 8]]);
-    get Movable(){
-        if(this.state === this.stateSet[3]){
+    stateSet = ['idle', 'attack', 'die', 'unarmor'];
+    stateLengthSet = new Map([["idle", 8], ["attack", 6], ["die", 12], ["unarmor", 8]]);
+    get Movable() {
+        if (this.state === this.stateSet[3]) {
             return false;
         }
         else {
             return super.Movable;
         }
     }
-    get armorCritical(){
+    get armorCritical() {
         return this.armorHealth <= 320;
     }
 
     width = 115;
     height = 96;
 
-    get entity(){
-        if(this.state === this.stateSet[2]){
+    get entity() {
+        if (this.state === this.stateSet[2]) {
             return "../static/images/mice/" + this.name + "/" + this.state + (this.armored ? "_armored" : "") + ".png";
         }
         else {
@@ -1243,7 +1313,7 @@ class SinkMouse extends ArmoredMouse {
         this.y = y * 64 + 76;
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 56);
     }
 
@@ -1252,7 +1322,7 @@ class SinkMouse extends ArmoredMouse {
             if (this.tick === this.stateLength - 1) {
                 this.attackCheck();
                 this.tick = 0;
-                if(this.state === "unarmor"){
+                if (this.state === "unarmor") {
                     this.state = "idle";
                 }
             }
@@ -1292,8 +1362,8 @@ class SinkMouse extends ArmoredMouse {
 }
 class PotMouse extends SinkMouse {
     name = "potmouse";
-    stateSet = ['idle','attack','die','unarmor'];
-    stateLengthSet = new Map([["idle", 12],["attack", 6],["die", 14],["unarmor", 10]]);
+    stateSet = ['idle', 'attack', 'die', 'unarmor'];
+    stateLengthSet = new Map([["idle", 12], ["attack", 6], ["die", 14], ["unarmor", 10]]);
     width = 69;
     height = 131;
 
@@ -1302,7 +1372,7 @@ class PotMouse extends SinkMouse {
         y: 34,
     }
     get entity() {
-        if(this.state === this.stateSet[2]){
+        if (this.state === this.stateSet[2]) {
             return "../static/images/mice/" + this.name + "/" + this.state + (this.armored ? "_armored" : "") + ".png";
         }
         else {
@@ -1321,7 +1391,7 @@ class PotMouse extends SinkMouse {
         this.y = y * 64 + 43;
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 28);
     }
 
@@ -1339,7 +1409,7 @@ class PotMouse extends SinkMouse {
     }
 
 
-    getFreezingHit(value = 20, length:number) {
+    getFreezingHit(value = 20, length: number) {
         GEH.requestPlayAudio("commonhit");
         if (!this.armored) {
             this.getFreezing(length);
@@ -1356,8 +1426,8 @@ class PotMouse extends SinkMouse {
 }
 class MechanicalMouse extends Mouse {
     name = "mechanicalmouse";
-    stateSet = ['idle','attack','die','explode'];
-    stateLengthSet = new Map([["idle", 4],["attack", 4],["die", 18],["explode", 8]]);
+    stateSet = ['idle', 'attack', 'die', 'explode'];
+    stateLengthSet = new Map([["idle", 4], ["attack", 4], ["die", 18], ["explode", 8]]);
     width = 250;
     height = 226;
     prepareTimes = 0;
@@ -1367,7 +1437,7 @@ class MechanicalMouse extends Mouse {
     }
 
     get entity() {
-        if(this.state === 'explode'){
+        if (this.state === 'explode') {
             return "../static/images/mice/" + this.name + "/" + this.state + ".png";
         }
         else {
@@ -1385,7 +1455,7 @@ class MechanicalMouse extends Mouse {
         this.y = y * 64 + 16;
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 120);
     }
 
@@ -1420,27 +1490,27 @@ class MechanicalMouse extends Mouse {
 }
 class NinjaMouse extends Mouse {
     name = "ninjamouse";
-    stateSet = ['idle','attack','die','explode'];
-    stateLengthSet = new Map([["idle", 6],["attack", 29],["die", 18],["summon", 16]]);
+    stateSet = ['idle', 'attack', 'die', 'explode'];
+    stateLengthSet = new Map([["idle", 6], ["attack", 29], ["die", 18], ["summon", 16]]);
     width = 156;
     height = 136;
     speed = 2;
     summoned = false;
     prepareTimes = 50;
-    guard:Array<Mouse|boolean> = [];
+    guard: Array<Mouse | boolean> = [];
     guardNum = 4;
 
     get critical() {
         return this.health <= 170;
     }
 
-    get entity(){
-        if(this.state === 'die'){
+    get entity() {
+        if (this.state === 'die') {
             return "../static/images/mice/" + this.name + "/" + this.state + ".png";
         }
         else {
-           return "../static/images/mice/" + this.name + "/" + this.state + (this.summoned ? "_summoned" : "")
-            + (this.critical ? "_critical" : "") + ".png";
+            return "../static/images/mice/" + this.name + "/" + this.state + (this.summoned ? "_summoned" : "")
+                + (this.critical ? "_critical" : "") + ".png";
         }
     }
 
@@ -1454,7 +1524,7 @@ class NinjaMouse extends Mouse {
         this.y = y * 64 + 37;
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 36);
     }
 
@@ -1540,10 +1610,10 @@ class NinjaMouse extends Mouse {
         let tag = false;
         for (let i = 0; i < this.guardNum; i++) {
             const guard = this.guard[i];
-            if(guard instanceof Mouse && guard.health > 0){
+            if (guard instanceof Mouse && guard.health > 0) {
 
             }
-            else{
+            else {
                 tag = true;
                 break;
             }
@@ -1568,7 +1638,7 @@ class NinjaMouse extends Mouse {
         }
     }
 
-    guardSummon = (i:number) => {
+    guardSummon = (i: number) => {
         switch (i) {
             case 0: {
                 const mouse = new NinjaGuardMouse(this.positionX - 1, this.row);
@@ -1615,11 +1685,11 @@ class NinjaGuardMouse extends Mouse {
     name = "ninjaguardmouse";
     width = 186;
     height = 178;
-    stateSet = ['idle','attack','die','summon'];
-    stateLengthSet = new Map([["idle", 12],["attack", 30],["die", 18],["summon", 10]]);
+    stateSet = ['idle', 'attack', 'die', 'summon'];
+    stateLengthSet = new Map([["idle", 12], ["attack", 30], ["die", 18], ["summon", 10]]);
     speed = 1;
     summoned = false;
-    master:Mouse|undefined;
+    master: Mouse | undefined;
 
     constructor(x = 0, y = 0) {
         super(x, y);
@@ -1629,15 +1699,15 @@ class NinjaGuardMouse extends Mouse {
     }
 
     get entity() {
-        if(this.state === this.stateSet[2] || this.state === this.stateSet[3]){
+        if (this.state === this.stateSet[2] || this.state === this.stateSet[3]) {
             return "../static/images/mice/" + this.name + "/" + this.state + ".png";
         }
-        else{
+        else {
             return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "") + ".png";
         }
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 66);
     }
 
@@ -1704,14 +1774,14 @@ class NinjaGuardMouse extends Mouse {
 }
 class RepairMouse extends SinkMouse {
     name = "repairmouse";
-    stateSet = ['idle','attack','die','unarmor','generate'];
-    stateLengthSet = new Map([["idle", 8],["attack", 5],["die", 12],["unarmor", 8],["generate", 6]]);
+    stateSet = ['idle', 'attack', 'die', 'unarmor', 'generate'];
+    stateLengthSet = new Map([["idle", 8], ["attack", 5], ["die", 12], ["unarmor", 8], ["generate", 6]]);
     width = 159;
     height = 103;
     private generateTarget?: null | MapGrid<Food> | Food;
 
-    get Movable(){
-        if(this.state === this.stateSet[4]){
+    get Movable() {
+        if (this.state === this.stateSet[4]) {
             return false;
         }
         else {
@@ -1722,14 +1792,14 @@ class RepairMouse extends SinkMouse {
         return this.armorHealth <= 320;
     }
 
-    get entity(){
-        if(this.state === this.stateSet[2]){
+    get entity() {
+        if (this.state === this.stateSet[2]) {
             return "../static/images/mice/" + this.name + "/" + this.state + (this.armored ? "_armored" : "") + ".png";
         }
         else {
-            if(this.state === this.stateSet[4]){
-               return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "")
-                   + "_armored" + (this.armorCritical ? "_critical" : "") + ".png";
+            if (this.state === this.stateSet[4]) {
+                return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "")
+                    + "_armored" + (this.armorCritical ? "_critical" : "") + ".png";
             }
             else {
                 return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "")
@@ -1748,16 +1818,16 @@ class RepairMouse extends SinkMouse {
         this.y = y * 64 + 72;
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 56);
     }
 
     attackCheck() {
         this.generateTarget = super.attackCheck();
-        if(this.armored && this.state !== this.stateSet[4]){
-            if(this.generateTarget){
-                if((this.generateTarget as MapGrid<Food>).getShieldType()
-                && !(this.generateTarget as MapGrid<Food>).getShieldType()!.ignored){
+        if (this.armored && this.state !== this.stateSet[4]) {
+            if (this.generateTarget) {
+                if ((this.generateTarget as MapGrid<Food>).getShieldType()
+                    && !(this.generateTarget as MapGrid<Food>).getShieldType()!.ignored) {
                     this.generateTarget = (this.generateTarget as MapGrid<Food>).getShieldType();
                     this.generateLadder();
                 }
@@ -1766,9 +1836,9 @@ class RepairMouse extends SinkMouse {
     }
 
     behaviorAnim() {
-        if(this.state === this.stateSet[4]){
+        if (this.state === this.stateSet[4]) {
             if (this.tick === this.stateLength - 1) {
-                if(this.generateTarget && !this.generateTarget.ignored){
+                if (this.generateTarget && !this.generateTarget.ignored) {
                     (this.generateTarget as Food).ignore("ladder" + (this.armorCritical ? "_critical" : ""));
                 }
                 this.state = this.stateSet[0];
@@ -1789,8 +1859,8 @@ class RepairMouse extends SinkMouse {
 }
 class GiantMouse extends Mouse {
     name = "giantmouse";
-    stateSet = ['idle','attack','die'];
-    stateLengthSet = new Map([["idle", 19],["attack", 18],["die", 21]]);
+    stateSet = ['idle', 'attack', 'die'];
+    stateLengthSet = new Map([["idle", 19], ["attack", 18], ["die", 21]]);
     width = 255;
     height = 173;
     damage = 10000;
@@ -1798,8 +1868,8 @@ class GiantMouse extends Mouse {
     get critical() {
         return this.health <= 900;
     }
-    get entity(){
-        if(this.state === 'die'){
+    get entity() {
+        if (this.state === 'die') {
             return "../static/images/mice/" + this.name + "/" + this.state + ".png";
         }
         else {
@@ -1820,7 +1890,7 @@ class GiantMouse extends Mouse {
         this.y = this.row * 64 - 2;
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 80);
     }
 
@@ -1864,8 +1934,8 @@ class GiantMouse extends Mouse {
 }
 class RollerMouse extends PanMouse {
     name = "rollermouse";
-    stateSet = ['idle','attack','die','unarmor'];
-    stateLengthSet = new Map([["idle", 10],["attack", 4],["die", 13],["unarmor", 8]]);
+    stateSet = ['idle', 'attack', 'die', 'unarmor'];
+    stateLengthSet = new Map([["idle", 10], ["attack", 4], ["die", 13], ["unarmor", 8]]);
     speed = 2;
     damage = 8;
     width = 112;
@@ -1885,20 +1955,20 @@ class RollerMouse extends PanMouse {
         this.y = y * 64 + 60;
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 42);
     }
 }
 class MobileMachineryShop extends Mouse {
     name = "mobilemachineryshop";
-    stateSet = ['idle','attack','die','move'];
-    stateLengthSet = new Map([["idle", 6],["attack", 12],["die", 13],["move", 6]]);
+    stateSet = ['idle', 'attack', 'die', 'move'];
+    stateLengthSet = new Map([["idle", 6], ["attack", 12], ["die", 13], ["move", 6]]);
     width = 283;
     height = 269;
     damage = 10000;
     bulletDam = 80;
     behaviorInterval = 2000;
-    target:number|null = null;
+    target: number | null = null;
 
     get critical() {
         return this.health <= 280;
@@ -1913,8 +1983,8 @@ class MobileMachineryShop extends Mouse {
         this.y = y * 64 - 2;
     }
 
-    get Movable(){
-        if(this.target !== null){
+    get Movable() {
+        if (this.target !== null) {
             return false;
         }
         else {
@@ -1922,7 +1992,7 @@ class MobileMachineryShop extends Mouse {
         }
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 115);
     }
 
@@ -1959,9 +2029,9 @@ class MobileMachineryShop extends Mouse {
     }
 
     attackCheck() {
-        if(this.column <= 8 && this.CanUpdateEntity){
+        if (this.column <= 8 && this.CanUpdateEntity) {
             for (let i = 0; i < this.column + 1; i++) {
-            if (level.Foods[this.row * level.column_num + i] && level.Foods[this.row * level.column_num + i].hasTarget) {
+                if (level.Foods[this.row * level.column_num + i] && level.Foods[this.row * level.column_num + i].hasTarget) {
                     return i;
                 }
             }
@@ -1975,8 +2045,8 @@ class MobileMachineryShop extends Mouse {
 
 class Mole extends Mouse {
     name = "mole";
-    stateSet = ['idle','attack','die','dig','arise','stagger'];
-    stateLengthSet = new Map([["idle", 8],["attack", 7],["die", 10],["dig",6],["arise",14],["stagger",4]]);
+    stateSet = ['idle', 'attack', 'die', 'dig', 'arise', 'stagger'];
+    stateLengthSet = new Map([["idle", 8], ["attack", 7], ["die", 10], ["dig", 6], ["arise", 14], ["stagger", 4]]);
     width = 135;
     height = 132;
     behaviorInterval = 1000;
@@ -2006,7 +2076,7 @@ class Mole extends Mouse {
         this.y = this.row * 64 + 42;
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 75);
     }
     behaviorMove() {
@@ -2063,8 +2133,8 @@ class Mole extends Mouse {
 
 class GlidingMouse extends Mouse {
     name = "glidingmouse";
-    stateSet = ['idle','attack','die','fly','drop'];
-    stateLengthSet = new Map([["idle", 8],["attack", 4],["die", 12],["fly",6],["drop",6]]);
+    stateSet = ['idle', 'attack', 'die', 'fly', 'drop'];
+    stateLengthSet = new Map([["idle", 8], ["attack", 4], ["die", 12], ["fly", 6], ["drop", 6]]);
     width = 188;
     height = 196;
     fly = true;
@@ -2072,7 +2142,7 @@ class GlidingMouse extends Mouse {
     canBeThrown = false;
     speed = 2;
 
-    get entity(){
+    get entity() {
         if (this.state === 'die' || this.state === 'fly' || this.state === 'drop') {
             return "../static/images/mice/" + this.name + "/" + this.state + ".png";
         } else {
@@ -2088,7 +2158,7 @@ class GlidingMouse extends Mouse {
         this.state = 'fly';
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 58);
     }
 
@@ -2118,7 +2188,7 @@ class GlidingMouse extends Mouse {
     getDamaged(value = 20) {
         if (this.state === "fly") {
             this.armorHealth -= value;
-            if(this.armorHealth < 0){
+            if (this.armorHealth < 0) {
                 value = - this.armorHealth;
                 this.armorHealth = 0
                 this.state = "drop";
@@ -2141,8 +2211,8 @@ class GlidingMouse extends Mouse {
 
 class RogueMouse extends Mouse {
     name = "roguemouse";
-    stateSet = ['idle','attack','die'];
-    stateLengthSet = new Map([["idle", 8],["attack", 9],["die", 1]]);
+    stateSet = ['idle', 'attack', 'die'];
+    stateLengthSet = new Map([["idle", 8], ["attack", 9], ["die", 1]]);
     width = 105;
     height = 83;
     fly = true;
@@ -2150,14 +2220,14 @@ class RogueMouse extends Mouse {
     canBeThrown = false;
     behaviorInterval = 5000;
     speed = 0;
-    target:{layer_0:Food|null, layer_1:Food|null, layer_2:Food|null} = {layer_0: null, layer_1: null, layer_2: null};
-    get sign(){
+    target: { layer_0: Food | null, layer_1: Food | null, layer_2: Food | null } = { layer_0: null, layer_1: null, layer_2: null };
+    get sign() {
         return "../static/images/mice/" + this.name + "/sign.png";
     }
-    rope:string|undefined;
+    rope: string | undefined;
 
     get entity() {
-        if(this.state === this.stateSet[2]){
+        if (this.state === this.stateSet[2]) {
             return "../static/images/mice/" + this.name + "/" + "idle" + ".png";
         }
         else {
@@ -2176,22 +2246,22 @@ class RogueMouse extends Mouse {
         // this.rope.style.left = (this.column * 60 + 340) + 'px';
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 32);
     }
 
     behaviorAnim() {
         if (this.CanUpdateEntity) {
             const sign = GEH.requestDrawImage(this.sign);
-            if(sign){
+            if (sign) {
                 this.ctx.drawImage(sign, 62 * this.tick, 0, 62, 60,
                     this.column * 60 + 300, this.y, 62, 60);
             }
-            if(this.state === this.stateSet[0]){
-                if(this.y < this.row * 64){
+            if (this.state === this.stateSet[0]) {
+                if (this.y < this.row * 64) {
                     this.y += 30;
                 }
-                else if(this.y >= this.row * 64 && this.y < this.row * 64 + 50){
+                else if (this.y >= this.row * 64 && this.y < this.row * 64 + 50) {
                     this.y += 30;
                     this.fly = false;
                     this.canBeHit = true;
@@ -2213,23 +2283,23 @@ class RogueMouse extends Mouse {
                     }
                 }
             }
-            else if(this.state === this.stateSet[1]){
+            else if (this.state === this.stateSet[1]) {
                 if (!this.attackable) {
                     this.tick = this.stateLength - 1;
                     this.y -= 40;
-                    if(this.target){
-                        const ctx = level.Battlefield.Canvas.getContext('2d');
-                        if(this.target.layer_0){
+                    if (this.target) {
+                        const ctx = level.Battlefield.ctxBG as CanvasRenderingContext2D;
+                        if (this.target.layer_0) {
                             this.target.layer_0.y -= 40;
                             const img = GEH.requestDrawImage(this.target.layer_0.inside!);
-                            if(img){
+                            if (img) {
                                 ctx.drawImage(img, this.target.layer_0.x, this.target.layer_0.y);
                             }
                         }
                         if (this.target.layer_2) {
                             this.target.layer_2.y -= 40;
                             const img = GEH.requestDrawImage(this.target.layer_2.entity);
-                            if(img){
+                            if (img) {
                                 ctx.drawImage(img, this.target.layer_2.width * this.target.layer_2.tick, 0,
                                     this.target.layer_2.width, this.target.layer_2.height, this.target.layer_2.x, this.target.layer_2.y,
                                     this.target.layer_2.width, this.target.layer_2.height);
@@ -2238,7 +2308,7 @@ class RogueMouse extends Mouse {
                         if (this.target.layer_1) {
                             this.target.layer_1.y -= 40;
                             const img = GEH.requestDrawImage(this.target.layer_1.entity);
-                            if(img){
+                            if (img) {
                                 ctx.drawImage(img, this.target.layer_1.width * this.target.layer_1.tick, 0,
                                     this.target.layer_1.width, this.target.layer_1.height, this.target.layer_1.x, this.target.layer_1.y,
                                     this.target.layer_1.width, this.target.layer_1.height);
@@ -2246,7 +2316,7 @@ class RogueMouse extends Mouse {
                         }
                         if (this.target.layer_0) {
                             const img = GEH.requestDrawImage(this.target.layer_0.entity);
-                            if(img){
+                            if (img) {
                                 ctx.drawImage(img, this.target.layer_0.width * this.target.layer_0.tick, 0,
                                     this.target.layer_0.width, this.target.layer_0.height, this.target.layer_0.x, this.target.layer_0.y,
                                     this.target.layer_0.width, this.target.layer_0.height);
@@ -2257,17 +2327,17 @@ class RogueMouse extends Mouse {
                         this.remove();
                     }
                 }
-                else if(this.tick === this.stateLength - 1) {
+                else if (this.tick === this.stateLength - 1) {
                     this.attackable = false;
                     const food = level.Foods[this.row * level.column_num + this.column];
                     if (food != null) {
                         if (food.layer_0) {
                             this.target.layer_0 = food.layer_0;
                         }
-                        if(food.layer_1){
+                        if (food.layer_1) {
                             this.target.layer_1 = food.layer_1;
                         }
-                        if(food.layer_2){
+                        if (food.layer_2) {
                             this.target.layer_2 = food.layer_2;
                         }
                         level.Foods[this.row * level.column_num + this.column].crashRemove();
@@ -2284,8 +2354,8 @@ class RogueMouse extends Mouse {
 
 class RubbishTruck extends Mouse {
     name = "rubbishtruck";
-    stateSet = ['idle','attack','die'];
-    stateLengthSet = new Map([["idle", 6],["attack", 1],["die", 13]]);
+    stateSet = ['idle', 'attack', 'die'];
+    stateLengthSet = new Map([["idle", 6], ["attack", 1], ["die", 13]]);
     width = 295;
     height = 285;
     damage = 10000;
@@ -2302,7 +2372,7 @@ class RubbishTruck extends Mouse {
         this.y = y * 64 - 32;
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 115);
     }
 
@@ -2331,7 +2401,7 @@ class MarioMouse extends BossMouse {
     width = 184;
     height = 176;
     stateSet = ['idle', "dig", 'die', 'dive', 'jump'];
-    stateLengthSet = new Map([["idle", 21],["die", 18],["dig", 8],["dive",18],["jump",14]]);
+    stateLengthSet = new Map([["idle", 21], ["die", 18], ["dig", 8], ["dive", 18], ["jump", 14]]);
     tunnelLength = 3;
     jumpLength = 3;
     dizzyTimes = 0;
@@ -2354,9 +2424,14 @@ class MarioMouse extends BossMouse {
     }
 
     behaviorAnim() {
-        if(this.progress){
-            this.progress.style.width = (this.health / this.fullHealth * 224) + "px";
+        if (this.progress) {
+            const widthPx = `${(this.health / this.fullHealth * 224).toFixed(2)}px`;
+            if ((this.progress as any).__lastWidth !== widthPx) {
+                this.progress.style.width = widthPx;
+                (this.progress as any).__lastWidth = widthPx;
+            }
         }
+
         if (this.state === "idle") {
             this.x = 800;
             if (this.tick === this.stateLength - 1) {
@@ -2377,15 +2452,15 @@ class MarioMouse extends BossMouse {
                 }
             }
         }
-        else if(this.state === "dig"){
+        else if (this.state === "dig") {
             if (this.tick === this.stateLength - 1) {
                 this.dugTimes++;
                 if (this.dugTimes === this.digLength) {
                     this.tunnelSet();
                     const temp = Math.floor(Math.random() * level.row_num);
                     for (let i = 0; i < level.row_num; i++) {
-                        if(level.waterLine === null
-                            || level.waterLine[this.row] === level.waterLine[(temp + i) % level.row_num]){
+                        if (level.waterLine === null
+                            || level.waterLine[this.row] === level.waterLine[(temp + i) % level.row_num]) {
                             const out = new TubeOut(level.column_num - this.tunnelLength, (temp + i) % level.row_num);
                             level.Mice[this.row][this.column].push(out);
 
@@ -2434,7 +2509,7 @@ class MarioMouse extends BossMouse {
                 }
             }
         }
-        else if(this.state === "jump"){
+        else if (this.state === "jump") {
             if (this.tick < 4 || this.tick > 9) {
 
             } else {
@@ -2444,7 +2519,7 @@ class MarioMouse extends BossMouse {
                 this.jumpedTimes++;
                 if (level.Foods[this.row * level.column_num + this.column] != null) {
                     if (level.Foods[this.row * level.column_num + this.column].layer_0 != null) {
-                        level.Foods[this.row * level.column_num + this.column ].layer_0.remove();
+                        level.Foods[this.row * level.column_num + this.column].layer_0.remove();
                     }
                     if (level.Foods[this.row * level.column_num + this.column].layer_1 != null
                         && level.Foods[this.row * level.column_num + this.column].layer_1.attackable
@@ -2464,8 +2539,8 @@ class MarioMouse extends BossMouse {
                 }
             }
         }
-        else if(this.state === "dive"){
-            if(this.tick === this.stateLength - 1){
+        else if (this.state === "dive") {
+            if (this.tick === this.stateLength - 1) {
                 this.tick = 0;
                 this.state = "idle";
                 this.changePos();
@@ -2474,7 +2549,7 @@ class MarioMouse extends BossMouse {
         super.behaviorAnim();
     }
 
-    get positionX(){
+    get positionX() {
         return EventHandler.getPositionX(this.x + 75);
     }
 
@@ -2492,7 +2567,7 @@ class MarioMouse extends BossMouse {
         if (level != null) {
             level.victory();
         }
-        if(this.progress != null){
+        if (this.progress != null) {
             this.progress.style.width = "0";
         }
         return super.die();
@@ -2504,10 +2579,10 @@ class TubeOut extends Obstacle {
     width = 104;
     height = 86;
     stateSet = ['idle', 'idle', 'die'];
-    stateLengthSet = new Map([["idle", 6],["die", 1]]);
-    entry?:Food;
+    stateLengthSet = new Map([["idle", 6], ["die", 1]]);
+    entry?: Food;
 
-    get CanUpdateEntity(){
+    get CanUpdateEntity() {
         return this.tick !== this.stateLength - 1;
     }
 
@@ -2522,7 +2597,7 @@ class TubeOut extends Obstacle {
     }
 
     behaviorAnim() {
-        if(this.critical){
+        if (this.critical) {
             this.stateLengthSet.set("idle", 1);
         }
     }
@@ -2534,8 +2609,8 @@ class TubeOut extends Obstacle {
         return super.die();
     }
 }
-const landSummon = function (item:typeof Mouse, x = 9, y = -1) {
-    const {GameEnd} = GEH;
+const landSummon = function (item: typeof Mouse, x = 9, y = -1) {
+    const { GameEnd } = GEH;
 
     if (!level || GameEnd) {
         return false;
@@ -2564,7 +2639,7 @@ const landSummon = function (item:typeof Mouse, x = 9, y = -1) {
     return mouse;
 };
 const waterSummon = function (item: typeof Mouse, x = 9, y = -1) {
-    const {GameEnd } = GEH;
+    const { GameEnd } = GEH;
     if (!level || GameEnd || !level.waterPosition) {
         return false;
     }
@@ -2579,7 +2654,7 @@ const waterSummon = function (item: typeof Mouse, x = 9, y = -1) {
     return mouse;
 };
 const foodPosSummon = function (item: typeof Mouse) {
-    const {GameEnd } = GEH;
+    const { GameEnd } = GEH;
 
     if (!level || GameEnd) {
         return false;
@@ -2605,7 +2680,7 @@ const foodPosSummon = function (item: typeof Mouse) {
     level.Mice[y][x]?.push(mouse);
     return mouse;
 };
-export const getMouseDetails = function (type:number|string = 0) {
+export const getMouseDetails = function (type: number | string = 0) {
     switch (type) {
         case 0:
         case "commonmouse":
@@ -2613,11 +2688,11 @@ export const getMouseDetails = function (type:number|string = 0) {
                 type: 0,
                 cName: "普通鼠",
                 eName: "commonmouse",
-                assets: ["attack","attack_critical","die","idle","idle_critical"],
+                assets: ["attack", "attack_critical", "die", "idle", "idle_critical"],
                 description: "平平无奇的海盗鼠",
                 story: "在这普通的一天，我穿着普通的鞋，很普通地走在这普通的街。",
                 awardEvents: [
-                    {type: 0, num: 25, needChance: 80}
+                    { type: 0, num: 25, needChance: 80 }
                 ],
                 summon: (function () {
                     return landSummon(CommonMouse);
@@ -2629,11 +2704,11 @@ export const getMouseDetails = function (type:number|string = 0) {
                 type: 1,
                 cName: "球迷鼠",
                 eName: "footballfanmouse",
-                assets: ["attack","attack_armored","attack_armored_critical","attack_critical","die","idle","idle_armored","idle_armored_critical","idle_critical","unarmor_attack","unarmor_idle"],
+                assets: ["attack", "attack_armored", "attack_armored_critical", "attack_critical", "die", "idle", "idle_armored", "idle_armored_critical", "idle_critical", "unarmor_attack", "unarmor_idle"],
                 description: "戴着半截足球作为防具的海盗鼠",
                 story: "球迷鼠的愤怒总是被鼠国国足的遗憾离场点燃。",
                 awardEvents: [
-                    {type: 0, num: 50, needChance: 80},
+                    { type: 0, num: 50, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(FootballFanMouse);
@@ -2645,11 +2720,11 @@ export const getMouseDetails = function (type:number|string = 0) {
                 type: 2,
                 cName: "滑板鼠",
                 eName: "skatingmouse",
-                assets: ["attack_jumped","attack_jumped_critical","die","idle","idle_critical","idle_jumped","idle_jumped_critical","jump","jump_critical"],
+                assets: ["attack_jumped", "attack_jumped_critical", "die", "idle", "idle_critical", "idle_jumped", "idle_jumped_critical", "jump", "jump_critical"],
                 description: "行动快速的海盗鼠，能够越过防御卡",
                 story: "滑板鼠不是滑鼠。",
                 awardEvents: [
-                    {type: 0, num: 50, needChance: 80},
+                    { type: 0, num: 50, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(SkatingMouse);
@@ -2661,11 +2736,11 @@ export const getMouseDetails = function (type:number|string = 0) {
                 type: 3,
                 cName: "捧花僵尸鼠",
                 eName: "potmouse",
-                assets: ["attack","attack_armored","attack_critical","attack_critical_armored","die","die_armored","idle","idle_armored","idle_critical","idle_critical_armored","unarmor","unarmor_critical"],
+                assets: ["attack", "attack_armored", "attack_critical", "attack_critical_armored", "die", "die_armored", "idle", "idle_armored", "idle_critical", "idle_critical_armored", "unarmor", "unarmor_critical"],
                 description: "捧着花盆作为防具的海盗鼠，花盆破碎后会被激怒",
                 story: "久仰久仰，第三代脆皮坚果想必就是出自这位大师之手。",
                 awardEvents: [
-                    {type: 0, num: 50, needChance: 80},
+                    { type: 0, num: 50, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(PotMouse);
@@ -2677,11 +2752,11 @@ export const getMouseDetails = function (type:number|string = 0) {
                 type: 4,
                 cName: "铁锅鼠",
                 eName: "panmouse",
-                assets: ["attack","attack_armored","attack_armored_critical","attack_critical","die","idle","idle_armored","idle_armored_critical","idle_critical","unarmor_attack","unarmor_idle"],
+                assets: ["attack", "attack_armored", "attack_armored_critical", "attack_critical", "die", "idle", "idle_armored", "idle_armored_critical", "idle_critical", "unarmor_attack", "unarmor_idle"],
                 description: "戴着铁锅作为防具的海盗鼠",
                 story: "行无辙迹，居无炊具，幕天席地，纵意所知。",
                 awardEvents: [
-                    {type: 0, num: 75, needChance: 80},
+                    { type: 0, num: 75, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(PanMouse);
@@ -2693,11 +2768,11 @@ export const getMouseDetails = function (type:number|string = 0) {
                 type: 5,
                 cName: "纸船鼠",
                 eName: "paperboatmouse",
-                assets: ["attack_inwater","attack_inwater_critical","die","die_inwater","dive_inwater","dive_inwater_critical","idle","idle_critical","idle_inwater","idle_inwater_critical"],
+                assets: ["attack_inwater", "attack_inwater_critical", "die", "die_inwater", "dive_inwater", "dive_inwater_critical", "idle", "idle_critical", "idle_inwater", "idle_inwater_critical"],
                 description: "乘坐纸船的水路海盗鼠",
                 story: "船儿船儿看不见，船上也没帆。",
                 awardEvents: [
-                    {type: 0, num: 25, needChance: 80},
+                    { type: 0, num: 25, needChance: 80 },
                 ],
                 summon: (function () {
                     return waterSummon(PaperBoatMouse);
@@ -2709,11 +2784,11 @@ export const getMouseDetails = function (type:number|string = 0) {
                 type: 6,
                 cName: "旗帜鼠",
                 eName: "flagmouse",
-                assets: ["attack","attack_critical","die","idle","idle_critical"],
+                assets: ["attack", "attack_critical", "die", "idle", "idle_critical"],
                 description: "举着旗帜的海盗鼠，标志大波鼠军的到来",
-                story: "出发！目标安戈洛！",
+                story: "出发，目标安戈洛！",
                 awardEvents: [
-                    {type: 0, num: 25, needChance: 80},
+                    { type: 0, num: 25, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(FlagMouse);
@@ -2725,11 +2800,11 @@ export const getMouseDetails = function (type:number|string = 0) {
                 type: 7,
                 cName: "潜水鼠",
                 eName: "divemouse",
-                assets: ["attack_inwater","attack_inwater_critical","die","die_inwater","dive_inwater","dive_inwater_critical","float_inwater","float_inwater_critical","idle","idle_critical","idle_inwater","idle_inwater_critical"],
+                assets: ["attack_inwater", "attack_inwater_critical", "die", "die_inwater", "dive_inwater", "dive_inwater_critical", "float_inwater", "float_inwater_critical", "idle", "idle_critical", "idle_inwater", "idle_inwater_critical"],
                 description: "能够潜入水下躲避子弹的水路海盗鼠",
                 story: "心事浩茫连广宇，于无声处听惊雷。",
                 awardEvents: [
-                    {type: 0, num: 50, needChance: 80},
+                    { type: 0, num: 50, needChance: 80 },
                 ],
                 summon: (function () {
                     return waterSummon(DiveMouse);
@@ -2741,11 +2816,11 @@ export const getMouseDetails = function (type:number|string = 0) {
                 type: 8,
                 cName: "房东鼠",
                 eName: "sinkmouse",
-                assets: ["attack","attack_armored","attack_armored_critical","attack_critical","attack_critical_armored","attack_critical_armored_critical","die","die_armored","idle","idle_armored","idle_armored_critical","idle_critical","idle_critical_armored","idle_critical_armored_critical","unarmor","unarmor_critical"],
+                assets: ["attack", "attack_armored", "attack_armored_critical", "attack_critical", "attack_critical_armored", "attack_critical_armored_critical", "die", "die_armored", "idle", "idle_armored", "idle_armored_critical", "idle_critical", "idle_critical_armored", "idle_critical_armored_critical", "unarmor", "unarmor_critical"],
                 description: "举着地漏作为防具的海盗鼠，地漏能阻挡直线子弹",
                 story: "Good morning，房东鼠！",
                 awardEvents: [
-                    {type: 0, num: 50, needChance: 80},
+                    { type: 0, num: 50, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(SinkMouse);
@@ -2757,11 +2832,11 @@ export const getMouseDetails = function (type:number|string = 0) {
                 type: 9,
                 cName: "跳跳鼠",
                 eName: "kangaroomouse",
-                assets: ["attack_stopped","attack_stopped_critical","die","die_stopped","idle","idle_critical","idle_stopped","idle_stopped_critical","stop_stopped","stop_stopped_critical"],
+                assets: ["attack_stopped", "attack_stopped_critical", "die", "die_stopped", "idle", "idle_critical", "idle_stopped", "idle_stopped_critical", "stop_stopped", "stop_stopped_critical"],
                 description: "蹦蹦跳跳、行动快速的海盗鼠，能够越过防御卡",
                 story: "小老鼠黄又黄，两只耳朵竖起来，爱吃火炉爱吃菜，蹦蹦跳跳真可爱。",
                 awardEvents: [
-                    {type: 0, num: 50, needChance: 80},
+                    { type: 0, num: 50, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(KangarooMouse);
@@ -2773,11 +2848,11 @@ export const getMouseDetails = function (type:number|string = 0) {
                 type: 10,
                 cName: "机器鼠",
                 eName: "mechanicalmouse",
-				assets: ["attack","attack_critical","die","explode","idle","idle_critical"],
+                assets: ["attack", "attack_critical", "die", "explode", "idle", "idle_critical"],
                 description: "攻击过程中会自爆的海盗鼠",
                 story: "机器鼠，瘦鼠又来欺负我了！",
                 awardEvents: [
-                    {type: 0, num: 50, needChance: 80},
+                    { type: 0, num: 50, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(MechanicalMouse);
@@ -2789,11 +2864,11 @@ export const getMouseDetails = function (type:number|string = 0) {
                 type: 11,
                 cName: "忍者鼠首领",
                 eName: "ninjamouse",
-				assets: ["attack_summoned","attack_summoned_critical","die","idle","idle_critical","idle_summoned","idle_summoned_critical","summon_summoned","summon_summoned_critical"],
+                assets: ["attack_summoned", "attack_summoned_critical", "die", "idle", "idle_critical", "idle_summoned", "idle_summoned_critical", "summon_summoned", "summon_summoned_critical"],
                 description: "行动快速的海盗鼠，能召唤忍者鼠护卫",
                 story: "说出的话言出必行，这就是我的忍道。",
                 awardEvents: [
-                    {type: 0, num: 75, needChance: 80},
+                    { type: 0, num: 75, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(NinjaMouse);
@@ -2805,11 +2880,11 @@ export const getMouseDetails = function (type:number|string = 0) {
                 type: 12,
                 cName: "修理鼠",
                 eName: "repairmouse",
-				assets: ["attack","attack_armored","attack_armored_critical","attack_critical","attack_critical_armored","attack_critical_armored_critical","die","die_armored","generate_armored","generate_armored_critical","generate_critical_armored","generate_critical_armored_critical","idle","idle_armored","idle_armored_critical","idle_critical","idle_critical_armored","idle_critical_armored_critical","unarmor","unarmor_critical"],
+                assets: ["attack", "attack_armored", "attack_armored_critical", "attack_critical", "attack_critical_armored", "attack_critical_armored_critical", "die", "die_armored", "generate_armored", "generate_armored_critical", "generate_critical_armored", "generate_critical_armored_critical", "idle", "idle_armored", "idle_armored_critical", "idle_critical", "idle_critical_armored", "idle_critical_armored_critical", "unarmor", "unarmor_critical"],
                 description: "举着梯子作为防具的海盗鼠，架设有梯子的防御卡会被快速翻过",
-                story: "修理鼠修理修理署的修理枢。",
+                story: "修理鼠修理熟修理署修理枢。",
                 awardEvents: [
-                    {type: 0, num: 50, needChance: 80},
+                    { type: 0, num: 50, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(RepairMouse);
@@ -2825,7 +2900,7 @@ export const getMouseDetails = function (type:number|string = 0) {
                 description: "行动快速的水路海盗鼠，能够越过防御卡",
                 story: "你不一定要成为公主，才能找到你的王子。",
                 awardEvents: [
-                    {type: 0, num: 50, needChance: 80},
+                    { type: 0, num: 50, needChance: 80 },
                 ],
                 summon: (function () {
                     return waterSummon(FrogMouse);
@@ -2841,7 +2916,7 @@ export const getMouseDetails = function (type:number|string = 0) {
                 description: "体格巨大的海盗鼠，攻击造成碾压",
                 story: "碧海擎鲸望巨“型”，云天张翼仰高“朋”。",
                 awardEvents: [
-                    {type: 0, num: 100, needChance: 80},
+                    { type: 0, num: 100, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(GiantMouse);
@@ -2857,7 +2932,7 @@ export const getMouseDetails = function (type:number|string = 0) {
                 description: "行动快速、戴着全副武装的海盗鼠",
                 story: "我的滑板鞋，时尚时尚最时尚。",
                 awardEvents: [
-                    {type: 0, num: 75, needChance: 80},
+                    { type: 0, num: 75, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(RollerMouse);
@@ -2871,9 +2946,9 @@ export const getMouseDetails = function (type:number|string = 0) {
                 eName: "mobilemachineryshop",
                 assets: ["attack", "attack_critical", "die", "idle", "idle_critical", "move", "move_critical"],
                 description: "驾驶工程车的海盗鼠，能向防御卡投掷石头",
-                story: "这里是老鼠的故事",
+                story: "不负责挖坑，只负责填坑。",
                 awardEvents: [
-                    {type: 0, num: 75, needChance: 80},
+                    { type: 0, num: 75, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(MobileMachineryShop);
@@ -2887,9 +2962,9 @@ export const getMouseDetails = function (type:number|string = 0) {
                 eName: "mole",
                 assets: ["arise", "attack", "attack_critical", "die", "dig", "idle", "idle_critical", "stagger", "stagger_critical"],
                 description: "能够快速移动到战场后方，而后向前偷袭的海盗鼠",
-                story: "这里是老鼠的故事",
+                story: "Honour is a feudal atavism.",
                 awardEvents: [
-                    {type: 0, num: 75, needChance: 80},
+                    { type: 0, num: 75, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(Mole);
@@ -2905,7 +2980,7 @@ export const getMouseDetails = function (type:number|string = 0) {
                 description: "驾驶滑翔翼的空中海盗鼠",
                 story: "我的青春小鸟一样不回来。",
                 awardEvents: [
-                    {type: 0, num: 75, needChance: 80},
+                    { type: 0, num: 75, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(GlidingMouse);
@@ -2919,9 +2994,9 @@ export const getMouseDetails = function (type:number|string = 0) {
                 eName: "roguemouse",
                 assets: ["attack", "idle"],
                 description: "从高空一跃而下、窃取防御卡的海盗鼠",
-                story: "这里是老鼠的故事",
+                story: "盗食而遨游，泛若有系之鼠，虚而遨游者也。",
                 awardEvents: [
-                    {type: 0, num: 75, needChance: 80},
+                    { type: 0, num: 75, needChance: 80 },
                 ],
                 summon: (function () {
                     return foodPosSummon(RogueMouse);
@@ -2935,9 +3010,9 @@ export const getMouseDetails = function (type:number|string = 0) {
                 eName: "footballfanmousewater",
                 assets: ["attack_inwater", "attack_inwater_armored", "attack_inwater_armored_critical", "attack_inwater_critical", "die", "die_inwater", "dive_inwater", "dive_inwater_armored", "dive_inwater_armored_critical", "dive_inwater_critical", "idle", "idle_armored", "idle_armored_critical", "idle_critical", "idle_inwater", "idle_inwater_armored", "idle_inwater_armored_critical", "idle_inwater_critical", 'unarmor_idle', "unarmor_inwater_attack", "unarmor_inwater_idle"],
                 description: "戴着半截足球作为防具的水路海盗鼠",
-                story: "这里是老鼠的故事",
+                story: "半身不“水”，已释然。",
                 awardEvents: [
-                    {type: 0, num: 25, needChance: 80},
+                    { type: 0, num: 25, needChance: 80 },
                 ],
                 summon: (function () {
                     return waterSummon(FootballFanMouseWater);
@@ -2951,9 +3026,9 @@ export const getMouseDetails = function (type:number|string = 0) {
                 eName: "rubbishtruck",
                 assets: ["die", "idle", "idle_critical"],
                 description: "驾驶垃圾车的海盗鼠，攻击造成碾压",
-                story: "这里是老鼠的故事",
+                story: "我从山中来，带着兰花草。种在小园中，希望花开早。",
                 awardEvents: [
-                    {type: 0, num: 25, needChance: 80},
+                    { type: 0, num: 25, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(RubbishTruck);
@@ -2967,9 +3042,9 @@ export const getMouseDetails = function (type:number|string = 0) {
                 eName: "panmousewater",
                 assets: ["attack_inwater", "attack_inwater_armored", "attack_inwater_armored_critical", "attack_inwater_critical", "die", "die_inwater", "dive_inwater", "dive_inwater_armored", "dive_inwater_armored_critical", "dive_inwater_critical", "idle", "idle_armored", "idle_armored_critical", "idle_critical", "idle_inwater", "idle_inwater_armored", "idle_inwater_armored_critical", "idle_inwater_critical", 'unarmor_idle', "unarmor_inwater_attack", "unarmor_inwater_idle"],
                 description: "戴着铁锅作为防具的水路海盗鼠",
-                story: "这里是老鼠的故事",
+                story: "俯观万物，扰扰焉，如江汉之载浮萍。",
                 awardEvents: [
-                    {type: 0, num: 25, needChance: 80},
+                    { type: 0, num: 25, needChance: 80 },
                 ],
                 summon: (function () {
                     return waterSummon(PanMouseWater);
@@ -2983,9 +3058,9 @@ export const getMouseDetails = function (type:number|string = 0) {
                 eName: "mariomouse",
                 assets: ["die", "dig", "dig_critical", "dive", "dive_critical", "idle", "idle_critical", "jump", "jump_critical"],
                 description: "镇守曲奇岛和色拉岛的首领，能够挖掘管道、蹦跳着碾压防御卡",
-                story: "这里是老鼠的故事",
+                story: "Dig Up, Super Star!",
                 awardEvents: [
-                    {type: 0, num: 25, needChance: 80},
+                    { type: 0, num: 25, needChance: 80 },
                 ],
                 summon: (function () {
                     return landSummon(MarioMouse);
@@ -2998,7 +3073,7 @@ export const getMouseDetails = function (type:number|string = 0) {
                 eName: "tube",
                 assets: ["idle", "idle_critical"],
                 description: "由“洞君”召唤的管道",
-                story: "这里是老鼠的故事",
+                story: "别有洞天二十四，铁锈管道冷冰冰。",
                 summon: (function () {
                     return landSummon(TubeOut);
                 })
@@ -3006,13 +3081,18 @@ export const getMouseDetails = function (type:number|string = 0) {
         default:
             return {
                 type: -1,
-                cName: "老鼠",
+                cName: "海盗鼠",
                 eName: "mouse",
                 assets: ["attack", "attack_critical", "die", "idle", "idle_critical"],
-                description: "这里是老鼠的概述",
-                story: "这里是老鼠的故事。",
+                description: "这里是海盗鼠的概述",
+                story: "这里是海盗鼠的故事。",
                 summon: (function () {
-                    throw GAME_ERROR_CODE_013 + type;
+                    // 等待i18n加载完成后再抛出错误
+                    if (i18n.isReady()) {
+                        throw i18n.t("GAME_ERROR_CODE_013") + type;
+                    } else {
+                        throw "GAME_ERROR_CODE_013" + type;
+                    }
                 })
             };
     }

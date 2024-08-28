@@ -1,188 +1,196 @@
 import EventHandler from "./EventHandler.js";
-import {Card} from "./EventHandler.js";
-import {GEH} from "./Core.js";
+import { Card } from "./EventHandler.js";
+import { GEH } from "./Core.js";
 import {
-    Boomerang,
-    Bun,
-    Chocolate,
-    ChocolateDot,
-    CoffeeBubble, Egg,
-    FreezingBun,
-    Missile, SausageAir, SausageLand, SnowEgg,
-    Star,
-    WaterBullet,
-    WineBullet
+	Boomerang,
+	Bun,
+	Chocolate,
+	ChocolateDot,
+	CoffeeBubble, Egg,
+	FreezingBun,
+	Missile, SausageAir, SausageLand, SnowEgg,
+	Star,
+	WaterBullet,
+	WineBullet
 } from "./Bullets.js";
-import {level, MapGrid} from "./Level.js";
-import {Mouse, CommonMouse} from "./Mice.js";
+import { level } from "./Level.js";
+import { MapGrid } from "./GameBattlefield.js";
+import { t } from "./i18n/index.js";
+
+import { Mouse, CommonMouse } from "./Mice.js";
 const specialGenerate = function (x: number, y: number, star = 0, skillLevel = 0, type = 0) {
-    const food = level.Foods[y * level.column_num + x];
-    switch (type) {
-        case 0: {
-            level.createSpriteAnimation(
-                (x * level.row_gap + level.column_start - 20),
-                (y * level.column_gap + level.row_start - 60),
-                "../static/images/foods/icecream/idle.png",
-                16,
-                {function: () => {
-                        food.layers.forEach((layer: MapGrid<Food>) => {
-                            const name = layer?.constructor?.name;
-                            if (name) {
-                                level.Cards.forEach((card: Card) => {
-                                    if (card.name === name && card.cooling) {
-                                        card.remainTime = 0;
-                                    }
-                                });
-                            }
-                        });
-                    },
-                    zIndex: y * level.column_num + x + 10
-                }
-            );
-            break;
-        }
-        case 1: {
-            level.createSpriteAnimation(
-                (x * level.row_gap + level.column_start - 10),
-                (y * level.column_gap + level.row_start - 40),
-                "../static/images/foods/groundcoffee/idle.png",
-                13,
-                {
-                    function: () => {
-                        if (food?.layer_1) {
-                            food.layer_1.wakeUp();
-                        }
-                        if (star === 16 && level.Mice?.[y]?.[x]) {
-                            level.Mice[y][x].forEach((value: Mouse) => value.getDamaged(9999));
-                        }
-                    },
-                    zIndex: y * level.column_num + x + 10
-                }
-            );
-            break;
-        }
-        case 2: {
-            GEH.requestPlayAudio('saizi');
-            level.createSpriteAnimation(
-                (x * level.row_gap + level.column_start - 2),
-                (y * level.column_gap + level.row_start - 20),
-                "../static/images/foods/cork/idle.png",
-                40,
-                {
-                    function: () => {
-                        if (food?.layer_1?.constructor.name === 'ratnest') {
-                            food.layer_1?.remove();
-                            food.layer_1 = null;
-                        }
-                    },
-                    zIndex: y * level.column_num + x + 10,
-                }
-            );
-            break;
-        }
-        default : {
-            throw new Error("Unknown special generate.");
-        }
-    }
-    if(food?.water){
-        level.Battlefield.playPlantAnimation(1, x, y);
-    }
-    else {
-        level.Battlefield.playPlantAnimation(0, x, y);
-    }
-    return true;
+	const food = level.Foods[y * level.column_num + x];
+	switch (type) {
+		case 0: {
+			level.createSpriteAnimation(
+				(x * level.row_gap + level.column_start - 20),
+				(y * level.column_gap + level.row_start - 60),
+				"../static/images/foods/icecream/idle.png",
+				16,
+				{
+					function: () => {
+						food.layers.forEach((layer: MapGrid<Food>) => {
+							const name = layer?.constructor?.name;
+							if (name) {
+								level.Cards.forEach((card: Card) => {
+									if (card.name === name && card.cooling) {
+										card.remainTime = 0;
+									}
+								});
+							}
+						});
+					},
+					zIndex: Math.min(y * level.column_num + x + 10, level.row_num * level.column_num)
+				}
+			);
+			break;
+		}
+		case 1: {
+			level.createSpriteAnimation(
+				(x * level.row_gap + level.column_start - 10),
+				(y * level.column_gap + level.row_start - 40),
+				"../static/images/foods/groundcoffee/idle.png",
+				13,
+				{
+					function: () => {
+						if (food?.layer_1) {
+							food.layer_1.wakeUp();
+						}
+						if (star === 16 && level.Mice?.[y]?.[x]) {
+							level.Mice[y][x].forEach((value: Mouse) => value.getDamaged(9999));
+						}
+					},
+					zIndex: Math.min(y * level.column_num + x + 10, level.row_num * level.column_num)
+				}
+			);
+			break;
+		}
+		case 2: {
+			GEH.requestPlayAudio('saizi');
+			level.createSpriteAnimation(
+				(x * level.row_gap + level.column_start - 2),
+				(y * level.column_gap + level.row_start - 20),
+				"../static/images/foods/cork/idle.png",
+				40,
+				{
+					function: () => {
+						if (food?.layer_1?.constructor.name === 'ratnest') {
+							food.layer_1?.remove();
+							food.layer_1 = null;
+						}
+					},
+					zIndex: Math.min(y * level.column_num + x + 10, level.row_num * level.column_num),
+				}
+			);
+			break;
+		}
+		default: {
+			throw new Error("Unknown special generate.");
+		}
+	}
+	if (food?.water) {
+		level.Battlefield.playPlantAnimation(1, x, y);
+	}
+	else {
+		level.Battlefield.playPlantAnimation(0, x, y);
+	}
+	return true;
 }
 export class Food {
-    static name = "stove";		//名称
-	static cName = "防御卡";
-    static assets = ["idle"];
+	static name = "stove";		//名称
+	static get cName(): string {
+		return t("A000_CNAME");
+	}
+	static assets = ["idle"];
 	static offset = [0, 0];
 	static category = "";
-    static cost = 50;
-    static coolTime = 7500;
+	static cost = 50;
+	static coolTime = 7500;
 	static description = "";
-	static upgrade = "强化后提高[星级标识]";
-    static rarity = 0;
-    static story = "";
-    static addCost = false;
-    static special:string|undefined = undefined;
-    protected readonly type: number|undefined;
-    readonly star: number = 0;
-    starAnimTick: number = 0;
-    protected readonly starAnimOffset: number = 0;
-    readonly starAnimLength: number = 0;
-    readonly starAnim: string|undefined;
-    public x: number = 0;
-    public y: number = 0;
-    ignored: boolean = false;
-    ladder: string|undefined;
-    static idleLength: number = 12;
-    static artist: string|undefined;
-    static storyContributor: string|undefined;
-    static type: number|undefined;
-    static inside: boolean|undefined;
-    static endLength: number|undefined;
-    get inside():null|string{
-        return null;
-    }
+	static get upgrade(): string {
+		return t("U000");
+	}
+	static rarity = 0;
+	static story = "";
+	static addCost = false;
+	static special: string | undefined = undefined;
+	protected readonly type: number | undefined;
+	readonly star: number = 0;
+	starAnimTick: number = 0;
+	protected readonly starAnimOffset: number = 0;
+	readonly starAnimLength: number = 0;
+	readonly starAnim: string | undefined;
+	public x: number = 0;
+	public y: number = 0;
+	ignored: boolean = false;
+	ladder: string | undefined;
+	static idleLength: number = 12;
+	static artist: string | undefined;
+	static storyContributor: string | undefined;
+	static type: number | undefined;
+	static inside: boolean | undefined;
+	static endLength: number | undefined;
+	get inside(): null | string {
+		return null;
+	}
 	static generate(x: number, y: number, star: number, skillLevel: number) {
-        const food = level.Foods[y * level.column_num + x];
+		const food = level.Foods[y * level.column_num + x];
 
-        if (food.noPlace || (food.water && !food.layer_2)) {
-            return false;
-        }
+		if (food.noPlace || (food.water && !food.layer_2)) {
+			return false;
+		}
 
-        if (!food.layer_1 && (food.water || !food.layer_2)) {
-            food.layer_1 = new this(x, y, food.water ? 1 : 0, star, skillLevel);
-            return true;
-        }
+		if (!food.layer_1 && (food.water || !food.layer_2)) {
+			food.layer_1 = new this(x, y, food.water ? 1 : 0, star, skillLevel);
+			return true;
+		}
 
-        return false;
-    };
-    static SHADOW_IMAGE = "../static/images/interface/shadow.svg";
-    #health = 300;
-	get health(){
+		return false;
+	};
+	static SHADOW_IMAGE = "../static/images/interface/shadow.svg";
+	#health = 300;
+	get health() {
 		return this.#health;
 	}
-	set health(value){
-		if(value <= 0){
+	set health(value) {
+		if (value <= 0) {
 			this.remove();
 		}
-		else if(value < this.#health){
+		else if (value < this.#health) {
 			this.getDamagedTag = true;
 		}
 		this.#health = value;
 	}
-    width = 50;
-    height = 50;
-	get entity(){
+	width = 50;
+	height = 50;
+	get entity() {
 		return "../static/images/foods/" + this.constructor.name + "/" + this.state + ".png";
 	}
 
-    row = 0;			//所在行
-    column = 0;			//所在列
-    attackable = true;		//是否可以被攻击
-    short = false;			//是否低矮（不会被啃食）
-    tall = false;					//是否身形高大（不可被越过）
+	row = 0;			//所在行
+	column = 0;			//所在列
+	attackable = true;		//是否可以被攻击
+	short = false;			//是否低矮（不会被啃食）
+	tall = false;					//是否身形高大（不可被越过）
 
-    canReverseBoost = false;		//是否可以反弹子弹
-    canFireBoost = false;			//是否可以引燃子弹
-    canBlockBoost = false;			//是否可以移除子弹
-    canShovel = true;				//是否可以被铲除
+	canReverseBoost = false;		//是否可以反弹子弹
+	canFireBoost = false;			//是否可以引燃子弹
+	canBlockBoost = false;			//是否可以移除子弹
+	canShovel = true;				//是否可以被铲除
 
-    behaviorInterval: number|null = null;		//行为时间间隔
-    remainTime: number|null = null;				//当前剩余时间
+	behaviorInterval: number | null = null;		//行为时间间隔
+	remainTime: number | null = null;				//当前剩余时间
 
-    stateSet = ["idle"];			//状态集合
-    state = this.stateSet[0];		//当前状态
-    stateLengthSet = [12];			//状态时间长度集合
-    stateLength = this.stateLengthSet[0];	//当前状态时间长度
-    tick = 0;						//当前时间戳
+	stateSet = ["idle"];			//状态集合
+	state = this.stateSet[0];		//当前状态
+	stateLengthSet = [12];			//状态时间长度集合
+	stateLength = this.stateLengthSet[0];	//当前状态时间长度
+	tick = 0;						//当前时间戳
 	getDamagedTag = false;
-	get ctx(){
-		return level.Battlefield.Canvas.getContext('2d');
+	get ctx() {
+		return level.Battlefield.ctxBG as CanvasRenderingContext2D;
 	}
-	get parent(){
+	get parent() {
 		return level;
 	}
 	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
@@ -214,7 +222,7 @@ export class Food {
 					break;
 				}
 				case 9: {
-                    this.starAnimOffset = 3;
+					this.starAnimOffset = 3;
 					this.starAnimLength = 8;
 					break;
 				}
@@ -239,30 +247,30 @@ export class Food {
 			}
 			this.starAnim = "../static/images/interface/star/" + this.star + ".png";
 		}
-        level.Battlefield.playPlantAnimation(type, x, y);
+		level.Battlefield.playPlantAnimation(type, x, y);
 	}
 	initialPlant = (x: number, y: number, type: number) => {
-        const currentConstructor = this.constructor as typeof Food;
+		const currentConstructor = this.constructor as typeof Food;
 		this.x = level.column_start + x * level.row_gap + currentConstructor.offset[0];
 		this.y = level.row_start + y * level.column_gap + currentConstructor.offset[1] + (type === 1 ? - 10 : 0);
 	}
 	behavior() {
 		this.tick = (this.tick + 1) % this.stateLength;
 	}
-	CreateUnderlayAnim(width = 72, height = 36){
-        const shadow = GEH.requestDrawImage(Food.SHADOW_IMAGE);
-        if(shadow){
-            const shadowX = (this.column + 0.5) * level.row_gap + level.column_start - width / 2 + 4;
-            const shadowY = (this.row + 1) * level.column_gap + level.row_start - height;
-            this.ctx.drawImage(shadow, shadowX, shadowY, width, height);
-        }
+	CreateUnderlayAnim(width = 72, height = 36) {
+		const shadow = GEH.requestDrawImage(Food.SHADOW_IMAGE);
+		if (shadow) {
+			const shadowX = (this.column + 0.5) * level.row_gap + level.column_start - width / 2 + 4;
+			const shadowY = (this.row + 1) * level.column_gap + level.row_start - height;
+			this.ctx.drawImage(shadow, shadowX, shadowY, width, height);
+		}
 	}
 	CreateOverlayAnim() {
 		if (this.star >= 4) {
-            const star = GEH.requestDrawImage(this.starAnim!);
-            if(star){
-                const {width, height} = star;
-                const x = (this.column + 0.5) * level.row_gap + level.column_start - width / this.starAnimLength / 2 + 4;
+			const star = GEH.requestDrawImage(this.starAnim!);
+			if (star) {
+				const { width, height } = star;
+				const x = (this.column + 0.5) * level.row_gap + level.column_start - width / this.starAnimLength / 2 + 4;
 				const y = (this.row + 1) * level.column_gap + level.row_start - height * 1.5 + (this.type ? -10 : 0) + this.starAnimOffset;
 				this.ctx.drawImage(star,
 					width / this.starAnimLength * this.starAnimTick, 0,
@@ -270,7 +278,7 @@ export class Food {
 					x, y,
 					width / this.starAnimLength, height);
 				this.starAnimTick = (this.starAnimTick + 1) % this.starAnimLength;
-            }
+			}
 		}
 	}
 	ignore(src = "ladder") {
@@ -286,11 +294,11 @@ export class Food {
 		return true;
 	}
 
-	getDamaged(value = 10, origin: Mouse|null = null) {
+	getDamaged(value = 10, origin: Mouse | null = null) {
 		this.health = this.health - value;
 	}
 
-	getCrashDamaged(value = 10, origin:Mouse|null = null) {
+	getCrashDamaged(value = 10, origin: Mouse | null = null) {
 		this.getDamaged(value, origin);
 	}
 
@@ -324,376 +332,396 @@ export class Food {
 				}
 			})
 		}
-    }
+	}
 }
 export class Character extends Food {
-    static name = 'player';
+	static name = 'player';
 	static offset = [-38, -78];
 	width = 129;
-    height = 129;
-    stateLengthSet = [8, 6];
-    stateSet = ['idle', 'attack'];
-    stateLength = this.stateLengthSet[0];
-    canShovel = false;
-    private readonly damage: number = 0;
-    behaviorInterval: number = 0;
-    remainTime: number = 0;
+	height = 129;
+	stateLengthSet = [8, 6];
+	stateSet = ['idle', 'attack'];
+	stateLength = this.stateLengthSet[0];
+	canShovel = false;
+	private readonly damage: number = 0;
+	behaviorInterval: number = 0;
+	remainTime: number = 0;
 	get entity() {
-		return "../static/images/character/"  + this.constructor.name + "/" + this.state + ".png";
+		return "../static/images/character/" + this.constructor.name + "/" + this.state + ".png";
 	}
 
-	get weapon(){
+	get weapon() {
 		return "../static/images/character/weapon/bun/" + this.state + ".png";
 	}
 
 	constructor(x = 0, y = 0, type = 0) {
-        super(x, y, type);
+		super(x, y, type);
 		this.initialPlant(x, y, type);
-        this.damage = 20;
-        this.behaviorInterval = 2000;
-        this.remainTime = this.behaviorInterval;
-    }
+		this.damage = 20;
+		this.behaviorInterval = 2000;
+		this.remainTime = this.behaviorInterval;
+	}
 
-    behavior() {
-        if (this.remainTime <= 0) {
-            if (this.state === this.stateSet[0]) {
-                if (this.attackCheck()) {
-                    this.state = this.stateSet[1];
-                    this.stateLength = this.stateLengthSet[1];
-                    this.tick = 0;
-                }
-            } else if (this.state === this.stateSet[1]) {
-                if (this.tick === 3) {
-                    this.fire();
-                }
-                if (this.tick === this.stateLength - 1) {
-                    this.tick = 0;
-                    this.state = this.stateSet[0];
-                    this.stateLength = this.stateLengthSet[0];
-                    this.remainTime = this.behaviorInterval;
-                }
-            }
-        }
+	behavior() {
+		if (this.remainTime <= 0) {
+			if (this.state === this.stateSet[0]) {
+				if (this.attackCheck()) {
+					this.state = this.stateSet[1];
+					this.stateLength = this.stateLengthSet[1];
+					this.tick = 0;
+				}
+			} else if (this.state === this.stateSet[1]) {
+				if (this.tick === 3) {
+					this.fire();
+				}
+				if (this.tick === this.stateLength - 1) {
+					this.tick = 0;
+					this.state = this.stateSet[0];
+					this.stateLength = this.stateLengthSet[0];
+					this.remainTime = this.behaviorInterval;
+				}
+			}
+		}
 
 		this.tick = (this.tick + 1) % this.stateLength;
-    }
+	}
 
 	CreateOverlayAnim() {
-        const img = GEH.requestDrawImage(this.weapon);
-        if(img){
-            this.ctx.drawImage(img, this.width * this.tick, 0, this.width,
+		const img = GEH.requestDrawImage(this.weapon);
+		if (img) {
+			this.ctx.drawImage(img, this.width * this.tick, 0, this.width,
 				this.height, this.x, this.y, this.width, this.height);
-        }
+		}
 	}
 
 	attackCheck() {
 		return level.Mice[this.row]?.some((mouse: Mouse[]) => mouse != null && mouse.length > 0) ?? false;
 	}
 
-    fire() {
+	fire() {
 		GEH.requestPlayAudio("zidan");
-        this.parent.requestSummonBullet(Bun, this.x + 110, this.y + 110, this.damage, 0);
-    }
+		this.parent.requestSummonBullet(Bun, this.x + 110, this.y + 110, this.damage, 0);
+	}
 
-    remove() {
-        if (!GEH.GameEnd) {
+	remove() {
+		if (!GEH.GameEnd) {
 			if (level) {
 				level.defeat();
 			}
-        }
-        super.remove();
-    }
+		}
+		super.remove();
+	}
 }
 class Stove extends Food {
-    static name = "stove";
-    static cName = "小火炉";
-    static assets = ["idle","produce"];
-    static offset = [9, -58];
-    static category = "辅助型";
-    static cost = 50;
-    static coolTime = 7500;
-    static description = "定时产出额外火苗";
-    static upgrade = "强化后提高[产出速率]";
-    static rarity = 0;
-    static story = "我们当着火炉，不是照亮自己，而是普照世界。";
+	static name = "stove";
+	static get cName(): string {
+		return t("A001_CNAME");
+	}
+	static assets = ["idle", "produce"];
+	static offset = [9, -58];
+	static get category(): string {
+		return t("C000");
+	}
+	static cost = 50;
+	static coolTime = 7500;
+	static description = "定时产出额外火苗";
+	static upgrade = "强化后提高[产出速率]";
+	static rarity = 0;
+	static story = "我们当着火炉，不是照亮自己，而是普照世界。";
 
-    width = 50;
-    height = 112;
-    stateLengthSet = [12, 17];
-    stateSet = ["idle", "produce"];
-    behaviorInterval: number = 0;
-    remainTime: number = 0;
+	width = 50;
+	height = 112;
+	stateLengthSet = [12, 17];
+	stateSet = ["idle", "produce"];
+	behaviorInterval: number = 0;
+	remainTime: number = 0;
 
-    constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
-        super(x, y, type, star, skillLevel);
-        this.initialPlant(x, y, type);
-        this.behaviorInterval = 25000 - star * 1000;
-        this.remainTime = this.behaviorInterval;
-    }
+	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
+		super(x, y, type, star, skillLevel);
+		this.initialPlant(x, y, type);
+		this.behaviorInterval = 25000 - star * 1000;
+		this.remainTime = this.behaviorInterval;
+	}
 
-    behavior() {
-        if (this.remainTime <= 0) {
-            if (this.state === this.stateSet[0]) {
-                this.tick = 0;
-                this.state = this.stateSet[1];
-                this.stateLength = this.stateLengthSet[1];
-            } else if (this.state === this.stateSet[1]
+	behavior() {
+		if (this.remainTime <= 0) {
+			if (this.state === this.stateSet[0]) {
+				this.tick = 0;
+				this.state = this.stateSet[1];
+				this.stateLength = this.stateLengthSet[1];
+			} else if (this.state === this.stateSet[1]
 				&& this.tick === this.stateLength - 1) {
-                this.tick = 0;
-                this.state = this.stateSet[0];
-                this.stateLength = this.stateLengthSet[0];
-                this.remainTime = this.behaviorInterval;
-                this.produce();
-            }
-        }
-        super.behavior();
-    }
+				this.tick = 0;
+				this.state = this.stateSet[0];
+				this.stateLength = this.stateLengthSet[0];
+				this.remainTime = this.behaviorInterval;
+				this.produce();
+			}
+		}
+		super.behavior();
+	}
 
-    produce() {
-        const randomX = this.x + 40 - Math.floor(Math.random() * 12);
-        this.parent.produceSun(randomX, this.y + 90, 25, 1);
-    }
+	produce() {
+		const randomX = this.x + 40 - Math.floor(Math.random() * 12);
+		this.parent.produceSun(randomX, this.y + 90, 25, 1);
+	}
 }
 class BunShooter extends Food {
-    static name = "bunshooter";
-    static cName = "笼包射手";
-    static assets = ["attack","idle"];
-    static offset = [5, -10];
-    static category = "攻击型";
-    static cost = 100;
-    static coolTime = 7500;
-    static description = "发射可以造成伤害的包子";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 1;
-    static story = "笼包一旦接受了自己的软弱，就将是无敌的。";
+	static name = "bunshooter";
+	static get cName(): string {
+		return t("A002_CNAME");
+	}
+	static assets = ["attack", "idle"];
+	static offset = [5, -10];
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 100;
+	static coolTime = 7500;
+	static description = "发射可以造成伤害的包子";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 1;
+	static story = "笼包一旦接受了自己的软弱，就将是无敌的。";
 
-    width = 66;
-    height = 64;
-    stateLengthSet = [12, 6];
-    stateSet = ["idle", "attack"];
-    attackTick = [5];
+	width = 66;
+	height = 64;
+	stateLengthSet = [12, 6];
+	stateSet = ["idle", "attack"];
+	attackTick = [5];
 
-    damage:number = 0;
-    behaviorInterval:number = 0;
-    remainTime:number = 0;
+	damage: number = 0;
+	behaviorInterval: number = 0;
+	remainTime: number = 0;
 
-    constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
-        super(x, y, type, star, skillLevel);
-        this.initialPlant(x, y, type);
-        this.damage = 25 + star * 5;
-        this.behaviorInterval = 2000;
-        this.remainTime = this.behaviorInterval;
-    }
+	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
+		super(x, y, type, star, skillLevel);
+		this.initialPlant(x, y, type);
+		this.damage = 25 + star * 5;
+		this.behaviorInterval = 2000;
+		this.remainTime = this.behaviorInterval;
+	}
 
-    behavior() {
-        if (this.remainTime <= 0) {
-            if (this.state === this.stateSet[0] && this.attackCheck()) {
-                this.state = this.stateSet[1];
-                this.stateLength = this.stateLengthSet[1];
-                this.tick = 0;
-            } else if (this.state === this.stateSet[1]) {
-                if (this.attackTick.includes(this.tick)) {
-                    this.fire();
-                }
-                if (this.tick === this.stateLength - 1) {
-                    this.tick = 0;
-                    this.state = this.stateSet[0];
-                    this.stateLength = this.stateLengthSet[0];
-                    this.remainTime = this.behaviorInterval;
-                }
-            }
-        }
-        super.behavior();
-    }
+	behavior() {
+		if (this.remainTime <= 0) {
+			if (this.state === this.stateSet[0] && this.attackCheck()) {
+				this.state = this.stateSet[1];
+				this.stateLength = this.stateLengthSet[1];
+				this.tick = 0;
+			} else if (this.state === this.stateSet[1]) {
+				if (this.attackTick.includes(this.tick)) {
+					this.fire();
+				}
+				if (this.tick === this.stateLength - 1) {
+					this.tick = 0;
+					this.state = this.stateSet[0];
+					this.stateLength = this.stateLengthSet[0];
+					this.remainTime = this.behaviorInterval;
+				}
+			}
+		}
+		super.behavior();
+	}
 
-    attackCheck() {
-        return (level.Mice[this.row] ?? []).some((mouse: Mouse[]) => mouse && mouse.length > 0);
-    }
+	attackCheck() {
+		return (level.Mice[this.row] ?? []).some((mouse: Mouse[]) => mouse && mouse.length > 0);
+	}
 
-    fire(){
-        GEH.requestPlayAudio("zidan");
-        const randomY = this.y + 24 + Math.floor(Math.random() * 5);
-        this.parent.requestSummonBullet(Bun, this.x + 60, randomY, this.damage, 0);
-    }
+	fire() {
+		GEH.requestPlayAudio("zidan");
+		const randomY = this.y + 24 + Math.floor(Math.random() * 5);
+		this.parent.requestSummonBullet(Bun, this.x + 60, randomY, this.damage, 0);
+	}
 }
 class Toast extends Food {
-    static name = "toast";
-    static cName = "吐司面包";
-    static assets = ["critical_1","critical_2","idle"];
-    static offset = [1, -2];
-    static category = "防守型";
-    static cost = 50;
-    static coolTime = 30000;
-    static description = "阻挡老鼠以保护身后卡片";
-    static upgrade = "强化后提高[生命值]";
-    static story = "吐司面包的体格要显得比其它卡片矮胖不少，难怪它老是把“深度优先”挂在嘴边。";
+	static name = "toast";
+	static get cName(): string {
+		return t("A003_CNAME");
+	}
+	static assets = ["critical_1", "critical_2", "idle"];
+	static offset = [1, -2];
+	static get category(): string {
+		return t("C002");
+	};
+	static cost = 50;
+	static coolTime = 30000;
+	static description = "阻挡老鼠以保护身后卡片";
+	static upgrade = "强化后提高[生命值]";
+	static story = "アンパンマン、優しい君は、行け!みんなの梦守るため。";
 
-    width = 68;
-    height = 58;
-    stateSet = ["idle", "critical_1", "critical_2"];
-    protected fullHealth: number = 0;
+	width = 68;
+	height = 58;
+	stateSet = ["idle", "critical_1", "critical_2"];
+	protected fullHealth: number = 0;
 
-    constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
-        super(x, y, type, star, skillLevel);
-        this.initialPlant(x, y, type);
-        this.health = 3000 + star * 200;
-        this.fullHealth = this.health;
-    }
+	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
+		super(x, y, type, star, skillLevel);
+		this.initialPlant(x, y, type);
+		this.health = 3000 + star * 200;
+		this.fullHealth = this.health;
+	}
 
-    CreateOverlayAnim() {
-        if (this.ignored) {
-            const { column_gap, row_gap, column_start, row_start } = level;
-            const { column, row } = this;
-            const x = column * column_gap + column_start + 32;
-            const y = row * row_gap + row_start - 8;
-            const img = GEH.requestDrawImage(this.ladder!);
-            if(img){
-                this.ctx.drawImage(img, x, y);
-            }
-        }
-        super.CreateOverlayAnim();
-    }
+	CreateOverlayAnim() {
+		if (this.ignored) {
+			const { column_gap, row_gap, column_start, row_start } = level;
+			const { column, row } = this;
+			const x = column * column_gap + column_start + 32;
+			const y = row * row_gap + row_start - 8;
+			const img = GEH.requestDrawImage(this.ladder!);
+			if (img) {
+				this.ctx.drawImage(img, x, y);
+			}
+		}
+		super.CreateOverlayAnim();
+	}
 
-    getDamaged(value = 10, origin: Mouse|null = null) {
-        super.getDamaged(value);
-        const { fullHealth } = this;
-        if (this.health <= fullHealth / 3) {
-            this.state = "critical_2";
-        } else if (this.health <= fullHealth * 2 / 3) {
-            this.state = "critical_1";
-        }
-    }
+	getDamaged(value = 10, origin: Mouse | null = null) {
+		super.getDamaged(value);
+		const { fullHealth } = this;
+		if (this.health <= fullHealth / 3) {
+			this.state = "critical_2";
+		} else if (this.health <= fullHealth * 2 / 3) {
+			this.state = "critical_1";
+		}
+	}
 }
 class FlourSack extends Food {
-    static name = "floursack";
-    static cName = "面粉袋";
-    static assets = ["attack_l","attack_r","idle"];
-    static offset = [-15, -70];
-    static category = "进攻型";
-    static cost = 50;
-    static coolTime = 30000;
-    static description = "碾压老鼠，造成伤害后消失";
-    static upgrade = "强化后缩短[冷却时间]";
-    static rarity = 0;
-    static story = "惹恼了它等着你的只有“天降正义”——不过呢，就算是“正义”，偶尔也得打个瞌睡。";
-    static storyContributor = "@Weirdo.";
-    static idleLength = 9;
-    damage = 1800;
-    width = 95;
-    height = 141;
-    stateLength = 9;
-    left: number = 0;
-    positionX: number = 0;
-    positionY: number = 0;
-    tag:number = 0;
-    target:Mouse|undefined;
+	static name = "floursack";
+	static get cName(): string {
+		return t("A004_CNAME");
+	}
+	static assets = ["attack_l", "attack_r", "idle"];
+	static offset = [-15, -70];
+	static get category(): string {
+		return t("C001");
+	}
+	static cost = 50;
+	static coolTime = 30000;
+	static description = "碾压老鼠，造成伤害后消失";
+	static upgrade = "强化后缩短[冷却时间]";
+	static rarity = 0;
+	static story = "惹恼了它等着你的只有“天降正义”——不过呢，就算是“正义”，偶尔也得打个瞌睡。";
+	static storyContributor = "@Weirdo.";
+	static idleLength = 9;
+	damage = 1800;
+	width = 95;
+	height = 141;
+	stateLength = 9;
+	left: number = 0;
+	positionX: number = 0;
+	positionY: number = 0;
+	tag: number = 0;
+	target: Mouse | undefined;
 
-    constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
-        super(x, y, type, star, skillLevel);
-        this.initialPlant(x, y, type);
-    }
+	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
+		super(x, y, type, star, skillLevel);
+		this.initialPlant(x, y, type);
+	}
 
-    CreateUnderlayAnim(width = 72, height = 36) {
-        const param = 2;
-        const { column_gap, row_start } = level;
-        const { x, row } = this;
+	CreateUnderlayAnim(width = 72, height = 36) {
+		const param = 2;
+		const { column_gap, row_start } = level;
+		const { x, row } = this;
 
-        const img = GEH.requestDrawImage(Food.SHADOW_IMAGE);
-        if(img){
-            let modifiedWidth = width;
-            let modifiedHeight = height;
-            if (this.state === "attack_r" || this.state === "attack_r") {
-                if (this.tick >= 3 && this.tick <= 5) {
-                    modifiedWidth = width - (this.tick - 2) * 2 * param;
-                    modifiedHeight = height - (this.tick - 2) * param;
-                } else if (this.tick === 6) {
-                    modifiedWidth = width - 3 * 2 * param;
-                    modifiedHeight = height - 3 * param;
-                } else if (this.tick >= 7 && this.tick <= 9) {
-                    modifiedWidth = width - (10 - this.tick) * 2 * param;
-                    modifiedHeight = height - (10 - this.tick) * param;
-                }
-            }
-            this.ctx.drawImage(img, x + this.width / 2 - modifiedWidth / 2 - 3, (row + 1) * column_gap + row_start - modifiedHeight, modifiedWidth, modifiedHeight);
-        }
-    }
+		const img = GEH.requestDrawImage(Food.SHADOW_IMAGE);
+		if (img) {
+			let modifiedWidth = width;
+			let modifiedHeight = height;
+			if (this.state === "attack_r" || this.state === "attack_r") {
+				if (this.tick >= 3 && this.tick <= 5) {
+					modifiedWidth = width - (this.tick - 2) * 2 * param;
+					modifiedHeight = height - (this.tick - 2) * param;
+				} else if (this.tick === 6) {
+					modifiedWidth = width - 3 * 2 * param;
+					modifiedHeight = height - 3 * param;
+				} else if (this.tick >= 7 && this.tick <= 9) {
+					modifiedWidth = width - (10 - this.tick) * 2 * param;
+					modifiedHeight = height - (10 - this.tick) * param;
+				}
+			}
+			this.ctx.drawImage(img, x + this.width / 2 - modifiedWidth / 2 - 3, (row + 1) * column_gap + row_start - modifiedHeight, modifiedWidth, modifiedHeight);
+		}
+	}
 
-    attackCheck() {
-        const { Mice } = level;
-        const { row, column } = this;
+	attackCheck() {
+		const { Mice } = level;
+		const { row, column } = this;
 
-        for (let i = column - 1; i <= column + 1; i++) {
-            if (Mice[row][i]?.length > 0) {
-                for (let j = 0; j < Mice[row][i].length; j++) {
-                    const mouse = Mice[row][i][j] as Mouse;
-                    if (mouse.attackable && !mouse.fly) {
-                        return this.target = mouse;
-                    }
-                }
-            }
-        }
-        return false;
-    }
+		for (let i = column - 1; i <= column + 1; i++) {
+			if (Mice[row][i]?.length > 0) {
+				for (let j = 0; j < Mice[row][i].length; j++) {
+					const mouse = Mice[row][i][j] as Mouse;
+					if (mouse.attackable && !mouse.fly) {
+						return this.target = mouse;
+					}
+				}
+			}
+		}
+		return false;
+	}
 
-    attack() {
-        const { Mice } = level;
-        const { positionX, positionY, tag } = this;
-        const { damage } = this;
+	attack() {
+		const { Mice } = level;
+		const { positionX, positionY, tag } = this;
+		const { damage } = this;
 
-        GEH.requestPlayAudio("yadao");
+		GEH.requestPlayAudio("yadao");
 
-        for (let i = positionX + tag - 1; i <= positionX + tag + 1; i++) {
-            if (Mice[positionY][i]?.length > 0) {
-                for (let j = 0; j < Mice[positionY][i].length; j++) {
-                    const mouse = Mice[positionY][i][j];
-                    if (mouse.attackable
-                        && !mouse.fly
-                        && Math.abs(positionX + 0.5 + tag - mouse.positionX) <= 0.72) {
-                        mouse.getDamaged(damage);
-                    }
-                }
-            }
-        }
-    }
+		for (let i = positionX + tag - 1; i <= positionX + tag + 1; i++) {
+			if (Mice[positionY][i]?.length > 0) {
+				for (let j = 0; j < Mice[positionY][i].length; j++) {
+					const mouse = Mice[positionY][i][j];
+					if (mouse.attackable
+						&& !mouse.fly
+						&& Math.abs(positionX + 0.5 + tag - mouse.positionX) <= 0.72) {
+						mouse.getDamaged(damage);
+					}
+				}
+			}
+		}
+	}
 
-    behavior() {
-        if (this.target) {
-            if (this.tick >= 3 && this.tick <= 9) {
-                this.attackable = false;
-                this.x += (60 / 7) * this.tag;
-            } else if (this.tick === 12) {
-                this.attack();
-            } else if (this.tick === this.stateLength - 1) {
-                this.remove();
-            }
-    	}
-        else {
-            if (this.attackCheck() && this.target) {
-                const target = this.target as Mouse;
-                GEH.requestPlayAudio("en");
-                this.positionY = this.row;
-                this.positionX = this.column;
-                this.tick = 0;
-                this.state = target.column >= this.column ? "attack_r" : "attack_l";
-                this.stateLength = 18;
-                this.tag = Math.max(-1, Math.min(1, target.column - this.column));
-            }
-        }
-        super.behavior();
+	behavior() {
+		if (this.target) {
+			if (this.tick >= 3 && this.tick <= 9) {
+				this.attackable = false;
+				this.x += (60 / 7) * this.tag;
+			} else if (this.tick === 12) {
+				this.attack();
+			} else if (this.tick === this.stateLength - 1) {
+				this.remove();
+			}
+		}
+		else {
+			if (this.attackCheck() && this.target) {
+				const target = this.target as Mouse;
+				GEH.requestPlayAudio("en");
+				this.positionY = this.row;
+				this.positionX = this.column;
+				this.tick = 0;
+				this.state = target.column >= this.column ? "attack_r" : "attack_l";
+				this.stateLength = 18;
+				this.tag = Math.max(-1, Math.min(1, target.column - this.column));
+			}
+		}
+		super.behavior();
 	}
 }
 class SnowBunShooter extends BunShooter {
 	static name = "snowbunshooter";
-	static cName = "冰冻笼包射手";
+	static get cName(): string {
+		return t("A005_CNAME");
+	}
 	static offset = [5, -13];
-    static category = "攻击型";
-    static cost = 150;
-    static coolTime = 7500;
-    static description = "发射可以造成伤害并减速的包子";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 1;
-    static story = "似乎是在冰箱里冻住的小笼包，就是不知道这种包子能不能吃。据说以前有人非常喜欢它。";
-    static storyContributor = "@永远爱冰包";
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 150;
+	static coolTime = 7500;
+	static description = "发射可以造成伤害并减速的包子";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 1;
+	static story = "似乎是在冰箱里冻住的小笼包，就是不知道这种包子能不能吃。据说以前有人非常喜欢它。";
+	static storyContributor = "@永远爱冰包";
 	width = 68;
 	height = 68;
 
@@ -705,37 +733,41 @@ class SnowBunShooter extends BunShooter {
 
 	fire() {
 		GEH.requestPlayAudio("zidan");
-        this.parent.requestSummonBullet(FreezingBun, this.x + 60, this.y + 24 + Math.floor(Math.random() * 5), this.damage, 0);
+		this.parent.requestSummonBullet(FreezingBun, this.x + 60, this.y + 24 + Math.floor(Math.random() * 5), this.damage, 0);
 	}
 }
 class RatClip extends Food {
 	static name = "ratclip";
-	static cName = "鼠夹地雷";
-    static assets = ["explode","getready","idle","ready"];
-    static generate(x: number, y: number, star:number, skillLevel:number) {
-        const food = level.Foods[y * level.column_num + x];
+	static get cName(): string {
+		return t("A006_CNAME");
+	}
+	static assets = ["explode", "getready", "idle", "ready"];
+	static generate(x: number, y: number, star: number, skillLevel: number) {
+		const food = level.Foods[y * level.column_num + x];
 
-        if (food.noPlace || (!food.water && !food.layer_1)) {
-            food.layer_1 = new this(x, y, 0, star, skillLevel);
-            return true;
-        }
+		if (food.noPlace || (!food.water && !food.layer_1)) {
+			food.layer_1 = new this(x, y, 0, star, skillLevel);
+			return true;
+		}
 
-        return false;
-    };
+		return false;
+	};
 	static offset = [-51, -68];
-    static category = "攻击型";
-    static cost = 25;
-    static coolTime = 30000;
-    static description = "需要时间就绪才能引爆的接触型炸弹";
-    static upgrade = "强化后减少[就绪耗时]";
-    static idleLength = 8;
-    static story = "这是个嗜睡的鼠夹——要不是在地底下呆久了需要透透气，可能就再也不露头了。";
-    static storyContributor = "@零殇";
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 25;
+	static coolTime = 30000;
+	static description = "需要时间就绪才能引爆的接触型炸弹";
+	static upgrade = "强化后减少[就绪耗时]";
+	static idleLength = 8;
+	static story = "这是个嗜睡的鼠夹——要不是在地底下呆久了需要透透气，可能就再也不露头了。";
+	static storyContributor = "@零殇";
 	damage = 1800;
 	width = 180;
 	height = 180;
 	stateLength = 8;
-    remainTime: number = 0;
+	remainTime: number = 0;
 	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
 		super(x, y, type, star, skillLevel);
 		this.initialPlant(x, y, type);
@@ -755,7 +787,7 @@ class RatClip extends Food {
 					this.stateLength = 8;
 					this.state = "ready";
 				}
-				this.getDamaged = ((value, origin)=> {
+				this.getDamaged = ((value, origin) => {
 					this.attackable = false;
 					this.tick = 0;
 					this.state = "explode";
@@ -783,16 +815,20 @@ class RatClip extends Food {
 }
 class SaladPult extends BunShooter {
 	static name = "saladpult";
-	static cName = "番茄沙拉投手";
+	static get cName(): string {
+		return t("A007_CNAME");
+	}
 	static offset = [-1, -18];
-    static category = "攻击型";
-    static cost = 100;
-    static coolTime = 7500;
-    static description = "投掷在两个目标间弹跳并造成伤害的番茄";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 1;
-    static story = "时至今日，番茄沙拉投手仍会想起和向日葵、苹果和茄子在一起的曼妙时光。";
-    static storyContributor = "@蓝色的黑钻";
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 100;
+	static coolTime = 7500;
+	static description = "投掷在两个目标间弹跳并造成伤害的番茄";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 1;
+	static story = "时至今日，番茄沙拉投手仍会想起和向日葵、苹果和茄子在一起的曼妙时光。";
+	static storyContributor = "@蓝色的黑钻";
 	width = 68;
 	height = 72;
 	stateLengthSet = [12, 10];
@@ -808,22 +844,26 @@ class SaladPult extends BunShooter {
 
 	fire() {
 		GEH.requestPlayAudio("touzhi");
-        this.parent.requestSummonBullet(Missile, this.x + 48, this.y + 12, this.damage, 1, this.row);
+		this.parent.requestSummonBullet(Missile, this.x + 48, this.y + 12, this.damage, 1, this.row);
 	}
 }
 class Pudding extends Food {
 	static name = "pudding";
-	static cName = "樱桃反弹布丁";
+	static get cName(): string {
+		return t("A008_CNAME");
+	}
 	static offset = [5, -28];
-    static category = "辅助型";
-    static cost = 100;
-    static coolTime = 7500;
-    static description = "使接触到的直线子弹反转";
-    static upgrade = "强化后提高[生命值]";
-    static rarity = 2;
-    static idleLength = 9;
-    static story = "“打在身上不痛不痒的，就像是在做按摩。”樱桃反弹布丁擅长反弹一切。无论是子弹、炸弹，还是邮箱里恶毒的言论——没有什么是反弹不了的。";
-    static storyContributor = "@悖论引擎";
+	static get category(): string {
+		return t("C000");
+	}
+	static cost = 100;
+	static coolTime = 7500;
+	static description = "使接触到的直线子弹反转";
+	static upgrade = "强化后提高[生命值]";
+	static rarity = 2;
+	static idleLength = 9;
+	static story = "“打在身上不痛不痒的，就像是在做按摩。”樱桃反弹布丁擅长反弹一切。无论是子弹、炸弹，还是邮箱里恶毒的言论——没有什么是反弹不了的。";
+	static storyContributor = "@悖论引擎";
 
 	canReverseBoost = true;
 	width = 54;
@@ -838,15 +878,19 @@ class Pudding extends Food {
 }
 class Brazier extends Food {
 	static name = "brazier";
-	static cName = "火盆";
+	static get cName(): string {
+		return t("A009_CNAME");
+	}
 	static offset = [4, -4];
-    static category = "辅助型";
-    static description = "引燃接触到的直线子弹";
-    static upgrade = "强化后提高[伤害倍率]";
-    static rarity = 1;
-    static story = "火盆的存在不只是为了引燃子弹，就像是火焰的存在不只是为了消融冰雪。它愿燃烧在每一个冬夜。";
-    static storyContributor = "@GrassCarp_草鱼";
-    static idleLength = 11;
+	static get category(): string {
+		return t("C000");
+	}
+	static description = "引燃接触到的直线子弹";
+	static upgrade = "强化后提高[伤害倍率]";
+	static rarity = 1;
+	static story = "火盆的存在不只是为了引燃子弹，就像是火焰的存在不只是为了消融冰雪。它愿燃烧在每一个冬夜。";
+	static storyContributor = "@GrassCarp_草鱼";
+	static idleLength = 11;
 	canFireBoost = true;
 	width = 60;
 	height = 59;
@@ -861,10 +905,10 @@ class Brazier extends Food {
 				for (let j = -1; j <= 1; j++) {
 					if (this.column + j >= 0 && this.column + j < (level.column_num + 1)) {
 						let DEG = 2;
-						if(i === -1 || i === 1){
+						if (i === -1 || i === 1) {
 							DEG--;
 						}
-						if(j === -1 || j === 1){
+						if (j === -1 || j === 1) {
 							DEG--;
 						}
 						level.lightDEGChange((this.row + i) * (level.column_num + 1) + (this.column + j), DEG);
@@ -880,10 +924,10 @@ class Brazier extends Food {
 				for (let j = -1; j <= 1; j++) {
 					if (this.column + j >= 0 && this.column + j < (level.column_num + 1)) {
 						let DEG = 2;
-						if(i === -1 || i === 1){
+						if (i === -1 || i === 1) {
 							DEG--;
 						}
-						if(j === -1 || j === 1){
+						if (j === -1 || j === 1) {
 							DEG--;
 						}
 						level.lightDEGChange((this.row + i) * (level.column_num + 1) + (this.column + j), - DEG);
@@ -896,39 +940,43 @@ class Brazier extends Food {
 }
 class WatermelonRind extends Toast {
 	static name = "watermelonrind";
-	static cName = "瓜皮护罩";
-    static generate(x: number, y: number, star: number, skillLevel: number){
-        const food = level.Foods[y * level.column_num + x];
-        if (food.noPlace || (food.water && !food.layer_2) || food.layer_0) {
-            return false;
-        }
+	static get cName(): string {
+		return t("A010_CNAME");
+	}
+	static generate(x: number, y: number, star: number, skillLevel: number) {
+		const food = level.Foods[y * level.column_num + x];
+		if (food.noPlace || (food.water && !food.layer_2) || food.layer_0) {
+			return false;
+		}
 
-        if (food.water) {
-            food.layer_0 = new this(x, y, 1, star, skillLevel);
-        } else {
-            food.layer_0 = new this(x, y, 0, star, skillLevel);
-        }
+		if (food.water) {
+			food.layer_0 = new this(x, y, 1, star, skillLevel);
+		} else {
+			food.layer_0 = new this(x, y, 0, star, skillLevel);
+		}
 
-        return true;
-    }
-	static assets = ["critical_1","critical_1_inside","critical_2","critical_2_inside","idle","idle_inside"];
+		return true;
+	}
+	static assets = ["critical_1", "critical_1_inside", "critical_2", "critical_2_inside", "idle", "idle_inside"];
 	static offset = [0, 18];
-    static category = "防守型";
-    static cost = 125;
-    static coolTime = 30000;
-    static description = "阻挡老鼠以保护内部卡片";
-    static upgrade = "强化后提高[生命值]";
-    static rarity = 2;
-    static story = "“这瓜皮，硬到掉牙了。”<br>——“是你牙口不好吧，大鼠！”";
-    static storyContributor = "@空白";
-    static idleLength = 10;
-    static inside = true;
+	static get category(): string {
+		return t("C002");
+	};
+	static cost = 125;
+	static coolTime = 30000;
+	static description = "阻挡老鼠以保护内部卡片";
+	static upgrade = "强化后提高[生命值]";
+	static rarity = 2;
+	static story = "“这瓜皮，硬到掉牙了。”<br>——“是你牙口不好吧，大鼠！”";
+	static storyContributor = "@空白";
+	static idleLength = 10;
+	static inside = true;
 
 	width = 66;
 	height = 38;
 	stateLength = 10;
-    fullHealth: number = 0;
-	get inside(){
+	fullHealth: number = 0;
+	get inside() {
 		return "../static/images/foods/" + this.constructor.name + "/" + this.state + "_inside.png";
 	}
 
@@ -945,39 +993,43 @@ class WatermelonRind extends Toast {
 }
 export class Plate extends Food {
 	static name = "plate";
-	static cName = "木盘子";
+	static get cName(): string {
+		return t("A011_CNAME");
+	}
 	static offset = [4, 26];
-    static category = "辅助型";
-    static cost = 25;
-    static description = "在水中承载卡片";
-    static upgrade = "强化后缩短[冷却时间]";
-    static rarity = 0;
-    static special = "只能放置在水中";
-    static story = "木盘子算美食吗？不算。但这并不妨碍它无休止地抱怨，“我不喜欢那些炉子啊，蒸笼啊什么的压在我身上——它们都太重了！”";
-    static storyContributor = "@Jk.blue";
-    static type = 2;
-    static idleLength = 8;
+	static get category(): string {
+		return t("C000");
+	}
+	static cost = 25;
+	static description = "在水中承载卡片";
+	static upgrade = "强化后缩短[冷却时间]";
+	static rarity = 0;
+	static special = "只能放置在水中";
+	static story = "木盘子算美食吗？不算。但这并不妨碍它无休止地抱怨，“我不喜欢那些炉子啊，蒸笼啊什么的压在我身上——它们都太重了！”";
+	static storyContributor = "@Jk.blue";
+	static type = 2;
+	static idleLength = 8;
 
-    static generate(x: number, y: number, star: number, skillLevel: number) {
-        if (level.Foods[y * level.column_num + x] == null) {
-            return false;
-        } else if (level.Foods[y * level.column_num + x].noPlace) {
-            return false;
-        } else if (level.Foods[y * level.column_num + x].water) {
-            if (level.Foods[y * level.column_num + x].layer_2 == null) {
-                if (level.Foods[y * level.column_num + x].layer_0 == null && level.Foods[y * level.column_num + x].layer_1 == null) {
-                    level.Foods[y * level.column_num + x].layer_2 = new this(x, y, 1, star, skillLevel);
-                    return true;
-                } else {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        } else {
-            return false;
-        }
-    }
+	static generate(x: number, y: number, star: number, skillLevel: number) {
+		if (level.Foods[y * level.column_num + x] == null) {
+			return false;
+		} else if (level.Foods[y * level.column_num + x].noPlace) {
+			return false;
+		} else if (level.Foods[y * level.column_num + x].water) {
+			if (level.Foods[y * level.column_num + x].layer_2 == null) {
+				if (level.Foods[y * level.column_num + x].layer_0 == null && level.Foods[y * level.column_num + x].layer_1 == null) {
+					level.Foods[y * level.column_num + x].layer_2 = new this(x, y, 1, star, skillLevel);
+					return true;
+				} else {
+					return false;
+				}
+			} else {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
 
 	width = 60;
 	height = 43;
@@ -992,9 +1044,9 @@ export class Plate extends Food {
 
 	CreateOverlayAnim() {
 		if (this.star >= 4) {
-            const img = GEH.requestDrawImage(this.starAnim!);
-            if(img){
-                const x = (this.column + 0.5) * level.row_gap + level.column_start - img.width / this.starAnimLength / 2 + 4;
+			const img = GEH.requestDrawImage(this.starAnim!);
+			if (img) {
+				const x = (this.column + 0.5) * level.row_gap + level.column_start - img.width / this.starAnimLength / 2 + 4;
 				const y = (this.row + 1) * level.column_gap + level.row_start - img.height * 1.5 + (this.type ? 10 : 10) + this.starAnimOffset;
 				this.ctx.drawImage(img,
 					img.width / this.starAnimLength * this.starAnimTick, 0,
@@ -1003,19 +1055,19 @@ export class Plate extends Food {
 					img.width / this.starAnimLength, img.height);
 
 				this.starAnimTick = (this.starAnimTick + 1) % this.starAnimLength;
-            }
+			}
 		}
 	}
 
 	behavior() {
-        const ripple = GEH.requestDrawImage(this.ripple);
-        if(ripple){
-            this.ctx.drawImage(ripple, 72 * this.rippleTick, 0, 72, 39,
+		const ripple = GEH.requestDrawImage(this.ripple);
+		if (ripple) {
+			this.ctx.drawImage(ripple, 72 * this.rippleTick, 0, 72, 39,
 				this.column * level.row_gap + level.column_start - (this.width / 2 - level.row_gap / 2) - 6,
 				this.row * level.column_gap + level.row_start - this.height / 2 + 48, 72, 39);
 			this.rippleTick = (this.rippleTick + 1) % 4;
-        }
-        super.behavior();
+		}
+		super.behavior();
 	}
 
 	remove() {
@@ -1024,16 +1076,20 @@ export class Plate extends Food {
 }
 class WaterPipe extends BunShooter {
 	static name = "waterpipe";
-	static cName = "双向水管";
+	static get cName(): string {
+		return t("A012_CNAME");
+	}
 	static offset = [1, -20];
-    static category = "攻击型";
-    static cost = 125;
-    static coolTime = 7500;
-    static description = "向前后两个方向发射重金属液体";
-    static ability = "双向直线攻击";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 1;
-    static story = "可爱的布丁小姐最好的伙伴之一，即使昔日荣光不再也有不少人喜欢它。";
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 125;
+	static coolTime = 7500;
+	static description = "向前后两个方向发射重金属液体";
+	static ability = "双向直线攻击";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 1;
+	static story = "可爱的布丁小姐最好的伙伴之一，即使昔日荣光不再也有不少人喜欢它。";
 
 	width = 63;
 	height = 74;
@@ -1047,34 +1103,38 @@ class WaterPipe extends BunShooter {
 	}
 
 	CreateUnderlayAnim(width = 54, height = 27) {
-        super.CreateUnderlayAnim(width, height);
+		super.CreateUnderlayAnim(width, height);
 	}
 
 	fire() {
 		GEH.requestPlayAudio("zidan");
 		switch (this.tick) {
 			case this.attackTick[0]:
-				this.parent.requestSummonBullet(WaterBullet, this.x + 60, this.y + 32 + Math.floor(Math.random() * 5) , this.damage, 0);
+				this.parent.requestSummonBullet(WaterBullet, this.x + 60, this.y + 32 + Math.floor(Math.random() * 5), this.damage, 0);
 				this.parent.requestSummonBullet(WaterBullet, this.x + 15, this.y + 34 + Math.floor(Math.random() * 5), this.damage, 180);
 				break;
 			case this.attackTick[1]:
 				this.parent.requestSummonBullet(WaterBullet, this.x + 15, this.y + 34 + Math.floor(Math.random() * 5), this.damage, 180);
 				break;
 		}
-    }
+	}
 }
 class DoubleBunShooter extends BunShooter {
 	static name = "doublebunshooter";
-	static cName = "双层笼包射手";
+	static get cName(): string {
+		return t("A013_CNAME");
+	}
 	static offset = [5, -14];
-    static category = "攻击型";
-    static cost = 200;
-    static coolTime = 7500;
-    static description = "发射双发包子";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 1;
-    static ability = "直线攻击";
-    static story = "I have a bun, I have a BunShooter. (Eh~) Duo-BunShooter!";
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 200;
+	static coolTime = 7500;
+	static description = "发射双发包子";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 1;
+	static ability = "直线攻击";
+	static story = "I have a bun, I have a BunShooter. (Eh~) Duo-BunShooter!";
 
 	width = 66;
 	height = 68;
@@ -1089,46 +1149,48 @@ class DoubleBunShooter extends BunShooter {
 
 	fire() {
 		GEH.requestPlayAudio("zidan");
-        this.parent.requestSummonBullet(Bun, this.x + 60, this.y + 26 + Math.floor(Math.random() * 5) , this.damage, 0);
-    }
+		this.parent.requestSummonBullet(Bun, this.x + 60, this.y + 26 + Math.floor(Math.random() * 5), this.damage, 0);
+	}
 }
 class HugeStove extends Stove {
 	static name = "hugestove";
-	static cName = "大火炉";
-    static cost = 150;
-    static coolTime = 50000;
-    static description = "定时产出额外火苗";
-    static addCost = true;
-    static special = "需要放置在小火炉上";
-    static upgrade = "强化后提高[产出速率]";
-    static rarity = 3;
-    static story = "一支极大的火炉。当你担忧被它烧着，而从它旁边走过去的时候，连眼睛也难以睁开。";
-    static cover = [Stove];
-    static generate(x: number, y: number, star: number, skillLevel: number) {
-        const food = level.Foods[y * level.column_num + x];
+	static get cName(): string {
+		return t("A014_CNAME");
+	}
+	static cost = 150;
+	static coolTime = 50000;
+	static description = "定时产出额外火苗";
+	static addCost = true;
+	static special = "需要放置在小火炉上";
+	static upgrade = "强化后提高[产出速率]";
+	static rarity = 3;
+	static story = "一支极大的火炉。当你担忧被它烧着，而从它旁边走过去的时候，连眼睛也难以睁开。";
+	static cover = [Stove];
+	static generate(x: number, y: number, star: number, skillLevel: number) {
+		const food = level.Foods[y * level.column_num + x];
 
-        if (!food) {
-            return false;
-        }
+		if (!food) {
+			return false;
+		}
 
-        if (this.cover.includes(food.layer_1?.constructor)) {
-            let state = 0;
-            if (food.layer_1.state === 'sleep') {
-                state = 2;
-            }
-            food.layer_1 = new this(x, y, food.water ? 1 : 0, star, skillLevel);
-            food.layer_1.state = food.layer_1.stateSet[state];
-            food.layer_1.stateLength = food.layer_1.stateLengthSet[state];
-            return true;
-        }
+		if (this.cover.includes(food.layer_1?.constructor)) {
+			let state = 0;
+			if (food.layer_1.state === 'sleep') {
+				state = 2;
+			}
+			food.layer_1 = new this(x, y, food.water ? 1 : 0, star, skillLevel);
+			food.layer_1.state = food.layer_1.stateSet[state];
+			food.layer_1.stateLength = food.layer_1.stateLengthSet[state];
+			return true;
+		}
 
-        if (this.cover.includes(food.layer_2?.constructor)) {
-            food.layer_1 = new this(x, y, 1, star, skillLevel);
-            return true;
-        }
+		if (this.cover.includes(food.layer_2?.constructor)) {
+			food.layer_1 = new this(x, y, 1, star, skillLevel);
+			return true;
+		}
 
-        return false;
-    };
+		return false;
+	};
 	static offset = [2, -54];
 	width = 62;
 	height = 108;
@@ -1140,7 +1202,7 @@ class HugeStove extends Stove {
 		this.addCost(50);
 	}
 
-	produce(){
+	produce() {
 		level.produceSun((this.x + 40 - Math.floor(Math.random() * 12)), this.y + 90, 25, 1);
 		level.produceSun((this.x + 28 - Math.floor(Math.random() * 12)), this.y + 90, 25, 1);
 	}
@@ -1152,15 +1214,19 @@ class HugeStove extends Stove {
 }
 class WineGlass extends Food {
 	static name = "wineglass";
-	static cName = "酒杯灯";
-    static cost = 25;
-    static category = "辅助型";
-    static description = "定时产出额外火苗";
-    static special = "日间需要休眠";
-    static upgrade = "强化后提高[产出速率]";
-    static rarity = 0;
-    static story = "予人星火者，必心怀火炉。";
-	static assets = ["grow","idle","idle_grown","produce","produce_grown","sleep"];
+	static get cName(): string {
+		return t("A015_CNAME");
+	}
+	static cost = 25;
+	static get category(): string {
+		return t("C000");
+	}
+	static description = "定时产出额外火苗";
+	static special = "日间需要休眠";
+	static upgrade = "强化后提高[产出速率]";
+	static rarity = 0;
+	static story = "予人星火者，必心怀火炉。";
+	static assets = ["grow", "idle", "idle_grown", "produce", "produce_grown", "sleep"];
 	static offset = [13, -56];
 
 	get entity() {
@@ -1175,8 +1241,8 @@ class WineGlass extends Food {
 	growTime = 4;
 	sleepAnim = "../static/images/sleep.png";
 	sleepAnimTick = 0;
-    readonly behaviorInterval: number = 0;
-    remainTime: number = 0;
+	readonly behaviorInterval: number = 0;
+	remainTime: number = 0;
 	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
 		super(x, y, type, star, skillLevel);
 		this.initialPlant(x, y, type);
@@ -1188,7 +1254,7 @@ class WineGlass extends Food {
 	}
 
 	CreateUnderlayAnim(width = 54, height = 27) {
-        super.CreateUnderlayAnim(width, height);
+		super.CreateUnderlayAnim(width, height);
 	}
 
 	behavior() {
@@ -1229,22 +1295,22 @@ class WineGlass extends Food {
 
 		this.tick = (this.tick + 1) % this.stateLength;
 
-		if(this.state === this.stateSet[3]){
-            const sleep = GEH.requestDrawImage(this.sleepAnim);
-            if(sleep){
-                this.ctx.drawImage(sleep, 28 * this.sleepAnimTick, 0, 28, 66,
+		if (this.state === this.stateSet[3]) {
+			const sleep = GEH.requestDrawImage(this.sleepAnim);
+			if (sleep) {
+				this.ctx.drawImage(sleep, 28 * this.sleepAnimTick, 0, 28, 66,
 					this.x + 18, this.y + 12, 28, 66);
 				this.sleepAnimTick = (this.sleepAnimTick + 1) % 10;
-            }
+			}
 		}
 	}
 
 	wakeUp() {
 		if (this.state === this.stateSet[3]) {
 			this.state = "idle";
-            return true;
+			return true;
 		}
-        return false;
+		return false;
 	}
 
 	produce() {
@@ -1258,15 +1324,17 @@ class WineGlass extends Food {
 }
 class CoffeeCup extends BunShooter {
 	static name = "coffeecup";
-	static cName = "咖啡杯";
-	static assets = ["attack","idle","sleep"];
-    static cost = 0;
-    static description = "发射射程有限的咖啡泡";
-    static special = "日间需要休眠";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 0;
-    static story = "我永恒的灵魂，注视着你的心。纵使黑夜孤寂，白昼如焚。";
-    static type = 1;
+	static get cName(): string {
+		return t("A016_CNAME");
+	}
+	static assets = ["attack", "idle", "sleep"];
+	static cost = 0;
+	static description = "发射射程有限的咖啡泡";
+	static special = "日间需要休眠";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 0;
+	static story = "我永恒的灵魂，注视着你的心。纵然黑夜孤寂，白昼如焚。";
+	static type = 1;
 	static offset = [5, 12];
 	width = 60;
 	height = 42;
@@ -1286,13 +1354,13 @@ class CoffeeCup extends BunShooter {
 
 	CreateOverlayAnim() {
 		super.CreateOverlayAnim();
-		if(this.state === this.stateSet[2]){
-            const sleep = GEH.requestDrawImage(this.sleepAnim);
-            if(sleep){
-                this.ctx.drawImage(sleep, 28 * this.sleepAnimTick, 0,
+		if (this.state === this.stateSet[2]) {
+			const sleep = GEH.requestDrawImage(this.sleepAnim);
+			if (sleep) {
+				this.ctx.drawImage(sleep, 28 * this.sleepAnimTick, 0,
 					28, 66, this.x + 30, this.y - 30, 28, 66);
 				this.sleepAnimTick = (this.sleepAnimTick + 1) % 10;
-            }
+			}
 		}
 	}
 	behavior() {
@@ -1305,9 +1373,9 @@ class CoffeeCup extends BunShooter {
 	wakeUp() {
 		if (this.state === this.stateSet[2]) {
 			this.state = "idle";
-            return true;
+			return true;
 		}
-        return false;
+		return false;
 	}
 
 	attackCheck() {
@@ -1323,14 +1391,17 @@ class CoffeeCup extends BunShooter {
 
 	fire() {
 		GEH.requestPlayAudio("zidan");
-        this.parent.requestSummonBullet(CoffeeBubble, this.x + 48, this.y + 20 + Math.floor(Math.random() * 5), this.damage, 0);
+		this.parent.requestSummonBullet(CoffeeBubble, this.x + 48, this.y + 20 + Math.floor(Math.random() * 5), this.damage, 0);
 	}
 }
 export class Cat extends Food {
 	static name = "cat";
-	static cName = "猫";
-	static assets = ["attack","awake","idle"];
-    static offset = [-12, 0];
+	static get cName(): string {
+		return t("A00A_CNAME");
+	}
+	static assets = ["attack", "awake", "idle"];
+	static offset = [-12, 0];
+	static story = "梦想家只能在月光下找寻自己的道路。而他的惩罚，是比其他人更早见到黎明。";
 	width = 94;
 	height = 64;
 	offsetX = 20;
@@ -1341,9 +1412,9 @@ export class Cat extends Food {
 	stateLengthSet = [10, 4, 8];
 	AttackStack: Mouse[] = [];
 
-    get positionX(){
-        return EventHandler.getPositionX(this.x + this.width - this.offsetX);
-    }
+	get positionX() {
+		return EventHandler.getPositionX(this.x + this.width - this.offsetX);
+	}
 	constructor(x = 0, y = 0, type = 2) {
 		super(x, y, type);
 		this.initialPlant(x, y, type);
@@ -1354,18 +1425,18 @@ export class Cat extends Food {
 	}
 
 	behavior() {
-		if(this.state === this.stateSet[1] && this.tick === this.stateLengthSet[1] - 1){
+		if (this.state === this.stateSet[1] && this.tick === this.stateLengthSet[1] - 1) {
 			this.tick = 0;
 			this.state = this.stateSet[2];
 			this.stateLength = this.stateLengthSet[2];
 		}
-		else if(this.state === this.stateSet[2]){
+		else if (this.state === this.stateSet[2]) {
 			this.attack();
 		}
 		super.behavior();
 	}
 
-	awake(){
+	awake() {
 		this.state = this.stateSet[1];
 		this.stateLength = this.stateLengthSet[1];
 		this.onAttack = true;
@@ -1377,8 +1448,8 @@ export class Cat extends Food {
 			if (level.Mice[this.row][Math.floor(this.positionX)] != null) {
 				for (let i = 0; i < level.Mice[this.row][Math.floor(this.positionX)].length; i++) {
 					const mouse = level.Mice[this.row][Math.floor(this.positionX)][i];
-					if(mouse.attackable
-						&& !this.AttackStack.includes(mouse)){
+					if (mouse.attackable
+						&& !this.AttackStack.includes(mouse)) {
 						mouse.getOverturned(1800);
 						this.AttackStack.push(mouse);
 					}
@@ -1392,14 +1463,16 @@ export class Cat extends Food {
 	}
 
 	remove() {
-		if(level){
+		if (level) {
 			level.Guardians[this.row] = null;
 		}
 	}
 }
 export class Crab extends Cat {
 	static name = "crab";
-	static cName = "蟹";
+	static get cName(): string {
+		return t("A00B_CNAME");
+	}
 	static offset = [-16, 0];
 	width = 94;
 	height = 64;
@@ -1416,17 +1489,17 @@ export class Crab extends Cat {
 class Takoyaki extends BunShooter {
 	static name = "takoyaki";
 	static cName = "章鱼烧";
-    static cost = 225;
-    static coolTime = 50000;
-    static description = "发射可攻击任何一路敌人的回旋镖";
-    static addCost = true;
-    static special = "需要放置在木盘子上";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 3;
-    static story = "抛弃眼睛，才能看到真实世界！";
-    static idleLength = 8;
-    static cover = [Plate];
-    static generate = HugeStove.generate;
+	static cost = 225;
+	static coolTime = 50000;
+	static description = "发射可攻击任何一路敌人的回旋镖";
+	static addCost = true;
+	static special = "需要放置在木盘子上";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 3;
+	static story = "抛弃眼睛，才能看到真实世界！";
+	static idleLength = 8;
+	static cover = [Plate];
+	static generate = HugeStove.generate;
 	static offset = [-4, -45];
 	width = 93;
 	height = 101;
@@ -1449,9 +1522,9 @@ class Takoyaki extends BunShooter {
 
 	fire() {
 		GEH.requestPlayAudio("touzhi");
-        this.parent.requestSummonBullet(Boomerang, this.x + 62, this.y + 72, this.damage);
-        this.parent.requestSummonBullet(Boomerang, this.x + 42, this.y + 72, this.damage);
-    }
+		this.parent.requestSummonBullet(Boomerang, this.x + 62, this.y + 72, this.damage);
+		this.parent.requestSummonBullet(Boomerang, this.x + 42, this.y + 72, this.damage);
+	}
 
 	remove() {
 		this.reduceCost(50);
@@ -1461,15 +1534,17 @@ class Takoyaki extends BunShooter {
 class CokeBomb extends Food {
 	static name = "cokebomb";
 	static cName = "可乐炸弹";
-    static category = "攻击型";
-    static cost = 150;
-    static coolTime = 50000;
-    static description = "爆炸面积中等的即时炸弹";
-    static upgrade = "强化后缩短[冷却时间]";
-    static rarity = 1;
-    static story = "谈及它的兄弟无糖可乐时，可乐炸弹的脸上闪过一丝不舍，“有人喜欢快乐，也有人追求健康——这没什么大不了的”。";
-    static idleLength = 18;
-    static endLength = 8;
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 150;
+	static coolTime = 50000;
+	static description = "爆炸面积中等的即时炸弹";
+	static upgrade = "强化后缩短[冷却时间]";
+	static rarity = 1;
+	static story = "谈及它的兄弟无糖可乐时，可乐炸弹的脸上闪过一丝不舍，“有人喜欢快乐，也有人追求健康——这没什么大不了的”。";
+	static idleLength = 18;
+	static endLength = 8;
 	static offset = [-111, -86];
 	width = 270;
 	height = 210;
@@ -1508,13 +1583,13 @@ class CokeBomb extends Food {
 class ChocolateBread extends Toast {
 	static name = "chocolatebread";
 	static cName = "巧克力面包";
-    static cost = 125;
-    static coolTime = 30000;
-    static addCost = true;
-    static description = "阻挡老鼠以保护身后卡片";
-    static upgrade = "强化后提高[生命值]";
-    static rarity = 1;
-    static story = "高高的面包上巧克力绽放。";
+	static cost = 125;
+	static coolTime = 30000;
+	static addCost = true;
+	static description = "阻挡老鼠以保护身后卡片";
+	static upgrade = "强化后提高[生命值]";
+	static rarity = 1;
+	static story = "高高的面包上巧克力绽放。";
 	static offset = [-3, -24];
 	tall = true;
 	width = 71;
@@ -1536,13 +1611,13 @@ class ChocolateBread extends Toast {
 class CoffeePot extends BunShooter {
 	static name = "coffeepot";
 	static cName = "咖啡喷壶";
-    static cost = 75;
-    static coolTime = 7500;
-    static description = "喷溅射程有限的穿透咖啡烟雾";
-    static special = "日间需要休眠";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 0;
-    static story = "为什么咖啡喷壶困了不喝点咖啡呢？答案：外源咖啡因日限额。";
+	static cost = 75;
+	static coolTime = 7500;
+	static description = "喷溅射程有限的穿透咖啡烟雾";
+	static special = "日间需要休眠";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 0;
+	static story = "为什么咖啡喷壶困了不喝点咖啡呢？答案：外源咖啡因日限额。";
 	static offset = [-5, -24];
 	width = 78;
 	height = 80;
@@ -1564,13 +1639,13 @@ class CoffeePot extends BunShooter {
 
 	CreateOverlayAnim() {
 		super.CreateOverlayAnim();
-		if(this.state === this.stateSet[2]){
-            const sleep = GEH.requestDrawImage(this.sleepAnim);
-            if(sleep){
-                this.ctx.drawImage(sleep, 28 * this.sleepAnimTick, 0,
+		if (this.state === this.stateSet[2]) {
+			const sleep = GEH.requestDrawImage(this.sleepAnim);
+			if (sleep) {
+				this.ctx.drawImage(sleep, 28 * this.sleepAnimTick, 0,
 					28, 66, this.x + 56, this.y - 24, 28, 66);
 				this.sleepAnimTick = (this.sleepAnimTick + 1) % 10;
-            }
+			}
 		}
 	}
 	behavior() {
@@ -1592,9 +1667,9 @@ class CoffeePot extends BunShooter {
 			this.tick = 0;
 			this.state = this.stateSet[3];
 			this.stateLength = this.stateLengthSet[3];
-            return true;
+			return true;
 		}
-        return false;
+		return false;
 	}
 
 	attackCheck() {
@@ -1602,7 +1677,7 @@ class CoffeePot extends BunShooter {
 			for (let i = this.column; i < Math.min(level.Mice[this.row].length, this.column + 5); i++) {
 				if (level.Mice[this.row][i] != null && level.Mice[this.row][i].length > 0) {
 					level?.createSpriteAnimation(this.x + 66, this.y + 10,
-						"../static/images/bullets/coffeesmog.png", 10, {vertical: true});
+						"../static/images/bullets/coffeesmog.png", 10, { vertical: true });
 					return true;
 				}
 			}
@@ -1626,16 +1701,18 @@ class CoffeePot extends BunShooter {
 class CatBox extends Food {
 	static name = "catbox";
 	static cName = "猫猫盒";
-    static category = "辅助型";
-    static cost = 50;
-    static description = "恫吓老鼠使其换行";
-    static upgrade = "强化后提高[生命值]";
-    static rarity = 1;
-    static story = "猫猫盒上带有的苦味会毁掉一天的好味道。";
-    static idleLength = 10;
-	static assets = ["idle","idle_critical_1","idle_critical_2","terrify","terrify_critical_1","terrify_critical_2"];
+	static get category(): string {
+		return t("C000");
+	}
+	static cost = 50;
+	static description = "恫吓老鼠使其换行";
+	static upgrade = "强化后提高[生命值]";
+	static rarity = 1;
+	static story = "猫猫盒上带有的苦味会毁掉一天的好味道。";
+	static idleLength = 10;
+	static assets = ["idle", "idle_critical_1", "idle_critical_2", "terrify", "terrify_critical_1", "terrify_critical_2"];
 	static offset = [-25, -46];
-    private readonly fullHealth: number = 0;
+	private readonly fullHealth: number = 0;
 	get entity() {
 		if (this.health <= this.fullHealth * 2 / 3) {
 			if (this.health <= this.fullHealth / 3) {
@@ -1659,8 +1736,8 @@ class CatBox extends Food {
 		this.fullHealth = this.health;
 	}
 
-	CreateUnderlayAnim(){
-        super.CreateUnderlayAnim(54, 27)
+	CreateUnderlayAnim() {
+		super.CreateUnderlayAnim(54, 27)
 	}
 
 	behavior() {
@@ -1674,12 +1751,12 @@ class CatBox extends Food {
 		super.behavior();
 	};
 
-	getCrashDamaged(value = 10, origin: Mouse|null = null) {
+	getCrashDamaged(value = 10, origin: Mouse | null = null) {
 		value = Math.max(10, value);
 		super.getDamaged(value);
 	}
 
-	getDamaged(value = 10, origin: Mouse|null) {
+	getDamaged(value = 10, origin: Mouse | null) {
 		this.getCrashDamaged(value, origin);
 		const pos = Math.random() < 0.5 ? -1 : 1;
 		if (origin) {
@@ -1701,12 +1778,12 @@ class CatBox extends Food {
 class WineRack extends BunShooter {
 	static name = "winerack";
 	static cName = "三线酒架";
-    static cost = 325;
-    static description = "向所在路及上下两路发射葡萄酒";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 2;
-    static story = "酒架酒驾，就架旧驾。";
-    static idleLength = 10;
+	static cost = 325;
+	static description = "向所在路及上下两路发射葡萄酒";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 2;
+	static story = "酒架酒驾，就架旧驾。";
+	static idleLength = 10;
 	static offset = [5, -6];
 	width = 65;
 	height = 61;
@@ -1748,24 +1825,26 @@ class WineRack extends BunShooter {
 	fire() {
 		GEH.requestPlayAudio("touzhi");
 
-        this.parent.requestSummonBullet(WineBullet, this.x + 45, this.y + 28 + Math.floor(Math.random() * 5), this.damage, 0, 0);
+		this.parent.requestSummonBullet(WineBullet, this.x + 45, this.y + 28 + Math.floor(Math.random() * 5), this.damage, 0, 0);
 		if (this.row > 0) {
-            this.parent.requestSummonBullet(WineBullet, this.x + 45, this.y + 28 + Math.floor(Math.random() * 5), this.damage, 0, -1);
+			this.parent.requestSummonBullet(WineBullet, this.x + 45, this.y + 28 + Math.floor(Math.random() * 5), this.damage, 0, -1);
 		}
 		if (this.row < level.row_num - 1) {
-            this.parent.requestSummonBullet(WineBullet, this.x + 45, this.y + 28 + Math.floor(Math.random() * 5), this.damage, 0, 1);
+			this.parent.requestSummonBullet(WineBullet, this.x + 45, this.y + 28 + Math.floor(Math.random() * 5), this.damage, 0, 1);
 		}
 	}
 }
 class GrilledStarfish extends BunShooter {
 	static name = "grilledstarfish";
 	static cName = "炭烧海星";
-    static category = "攻击型";
-    static cost = 125;
-    static description = "向五个触角方向发射海星";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 1;
-    static story = "“姐，你说天上的星星咋的就不会掉下来呢？”<br>“你害怕星星掉下来吗？”<br>“怕啥呢？它们那么小。”<br>“它们都很远很远，掉不下来的。”";
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 125;
+	static description = "向五个触角方向发射海星";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 1;
+	static story = "“姐，你说天上的星星咋的就不会掉下来呢？”<br>“你害怕星星掉下来吗？”<br>“怕啥呢？它们那么小。”<br>“它们都很远很远，掉不下来的。”";
 	static offset = [3, -22];
 	width = 64;
 	height = 77;
@@ -1779,8 +1858,8 @@ class GrilledStarfish extends BunShooter {
 		this.damage = 20 + star * 5;
 	}
 
-	CreateUnderlayAnim(width = 80, height = 40){
-        super.CreateUnderlayAnim(width, height);
+	CreateUnderlayAnim(width = 80, height = 40) {
+		super.CreateUnderlayAnim(width, height);
 	}
 
 	attackCheck() {
@@ -1797,7 +1876,7 @@ class GrilledStarfish extends BunShooter {
 
 		for (let i = 0; i < row_num; i++) {
 			if ((row + i >= 0 && row + i < row_num && column + i >= 0 && column + i < column_num &&
-					Mice[row + i] && Mice[row + i][column + i] && Mice[row + i][column + i].length > 0) ||
+				Mice[row + i] && Mice[row + i][column + i] && Mice[row + i][column + i].length > 0) ||
 				(row - i >= 0 && row - i < row_num && column + i >= 0 && column + i < column_num &&
 					Mice[row - i] && Mice[row - i][column + i] && Mice[row - i][column + i].length > 0)) {
 				return true;
@@ -1830,19 +1909,21 @@ class GrilledStarfish extends BunShooter {
 class RotaryCoffeePot extends Food {
 	static name = "rotarycoffeepot";
 	static cName = "旋转咖啡喷壶";
-    static category = "攻击型";
-    static cost = 150;
-    static coolTime = 50000;
-    static addCost = true;
-    static description = "围绕自身喷溅穿透咖啡烟雾";
-    static special = "需要放置在咖啡喷壶上";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 3;
-    static story = "高自旋咖啡壶会梦见低自旋配合物吗？";
-    static idleLength = 22;
-    static cover = [CoffeePot];
-    static generate = HugeStove.generate;
-	static assets = ["attack","awake","idle","sleep"];
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 150;
+	static coolTime = 50000;
+	static addCost = true;
+	static description = "围绕自身喷溅穿透咖啡烟雾";
+	static special = "需要放置在咖啡喷壶上";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 3;
+	static story = "高自旋咖啡壶会梦见低自旋配合物吗？";
+	static idleLength = 22;
+	static cover = [CoffeePot];
+	static generate = HugeStove.generate;
+	static assets = ["attack", "awake", "idle", "sleep"];
 	static offset = [-50, -52];
 	width = 161;
 	height = 107;
@@ -1853,7 +1934,7 @@ class RotaryCoffeePot extends Food {
 	sleepAnimTick = 0;
 	behaviorInterval = 1200;
 	remainTime = this.behaviorInterval;
-    private readonly damage: number = 0;
+	private readonly damage: number = 0;
 	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
 		super(x, y, type, star, skillLevel);
 		this.initialPlant(x, y, type);
@@ -1867,13 +1948,13 @@ class RotaryCoffeePot extends Food {
 
 	CreateOverlayAnim() {
 		super.CreateOverlayAnim();
-		if(this.state === this.stateSet[2]){
-            const sleep = GEH.requestDrawImage(this.sleepAnim);
-            if(sleep){
-                this.ctx.drawImage(sleep, 28 * this.sleepAnimTick, 0,
+		if (this.state === this.stateSet[2]) {
+			const sleep = GEH.requestDrawImage(this.sleepAnim);
+			if (sleep) {
+				this.ctx.drawImage(sleep, 28 * this.sleepAnimTick, 0,
 					28, 66, this.x + 88, this.y + 8, 28, 66);
 				this.sleepAnimTick = (this.sleepAnimTick + 1) % 10;
-            }
+			}
 		}
 	}
 	behavior() {
@@ -1914,9 +1995,9 @@ class RotaryCoffeePot extends Food {
 			this.tick = 0;
 			this.state = this.stateSet[3];
 			this.stateLength = this.stateLengthSet[3];
-            return true;
+			return true;
 		}
-        return false;
+		return false;
 	}
 
 	attackCheck() {
@@ -1969,7 +2050,9 @@ class RotaryCoffeePot extends Food {
 }
 export class RatNest extends Food {
 	static name = "ratnest";
-	static cName = "老鼠洞";
+	static get cName(): string {
+		return t("AA00_CNAME");
+	}
 	static offset = [0, 4];
 	get entity() {
 		return "../static/images/interface/ratnest.png";
@@ -2013,17 +2096,19 @@ export class RatNest extends Food {
 class IceBucket extends Food {
 	static name = "icebucket";
 	static cName = "冰桶炸弹";
-    static category = "辅助型";
-    static cost = 75;
-    static coolTime = 50000;
-    static description = "暂时冻结所有老鼠";
-    static special = "日间需要休眠";
-    static upgrade = "强化后缩短[冷却时间]";
-    static rarity = 0;
-    static story = "双腿渐冻，灵魂歌唱。";
-    static idleLength = 17;
-    static endLength = 8;
-    static assets = ["awake","idle","sleep"];
+	static get category(): string {
+		return t("C000");
+	}
+	static cost = 75;
+	static coolTime = 50000;
+	static description = "暂时冻结所有老鼠";
+	static special = "日间需要休眠";
+	static upgrade = "强化后缩短[冷却时间]";
+	static rarity = 0;
+	static story = "双腿渐冻，灵魂歌唱。";
+	static idleLength = 17;
+	static endLength = 8;
+	static assets = ["awake", "idle", "sleep"];
 	static offset = [-215, -192];
 	width = 465;
 	height = 420;
@@ -2059,9 +2144,9 @@ class IceBucket extends Food {
 			this.tick = 0;
 			this.state = 'awake';
 			this.stateLength = 5;
-            return true;
+			return true;
 		}
-        return false;
+		return false;
 	}
 
 	explode() {
@@ -2091,12 +2176,12 @@ class IceBucket extends Food {
 class ChocolatePult extends BunShooter {
 	static name = "chocolatepult";
 	static cName = "巧克力投手";
-    static assets = ["attack_0", "attack_1","idle"];
-    static cost = 100;
-    static description = "投掷巧克力粒或具有定身效果的巧克力块";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 1;
-    static story = "这是一块巧克力，乖巧可爱而美丽。";
+	static assets = ["attack_0", "attack_1", "idle"];
+	static cost = 100;
+	static description = "投掷巧克力粒或具有定身效果的巧克力块";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 1;
+	static story = "这是一块巧克力，乖巧可爱而美丽。";
 	static offset = [-27, -48];
 
 	get entity() {
@@ -2125,7 +2210,7 @@ class ChocolatePult extends BunShooter {
 		this.remainTime = this.behaviorInterval;
 	}
 	attackCheck() {
-		if(super.attackCheck()){
+		if (super.attackCheck()) {
 			this.attackType = Math.floor(Math.random() * 3) % 2;
 			return true;
 		}
@@ -2137,165 +2222,167 @@ class ChocolatePult extends BunShooter {
 	fire() {
 		GEH.requestPlayAudio("touzhi");
 		if (this.attackType) {
-            this.parent.requestSummonBullet(Chocolate, this.x + 32, this.y + 24, this.damage, this.row);
+			this.parent.requestSummonBullet(Chocolate, this.x + 32, this.y + 24, this.damage, this.row);
 		} else {
-            this.parent.requestSummonBullet(ChocolateDot, this.x + 32, this.y + 24, Math.floor(this.damage / 2), this.row);
+			this.parent.requestSummonBullet(ChocolateDot, this.x + 32, this.y + 24, Math.floor(this.damage / 2), this.row);
 		}
 	}
 }
 class SteelWool extends Food {
-    static name = "steelwool";
+	static name = "steelwool";
 	static cName = "钢丝球";
-    static category = "攻击型";
-    static cost = 25;
-    static coolTime = 30000;
-    static description = "拖沉靠近它的首个老鼠";
-    static special = "只能放置在水中";
-    static upgrade = "强化后缩短[冷却时间]";
-    static story = "每每发现钢丝仍缠在老鼠身上，它都会在叹惋之余安慰自己：“我在变秃，我在变强。”";
-    static idleLength = 6;
-    static assets = ["drag","idle"];
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 25;
+	static coolTime = 30000;
+	static description = "拖沉靠近它的首个老鼠";
+	static special = "只能放置在水中";
+	static upgrade = "强化后缩短[冷却时间]";
+	static story = "每每发现钢丝仍缠在老鼠身上，它都会在叹惋之余安慰自己：“我在变秃，我在变强。”";
+	static idleLength = 6;
+	static assets = ["drag", "idle"];
 	static offset = [-2, 4];
-    static type = 2;
-    static generate(x: number, y: number, star:number, skillLevel:number) {
-        if (level.Foods[y * level.column_num + x].noPlace) {
-            return false;
-        } else if (level.Foods[y * level.column_num + x].water) {
-            if (level.Foods[y * level.column_num + x].layer_1 == null) {
-                if (level.Foods[y * level.column_num + x].layer_0 == null && level.Foods[y * level.column_num + x].layer_2 == null) {
-                    level.Foods[y * level.column_num + x].layer_1 = new this(x, y, 1, star, skillLevel);
-                    return true;
-                } else {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        } else {
-            return false;
-        }
-    };
-    width = 72;
-    height = 141;
-    target:Mouse|null = null;
-    stateLength = 6;
+	static type = 2;
+	static generate(x: number, y: number, star: number, skillLevel: number) {
+		if (level.Foods[y * level.column_num + x].noPlace) {
+			return false;
+		} else if (level.Foods[y * level.column_num + x].water) {
+			if (level.Foods[y * level.column_num + x].layer_1 == null) {
+				if (level.Foods[y * level.column_num + x].layer_0 == null && level.Foods[y * level.column_num + x].layer_2 == null) {
+					level.Foods[y * level.column_num + x].layer_1 = new this(x, y, 1, star, skillLevel);
+					return true;
+				} else {
+					return false;
+				}
+			} else {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	};
+	width = 72;
+	height = 141;
+	target: Mouse | null = null;
+	stateLength = 6;
 
-    dragAnim = "../static/images/foods/steelwool/drag.png";
+	dragAnim = "../static/images/foods/steelwool/drag.png";
 	dragAnimTick = 0;
 
-    ripple = "../static/images/ripple.png";
+	ripple = "../static/images/ripple.png";
 	rippleTick = 0;
 
-    constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
-        super(x, y, type, star, skillLevel);
+	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
+		super(x, y, type, star, skillLevel);
 		this.initialPlant(x, y, type);
-    }
+	}
 
 	attackCheck() {
 		if (level.Mice[this.row] != null && level.Mice[this.row][this.column] != null) {
 			for (let i = 0; i < level.Mice[this.row][this.column].length + 1; i++) {
-                const mouse = level.Mice[this.row][this.column][i] as Mouse;
+				const mouse = level.Mice[this.row][this.column][i] as Mouse;
 				if (mouse && mouse.attackable && !mouse.fly) {
-                    mouse.haltedLength = Infinity;
-                    this.target = mouse;
-                    return true;
+					mouse.haltedLength = Infinity;
+					this.target = mouse;
+					return true;
 				}
 			}
 		}
 		return false;
 	}
 
-    behavior() {
-        if (this.target == null) {
-            this.attackCheck();
-        } else {
-			if(this.dragAnimTick === 6){
+	behavior() {
+		if (this.target == null) {
+			this.attackCheck();
+		} else {
+			if (this.dragAnimTick === 6) {
 				this.target.remove();
 				this.remove();
 			}
-            const drag = GEH.requestDrawImage(this.dragAnim);
-            if(drag){
-                this.ctx.drawImage(drag, 82 * this.rippleTick, 0, 82, 42,
+			const drag = GEH.requestDrawImage(this.dragAnim);
+			if (drag) {
+				this.ctx.drawImage(drag, 82 * this.rippleTick, 0, 82, 42,
 					level.column_start + this.target.positionX * level.row_gap - 18,
 					level.row_start + this.target.row * level.column_gap + 16, 82, 42);
 				this.dragAnimTick = this.dragAnimTick + 1;
-            }
-            this.y = this.y + 1;
-            this.target.y = this.target.y + 1;
-        }
-        const ripple = GEH.requestDrawImage(this.ripple);
-        if(ripple){
-            this.ctx.drawImage(ripple, 72 * this.rippleTick, 0, 72, 39,
+			}
+			this.y = this.y + 1;
+			this.target.y = this.target.y + 1;
+		}
+		const ripple = GEH.requestDrawImage(this.ripple);
+		if (ripple) {
+			this.ctx.drawImage(ripple, 72 * this.rippleTick, 0, 72, 39,
 				this.column * level.row_gap + level.column_start - (this.width / 2 - level.row_gap / 2) + 2, this.row * level.column_gap + level.row_start - this.height / 2 + 94, 72, 39);
 			this.rippleTick = (this.rippleTick + 1) % 4;
-        }
-        super.behavior();
-    }
+		}
+		super.behavior();
+	}
 }
 class TeaCup extends CoffeeCup {
-    static name = "teacup";
+	static name = "teacup";
 	static cName = "水上茶杯";
-    static cost = 0;
-    static coolTime = 30000;
-    static description = "发射射程有限的咖啡泡";
-    static special = "水生，日间需要休眠";
-    static upgrade = "强化后提高[攻击伤害]";
-    static story = "水上茶杯并不擅长水上运动——除非在海面上漂浮也算是水上运动。";
-    static idleLength = 8;
+	static cost = 0;
+	static coolTime = 30000;
+	static description = "发射射程有限的咖啡泡";
+	static special = "水生，日间需要休眠";
+	static upgrade = "强化后提高[攻击伤害]";
+	static story = "浮一生，会四季。";
+	static idleLength = 8;
 	static offset = [4, 6];
-    static type = 3;
-    static generate = SteelWool.generate;
-    width = 56;
-    height = 58;
-    stateSet = ["idle", "attack", "sleep"];
-    stateLengthSet = [8, 7, 8];
-    stateLength = this.stateLengthSet[0];
-    ripple = "../static/images/ripple.png";
+	static type = 3;
+	static generate = SteelWool.generate;
+	width = 56;
+	height = 58;
+	stateSet = ["idle", "attack", "sleep"];
+	stateLengthSet = [8, 7, 8];
+	stateLength = this.stateLengthSet[0];
+	ripple = "../static/images/ripple.png";
 	rippleTick = 0;
 
-    constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
-        super(x, y, type, star, skillLevel);
+	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
+		super(x, y, type, star, skillLevel);
 		this.initialPlant(x, y, type);
-        this.damage = 20 + star * 5;
-    }
+		this.damage = 20 + star * 5;
+	}
 
 	CreateOverlayAnim() {
-		if(this.state === this.stateSet[2]){
-            const sleep = GEH.requestDrawImage(this.sleepAnim);
-            if(sleep){
-                this.ctx.drawImage(sleep, 28 * this.sleepAnimTick, 0,
+		if (this.state === this.stateSet[2]) {
+			const sleep = GEH.requestDrawImage(this.sleepAnim);
+			if (sleep) {
+				this.ctx.drawImage(sleep, 28 * this.sleepAnimTick, 0,
 					28, 66, this.x + 30, this.y - 30, 28, 66);
 				this.sleepAnimTick = (this.sleepAnimTick + 1) % 10;
-            }
+			}
 		}
 	}
 
 	behavior() {
-        const ripple = GEH.requestDrawImage(this.ripple);
-        if(ripple){
-            this.ctx.drawImage(ripple, 72 * this.rippleTick, 0, 72, 39,
+		const ripple = GEH.requestDrawImage(this.ripple);
+		if (ripple) {
+			this.ctx.drawImage(ripple, 72 * this.rippleTick, 0, 72, 39,
 				this.column * level.row_gap + level.column_start - (this.width / 2 - level.row_gap / 2) - 6,
 				this.row * level.column_gap + level.row_start - this.height / 2 + 56, 72, 39);
 			this.rippleTick = (this.rippleTick + 1) % 4;
-        }
+		}
 		super.behavior();
 	}
 }
 class EggPult extends BunShooter {
 	static name = "eggpult";
 	static cName = "煮蛋器投手";
-    static cost = 250;
-    static description = "投掷对目标及其周围敌人造成伤害的鸡蛋";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 2;
-    static story = "我日日夜夜东奔西忙，干个不停，人人都对我很尊敬；我是美味镇里的大忙人，人人都离不开我煮鸡蛋。";
-    static idleLength = 14;
+	static cost = 250;
+	static description = "投掷对目标及其周围敌人造成伤害的鸡蛋";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 2;
+	static story = "我日日夜夜东奔西忙，干个不停，人人都对我很尊敬；我是美味镇里的大忙人，人人都离不开我煮鸡蛋。";
+	static idleLength = 14;
 	static offset = [-37, -72];
 	width = 107;
 	height = 128;
 	stateLengthSet = [14, 12];
 	behaviorInterval = 4000;
-	
+
 	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
 		super(x, y, type, star, skillLevel);
 		this.initialPlant(x, y, type);
@@ -2304,18 +2391,18 @@ class EggPult extends BunShooter {
 
 	fire() {
 		GEH.requestPlayAudio("touzhi");
-        this.parent.requestSummonBullet(Egg, this.x + 24, this.y + 48, this.damage, this.row);
+		this.parent.requestSummonBullet(Egg, this.x + 24, this.y + 48, this.damage, this.row);
 	}
 }
 class Sausage extends BunShooter {
 	static name = "sausage";
 	static cName = "香肠射手";
-    static cost = 125;
-    static description = "发射可以攻击空中敌人的香肠";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 1;
-    static story = "做剧烈运动之前一定要拉伸——香肠射手在这方面大有建树，它甚至获得了康复运动的博士学位。";
-	static assets = ["attack","attack_1","idle"];
+	static cost = 125;
+	static description = "发射可以攻击空中敌人的香肠";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 1;
+	static story = "做剧烈运动之前一定要拉伸——香肠射手在这方面大有建树，它甚至获得了康复运动的博士学位。";
+	static assets = ["attack", "attack_1", "idle"];
 	static offset = [5, -74];
 	get entity() {
 		if (this.state === this.stateSet[1]) {
@@ -2342,8 +2429,8 @@ class Sausage extends BunShooter {
 		this.damage = 25 + star * 5;
 	}
 
-	CreateUnderlayAnim(width = 54, height = 27){
-        super.CreateUnderlayAnim(width, height);
+	CreateUnderlayAnim(width = 54, height = 27) {
+		super.CreateUnderlayAnim(width, height);
 	}
 
 	behavior() {
@@ -2402,28 +2489,30 @@ class Sausage extends BunShooter {
 	fire() {
 		GEH.requestPlayAudio("zidan");
 		if (this.attackMode) {
-            this.parent.requestSummonBullet(SausageAir, this.x + 54, this.y + 38 + Math.floor(Math.random() * 8), this.damage, this.row)
+			this.parent.requestSummonBullet(SausageAir, this.x + 54, this.y + 38 + Math.floor(Math.random() * 8), this.damage, this.row)
 		} else {
-            this.parent.requestSummonBullet(SausageLand, this.x + 54, this.y + 94 + Math.floor(Math.random() * 5), this.damage);
+			this.parent.requestSummonBullet(SausageLand, this.x + 54, this.y + 94 + Math.floor(Math.random() * 5), this.damage);
 		}
 	}
 }
 class FishBone extends Food {
 	static name = "fishbone";
 	static cName = "鱼刺";
-    static category = "攻击型";
-    static cost = 100;
-    static description = "穿透攻击践踏其上的敌人";
-    static upgrade = "强化后提高[攻击伤害]";
-    static story = "我有206+1根骨头——那根是卡在喉咙里的鱼骨。";
-    static generate = RatClip.generate;
-	static assets = ["attack","idle"];
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 100;
+	static description = "穿透攻击践踏其上的敌人";
+	static upgrade = "强化后提高[攻击伤害]";
+	static story = "我有206+1根骨头——那根是卡在喉咙里的鱼骨。";
+	static generate = RatClip.generate;
+	static assets = ["attack", "idle"];
 	static offset = [3, 32];
 	short = true;
 	width = 62;
 	height = 21;
 	stateLength = 12;
-    protected damage: number = 0;
+	protected damage: number = 0;
 
 	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
 		super(x, y, type, star, skillLevel);
@@ -2461,7 +2550,7 @@ class FishBone extends Food {
 						if (level.Mice[this.row][this.column][i].attackable
 							&& !level.Mice[this.row][this.column][i].fly
 							&& (level.Mice[this.row][this.column][i].canBeHit
-                                || level.Mice[this.row][this.column][i].canBeThrown)) {
+								|| level.Mice[this.row][this.column][i].canBeThrown)) {
 							return true;
 						}
 					}
@@ -2472,7 +2561,7 @@ class FishBone extends Food {
 							&& level.Mice[this.row][this.column - 1][i].attackable
 							&& !level.Mice[this.row][this.column - 1][i].fly
 							&& (level.Mice[this.row][this.column - 1][i].canBeHit
-                                || level.Mice[this.row][this.column - 1][i].canBeThrown)) {
+								|| level.Mice[this.row][this.column - 1][i].canBeThrown)) {
 							return true;
 						}
 					}
@@ -2505,28 +2594,30 @@ class FishBone extends Food {
 		}
 	}
 
-	getCrashDamaged(value = 10, origin:Mouse|null = null) {
-        if(origin){
-            switch (origin.name) {
-                case 'mobilemachineryshop':
-                case 'rubbishtruck': {
-                    origin.die();
-                }
-            }
-        }
+	getCrashDamaged(value = 10, origin: Mouse | null = null) {
+		if (origin) {
+			switch (origin.name) {
+				case 'mobilemachineryshop':
+				case 'rubbishtruck': {
+					origin.die();
+				}
+			}
+		}
 		super.getCrashDamaged(value, origin);
 	}
 }
 class Hamburger extends Food {
 	static name = "hamburger";
 	static cName = "汉堡包";
-    static category = "攻击型";
-    static cost = 150;
-    static description = "吞噬前方老鼠";
-    static upgrade = "强化后缩短[吞噬间隔]";
-    static rarity = 1;
-    static story = "-请问是派大星吗？<br>-不是，我是蟹堡王。";
-	static assets = ["attack","digest","idle","swallow"];
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 150;
+	static description = "吞噬前方老鼠";
+	static upgrade = "强化后缩短[吞噬间隔]";
+	static rarity = 1;
+	static story = "-请问是派大星吗？<br>-不是，我是蟹堡王。";
+	static assets = ["attack", "digest", "idle", "swallow"];
 	static offset = [-13, -54];
 	width = 147;
 	height = 114;
@@ -2543,16 +2634,16 @@ class Hamburger extends Food {
 		this.behaviorInterval = 40000 - star * 2500;
 	}
 
-	CreateUnderlayAnim(width = 72, height= 36){
-        const shadow = GEH.requestDrawImage(Food.SHADOW_IMAGE);
-        if(shadow){
-            const left = (this.state === "attack" && this.tick >= 3 && this.tick <= 12) ?
-						 (this.tick > 5 ? 3 : (this.tick > 9 ? (13 - this.tick) : (this.tick - 2))) * 15 : 0;
+	CreateUnderlayAnim(width = 72, height = 36) {
+		const shadow = GEH.requestDrawImage(Food.SHADOW_IMAGE);
+		if (shadow) {
+			const left = (this.state === "attack" && this.tick >= 3 && this.tick <= 12) ?
+				(this.tick > 5 ? 3 : (this.tick > 9 ? (13 - this.tick) : (this.tick - 2))) * 15 : 0;
 
 			this.ctx.drawImage(shadow,
 				(this.column + 0.5) * level.row_gap + level.column_start - 72 / 2 + left + 4,
 				(this.row + 1) * level.column_gap + level.row_start - 36, 72, 36);
-        }
+		}
 	}
 
 	behavior() {
@@ -2631,7 +2722,7 @@ class Hamburger extends Food {
 						&& !mouse.fly
 						&& (mouse.canBeHit || mouse.canBeThrown)) {
 						mouse.getDamaged(this.damage);
-						if(mouse.health <= 0){
+						if (mouse.health <= 0) {
 							mouse.remove();
 						}
 						return true;
@@ -2646,7 +2737,7 @@ class Hamburger extends Food {
 						&& !mouse.fly
 						&& (mouse.canBeHit || mouse.canBeThrown)) {
 						mouse.getDamaged(this.damage);
-						if(mouse.health <= 0){
+						if (mouse.health <= 0) {
 							mouse.remove();
 						}
 						return true;
@@ -2660,12 +2751,14 @@ class Hamburger extends Food {
 class OilLamp extends Food {
 	static name = "oillamp";
 	static cName = "油灯";
-    static category = "辅助型";
-    static cost = 25;
-    static coolTime = 30000;
-    static description = "照亮大范围迷雾";
-    static upgrade = "强化后提高[生命值]";
-    static story = "Winston? We shall meet in the place where there is no darkness.";
+	static get category(): string {
+		return t("C000");
+	}
+	static cost = 25;
+	static coolTime = 30000;
+	static description = "照亮大范围迷雾";
+	static upgrade = "强化后提高[生命值]";
+	static story = "Winston? We shall meet in the place where there is no darkness.";
 	static offset = [-41, -90];
 	width = 145;
 	height = 145;
@@ -2680,10 +2773,10 @@ class OilLamp extends Food {
 				for (let j = -2; j <= 2; j++) {
 					if (this.column + j >= 0 && this.column + j < (level.column_num + 1)) {
 						let DEG = 2;
-						if(i === -2 || i === 2){
+						if (i === -2 || i === 2) {
 							DEG--;
 						}
-						if(j === -2 || j === 2){
+						if (j === -2 || j === 2) {
 							DEG--;
 						}
 						level.lightDEGChange((this.row + i) * (level.column_num + 1) + (this.column + j), DEG);
@@ -2692,8 +2785,8 @@ class OilLamp extends Food {
 			}
 		}
 	}
-	CreateUnderlayAnim(width = 54, height = 27){
-        super.CreateUnderlayAnim(width, height);
+	CreateUnderlayAnim(width = 54, height = 27) {
+		super.CreateUnderlayAnim(width, height);
 	}
 	remove() {
 		for (let i = -2; i <= 2; i++) {
@@ -2701,10 +2794,10 @@ class OilLamp extends Food {
 				for (let j = -2; j <= 2; j++) {
 					if (this.column + j >= 0 && this.column + j < (level.column_num + 1)) {
 						let DEG = 2;
-						if(i === -2 || i === 2){
+						if (i === -2 || i === 2) {
 							DEG--;
 						}
-						if(j === -2 || j === 2){
+						if (j === -2 || j === 2) {
 							DEG--;
 						}
 						level.lightDEGChange((this.row + i) * (level.column_num + 1) + (this.column + j), - DEG);
@@ -2718,14 +2811,16 @@ class OilLamp extends Food {
 class Fan extends Food {
 	static name = "fan";
 	static cName = "换气扇";
-    static category = "辅助型";
-    static cost = 100;
-    static description = "驱散迷雾和空域老鼠";
-    static upgrade = "强化后延长[驱散时间]";
-    static rarity = 1;
-    static story = "O bella ciao, bella ciao, bella ciao ciao ciao。";
-    static idleLength = 5;
-	static assets = ["blow","idle"];
+	static get category(): string {
+		return t("C000");
+	}
+	static cost = 100;
+	static description = "驱散迷雾和空域老鼠";
+	static upgrade = "强化后延长[驱散时间]";
+	static rarity = 1;
+	static story = "O bella ciao, bella ciao, bella ciao ciao ciao。";
+	static idleLength = 5;
+	static assets = ["blow", "idle"];
 	static offset = [1, -32];
 	width = 79;
 	height = 86;
@@ -2739,8 +2834,8 @@ class Fan extends Food {
 		this.duration = 15000 + star * 1000;
 	}
 
-	CreateUnderlayAnim(width = 54, height = 27){
-        super.CreateUnderlayAnim(width, height);
+	CreateUnderlayAnim(width = 54, height = 27) {
+		super.CreateUnderlayAnim(width, height);
 	}
 
 	behavior() {
@@ -2781,17 +2876,17 @@ class Fan extends Food {
 class SnowEggPult extends EggPult {
 	static name = "snoweggpult";
 	static cName = "冰煮蛋器投手";
-    static cost = 200;
-    static coolTime = 50000;
-    static description = "投掷对目标及其周围敌人造成伤害并减速的冰鸡蛋";
-    static addCost = true;
-    static special = "需要放置在煮蛋器上";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 3;
-    static story = "早上好世界，现在我有冰...鸡蛋。";
-    static idleLength = 14;
-    static cover = [EggPult];
-    static generate = HugeStove.generate;
+	static cost = 200;
+	static coolTime = 50000;
+	static description = "投掷对目标及其周围敌人造成伤害并减速的冰鸡蛋";
+	static addCost = true;
+	static special = "需要放置在煮蛋器上";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 3;
+	static story = "早上好世界，现在我有冰...鸡蛋。";
+	static idleLength = 14;
+	static cover = [EggPult];
+	static generate = HugeStove.generate;
 	static offset = [-37, -68];
 	width = 110;
 	height = 123;
@@ -2817,16 +2912,16 @@ class SnowEggPult extends EggPult {
 class GatlingBunShooter extends BunShooter {
 	static name = "gatlingbunshooter";
 	static cName = "机枪笼包射手";
-    static cost = 250;
-    static coolTime = 50000;
-    static description = "发射四发包子";
-    static addCost = true;
-    static special = "需要放置在双层笼包上";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 3;
-    static story = "物质力量只能由物质力量来摧毁。";
-    static cover = [DoubleBunShooter];
-    static generate = HugeStove.generate;
+	static cost = 250;
+	static coolTime = 50000;
+	static description = "发射四发包子";
+	static addCost = true;
+	static special = "需要放置在双层笼包上";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 3;
+	static story = "物质力量只能由物质力量来摧毁。";
+	static cover = [DoubleBunShooter];
+	static generate = HugeStove.generate;
 	static offset = [5, -22];
 	width = 71;
 	height = 75;
@@ -2854,16 +2949,16 @@ class GatlingBunShooter extends BunShooter {
 class SteelFishBone extends FishBone {
 	static name = "steelfishbone";
 	static cName = "钢鱼刺";
-    static cost = 125;
-    static coolTime = 50000;
-    static description = "穿透攻击践踏其上的敌人";
-    static addCost = true;
-    static special = "需要放置在鱼刺上";
-    static upgrade = "强化后提高[攻击伤害]";
-    static rarity = 3;
-    static story = "便条上写着：“从来没有人考虑过鱼刺卡到脚里应该怎么处理吗？”";
-    static cover = [FishBone];
-    static generate = HugeStove.generate;
+	static cost = 125;
+	static coolTime = 50000;
+	static description = "穿透攻击践踏其上的敌人";
+	static addCost = true;
+	static special = "需要放置在鱼刺上";
+	static upgrade = "强化后提高[攻击伤害]";
+	static rarity = 3;
+	static story = "便条上写着：“从来没有人考虑过鱼刺卡到脚里应该怎么处理吗？”";
+	static cover = [FishBone];
+	static generate = HugeStove.generate;
 	static offset = [0, 20];
 	width = 67;
 	height = 32;
@@ -2888,16 +2983,18 @@ class SteelFishBone extends FishBone {
 class KettleBomb extends IceBucket {
 	static name = "kettlebomb";
 	static cName = "开水壶炸弹";
-    static category = "攻击型";
-    static cost = 275;
-    static coolTime = 50000;
-    static description = "爆炸面积巨大的即时炸弹";
-    static special = "日间需要休眠";
-    static upgrade = "强化后缩短[冷却时间]";
-    static rarity = 2;
-    static story = "多喝开水，或者让开水壶来灌。";
-    static idleLength = 23;
-    static endLength = 8;
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 275;
+	static coolTime = 50000;
+	static description = "爆炸面积巨大的即时炸弹";
+	static special = "日间需要休眠";
+	static upgrade = "强化后缩短[冷却时间]";
+	static rarity = 2;
+	static story = "多喝开水，或者让开水壶来灌。";
+	static idleLength = 23;
+	static endLength = 8;
 	static offset = [-85, -148];
 	width = 240;
 	height = 210;
@@ -2932,9 +3029,9 @@ class KettleBomb extends IceBucket {
 			this.tick = 0;
 			this.state = 'awake';
 			this.stateLength = 3;
-            return true;
+			return true;
 		}
-        return false;
+		return false;
 	}
 
 	explode() {
@@ -2958,15 +3055,17 @@ class KettleBomb extends IceBucket {
 class WineBottle extends Food {
 	static name = "winebottle";
 	static cName = "酒瓶炸弹";
-    static category = "攻击型";
-    static cost = 125;
-    static coolTime = 50000;
-    static description = "单行爆炸的即时炸弹";
-    static upgrade = "强化后缩短[冷却时间]";
-    static rarity = 1;
-    static story = "It started with the wine.";
-    static idleLength = 9;
-    static endLength = 8;
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 125;
+	static coolTime = 50000;
+	static description = "单行爆炸的即时炸弹";
+	static upgrade = "强化后缩短[冷却时间]";
+	static rarity = 1;
+	static story = "可曾闲来愁沽酒，偶尔相对饮几盅。";
+	static idleLength = 9;
+	static endLength = 8;
 	static offset = [13, -20];
 	width = 40;
 	height = 75;
@@ -2978,8 +3077,8 @@ class WineBottle extends Food {
 		this.initialPlant(x, y, type);
 	}
 
-	CreateUnderlayAnim(width = 54, height = 27){
-        super.CreateUnderlayAnim(width, height);
+	CreateUnderlayAnim(width = 54, height = 27) {
+		super.CreateUnderlayAnim(width, height);
 	}
 
 	behavior() {
@@ -3025,25 +3124,27 @@ class WineBottle extends Food {
 class ChocolateCannon extends Food {
 	static name = "chocolatecannon";
 	static cName = "巧克力加农炮";
-    static category = "攻击型";
-    static cost = 125;
-    static coolTime = 50000;
-    static description = "定时发射巧克力炮弹";
-    static upgrade = "强化后减少[就绪耗时]";
-    static rarity = 3;
-    static story = "Yes, and how many times must the cannonballs fly, before they're forever banned.";
-    static idleLength = 10;
-    static cover = [ChocolatePult];
-    static generate = HugeStove.generate;
-	static assets = ["attack","idle"];
+	static get category(): string {
+		return t("C001");
+	};
+	static cost = 125;
+	static coolTime = 50000;
+	static description = "定时发射巧克力炮弹";
+	static upgrade = "强化后减少[就绪耗时]";
+	static rarity = 3;
+	static story = "Yes, and how many times must the cannonballs fly, before they're forever banned.";
+	static idleLength = 10;
+	static cover = [ChocolatePult];
+	static generate = HugeStove.generate;
+	static assets = ["attack", "idle"];
 	static offset = [-8, -32];
 	width = 84;
 	height = 85;
 	damage = 1800;
 	stateLength = 10;
 	stateLengthSet = [10];
-    behaviorInterval: number = 0;
-    remainTime: number = 0;
+	behaviorInterval: number = 0;
+	remainTime: number = 0;
 
 	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
 		super(x, y, type, star, skillLevel);
@@ -3073,31 +3174,35 @@ class ChocolateCannon extends Food {
 		level?.createSpriteAnimation(level.column_start + 8 * level.row_gap - 72,
 			level.row_start + this.row * level.column_gap - 72,
 			"../static/images/bullets/cannonball.png", 12,
-			{func: ()=>{
-			GEH.requestPlayAudio("pijiubao");
-			for (let i = this.row - 1; i <= this.row + 1; i++) {
-				if (level.Mice[i] != null) {
-					for (let j = 8 - 1; j <= 8 + 1; j++) {
-						for (let k = 0; level.Mice[i][j] != null && k < level.Mice[i][j].length; k++) {
-							level.Mice[i][j][k].getBlast(this.damage);
+			{
+				func: () => {
+					GEH.requestPlayAudio("pijiubao");
+					for (let i = this.row - 1; i <= this.row + 1; i++) {
+						if (level.Mice[i] != null) {
+							for (let j = 8 - 1; j <= 8 + 1; j++) {
+								for (let k = 0; level.Mice[i][j] != null && k < level.Mice[i][j].length; k++) {
+									level.Mice[i][j][k].getBlast(this.damage);
+								}
+							}
 						}
 					}
 				}
-			}
-		}});
+			});
 	}
 }
 class AirDefenseShell extends Food {
 	static name = "airdefenseshell";
 	static cName = "放空贝壳";
-    static category = "辅助型";
-    static cost = 100;
-    static description = "保护附近防御卡免受空降威胁";
-    static upgrade = "强化后提高[生命值]";
-    static rarity = 1;
-    static story = "-Say Geronimo!<br>-Bounce away!";
-    static idleLength = 10;
-	static assets = ["defend","idle"];
+	static get category(): string {
+		return t("C000");
+	}
+	static cost = 100;
+	static description = "保护附近防御卡免受空降威胁";
+	static upgrade = "强化后提高[生命值]";
+	static rarity = 1;
+	static story = "-Say Geronimo!<br>-Bounce away!";
+	static idleLength = 10;
+	static assets = ["defend", "idle"];
 	static offset = [-47, -54];
 	width = 177;
 	height = 174;
@@ -3132,7 +3237,9 @@ class AirDefenseShell extends Food {
 }
 export class TubeIn extends Food {
 	static name = "tubein";
-	static cName = "管道";
+	static get cName(): string {
+		return t("AA01_CNAME");
+	}
 	static offset = [-12, 48];
 	width = 91;
 	height = 62;
@@ -3178,139 +3285,141 @@ export class TubeIn extends Food {
 		super.remove();
 	}
 }
-export const FoodDetails = new Map<number, Food|any>([
-    [0, Stove],
-    [1, BunShooter],
-    [2, Toast],
-    [3, FlourSack],
-    [4, SnowBunShooter],
-    [5, SaladPult],
-    [6, RatClip],
-    [7, Pudding],
-    [8, WatermelonRind],
-    [9, Plate],
-    [10, WaterPipe],
-    [11, DoubleBunShooter],
-    [12, Brazier],
-    [13, WineGlass],
-    [14, CoffeeCup],
-    [15, HugeStove],
-    [16, Takoyaki],
-    [17, CokeBomb],
-    [18, ChocolateBread],
-    [19, CoffeePot],
-    [20, CatBox],
-    [21, WineRack],
-    [22, {
-        name: `icecream`,
-        cName: `冰淇淋`,
-        category: `辅助型`,
-        cost: 100,
-        coolTime: 60000,
-        offset: [-20, -60],
-        description: "种植在卡片上，使其立即冷却完毕",
-        upgrade: "强化后缩短[冷却时间]",
-        rarity: 1,
-        story: "五卷，赢了去睡觉，输了去学习。",
-        idleLength: 16,
-        generate: (function (x:number, y:number, star:number, skillLevel:number) {
-            return specialGenerate(x, y, star, skillLevel, 0);
-        })
-    }],
-    [23, {
-        name: `groundcoffee`,
-        cName: "咖啡粉",
-        category: `辅助型`,
-        cost: 75,
-        coolTime: 7500,
-        offset: [-10, -40],
-        description: "种植在休眠的卡片上，将其唤醒",
-        upgrade: "强化后提升[等级标识]",
-        rarity: 1,
-        story: "零落成泥碾作尘，只有香如故。",
-        idleLength: 13,
-        endLength: 4,
-        generate: (function (x:number, y:number, star:number, skillLevel:number) {
-            return specialGenerate(x, y, star, skillLevel, 1);
-        })
-    }],
-    [24, GrilledStarfish],
-    [25, RotaryCoffeePot],
-    [26, {
-        name: `cork`,
-        cName: "软木塞",
-        category: "辅助型",
-        cost: 75,
-        coolTime: 7500,
-        offset: [-2, -20],
-        description: "填充鼠洞以阻止老鼠钻出",
-        special: "只能放置在鼠洞上",
-        upgrade: "强化后提升[等级标识]",
-        rarity: 0,
-        story: "一无可进的进口，一无可去的去处。",
-        idleLength: 40,
-        endLength: 2,
-        generate: (function (x:number, y:number, star:number, skillLevel:number) {
-            if (level.Foods[y * level.column_num + x] == null
-                || level.Foods[y * level.column_num + x].layer_1 == null
-                || level.Foods[y * level.column_num + x].layer_1.constructor !== RatNest) {
-                return false;
-            } else {
-                return specialGenerate(x, y, star, skillLevel, 2);
-            }
-        })
-    }],
-    [27, IceBucket],
-    [28, ChocolatePult],
-    [29, EggPult],
-    [30, SteelWool],
-    [31, TeaCup],
-    [32, Sausage],
-    [33, FishBone],
-    [34, OilLamp],
-    [35, Hamburger],
-    [36, Fan],
-    [37, SnowEggPult],
-    [38, GatlingBunShooter],
-    [39, SteelFishBone],
-    [40, KettleBomb],
-    [41, WineBottle],
-    [42, ChocolateCannon],
-    [43, AirDefenseShell],
-    [44, {
-        name: `marshmallow`,
-        cName: "棉花糖",
-        offset: [-6, -6],
-        category: "辅助型",
-        cost: 25,
-        coolTime: 7500,
-        description: "填补云洞或是在岩浆上承载卡片",
-        upgrade: "强化后提高[生命值]",
-        rarity: 0,
-        story: "埏埴以为器，当其无，有器之用。凿户牖以为室，当其无，有室之用。故有之以为利，无之以为用。",
-        idleLength: 8,
-        generate: (function (x:number, y:number, star:number, skillLevel:number) {
-            level.Battlefield.playPlantAnimation(0, x, y);
-            if (level.Foods[y * level.column_num + x] && level.Foods[y * level.column_num + x].lava) {
+export const FoodDetails = new Map<number, Food | any>([
+	[0, Stove],
+	[1, BunShooter],
+	[2, Toast],
+	[3, FlourSack],
+	[4, SnowBunShooter],
+	[5, SaladPult],
+	[6, RatClip],
+	[7, Pudding],
+	[8, WatermelonRind],
+	[9, Plate],
+	[10, WaterPipe],
+	[11, DoubleBunShooter],
+	[12, Brazier],
+	[13, WineGlass],
+	[14, CoffeeCup],
+	[15, HugeStove],
+	[16, Takoyaki],
+	[17, CokeBomb],
+	[18, ChocolateBread],
+	[19, CoffeePot],
+	[20, CatBox],
+	[21, WineRack],
+	[22, {
+		name: `icecream`,
+		cName: `冰淇淋`,
+		category: `辅助型`,
+		cost: 100,
+		coolTime: 60000,
+		offset: [-20, -60],
+		description: "种植在卡片上，使其立即冷却完毕",
+		upgrade: "强化后缩短[冷却时间]",
+		rarity: 1,
+		story: "五卷，赢了去睡觉，输了去学习。",
+		assets: ["idle"],
+		idleLength: 16,
+		generate: (function (x: number, y: number, star: number, skillLevel: number) {
+			return specialGenerate(x, y, star, skillLevel, 0);
+		})
+	}],
+	[23, {
+		name: `groundcoffee`,
+		cName: "咖啡粉",
+		category: `辅助型`,
+		cost: 75,
+		coolTime: 7500,
+		offset: [-10, -40],
+		description: "种植在休眠的卡片上，将其唤醒",
+		upgrade: "强化后提升[等级标识]",
+		rarity: 1,
+		story: "零落成泥碾作尘，只有香如故。",
+		assets: ["idle"],
+		idleLength: 13,
+		endLength: 4,
+		generate: (function (x: number, y: number, star: number, skillLevel: number) {
+			return specialGenerate(x, y, star, skillLevel, 1);
+		})
+	}],
+	[24, GrilledStarfish],
+	[25, RotaryCoffeePot],
+	[26, {
+		name: `cork`,
+		cName: "软木塞",
+		get category() { return t("C000"); },
+		cost: 75,
+		coolTime: 7500,
+		offset: [-2, -20],
+		description: "填充鼠洞以阻止老鼠钻出",
+		special: "只能放置在鼠洞上",
+		upgrade: "强化后提升[等级标识]",
+		rarity: 0,
+		story: "一无可进的进口，一无可去的去处。",
+		idleLength: 40,
+		endLength: 2,
+		generate: (function (x: number, y: number, star: number, skillLevel: number) {
+			if (level.Foods[y * level.column_num + x] == null
+				|| level.Foods[y * level.column_num + x].layer_1 == null
+				|| level.Foods[y * level.column_num + x].layer_1.constructor !== RatNest) {
+				return false;
+			} else {
+				return specialGenerate(x, y, star, skillLevel, 2);
+			}
+		})
+	}],
+	[27, IceBucket],
+	[28, ChocolatePult],
+	[29, EggPult],
+	[30, SteelWool],
+	[31, TeaCup],
+	[32, Sausage],
+	[33, FishBone],
+	[34, OilLamp],
+	[35, Hamburger],
+	[36, Fan],
+	[37, SnowEggPult],
+	[38, GatlingBunShooter],
+	[39, SteelFishBone],
+	[40, KettleBomb],
+	[41, WineBottle],
+	[42, ChocolateCannon],
+	[43, AirDefenseShell],
+	[44, {
+		name: `marshmallow`,
+		cName: "棉花糖",
+		offset: [-6, -6],
+		get category() { return t("C000"); },
+		cost: 25,
+		coolTime: 7500,
+		description: "填补云洞或是在岩浆上承载卡片",
+		upgrade: "强化后提高[生命值]",
+		rarity: 0,
+		story: "埏埴以为器，当其无，有器之用。凿户牖以为室，当其无，有室之用。故有之以为利，无之以为用。",
+		idleLength: 8,
+		generate: (function (x: number, y: number, star: number, skillLevel: number) {
+			level.Battlefield.playPlantAnimation(0, x, y);
+			if (level.Foods[y * level.column_num + x] && level.Foods[y * level.column_num + x].lava) {
 
-            } else if (level && level.cloudCavityPosition) {
-                for (let i = 0; i < level.cloudCavityPosition.length; i++) {
-                    if (level.cloudCavityPosition[i].row === y
-                        && Math.abs(level.cloudCavityPosition[i].column - x) <= 1) {
-                        level.cloudCavityPosition[i].cavity = false;
-                        break;
-                    }
-                }
-            }
-            return true;
-        })
-    }],
+			} else if (level && level.cloudCavityPosition) {
+				for (let i = 0; i < level.cloudCavityPosition.length; i++) {
+					if (level.cloudCavityPosition[i].row === y
+						&& Math.abs(level.cloudCavityPosition[i].column - x) <= 1) {
+						level.cloudCavityPosition[i].cavity = false;
+						break;
+					}
+				}
+			}
+			return true;
+		})
+	}],
 ]);
 export const getFoodDetails = function (type: number) {
-    if(FoodDetails.has(type)){
-        return FoodDetails.get(type);
-    }
-    else {
-        return Food;
-    }
+	if (FoodDetails.has(type)) {
+		return FoodDetails.get(type);
+	}
+	else {
+		return Food;
+	}
 }

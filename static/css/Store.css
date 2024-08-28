@@ -1,21 +1,13 @@
 #town #store {
-	position: fixed;
-	top: 0;
-	left: 0;
-	z-index: 10;
-	display: none;
-	margin: auto;
-	width: var(--window_width);
-	height: var(--window_height);
+	/* shared modal layout & animation are defined in Style.css */
 	background-image: url("../images/interface/festival.png");
 	background-size: cover;
 	background-repeat: no-repeat;
 	color: white;
 	text-align: left;
 	font-weight: 600;
-	transition: all, .32s ease-in-out;
-    animation: townBoxIn 0.32s ease-in-out;
 }
+
 
 #town #store h2{
 	position: relative;
@@ -30,25 +22,24 @@
 	display: grid;
 	top: 2rem;
 	margin-left: 2rem;
-	padding: 24px;
-	width: calc(140px * 3);
-	border-radius: 2rem;
-	background-color: rgba(0, 0, 0, .48);
+	padding: 1.5rem;
+	width: calc(8.75rem * 3);
+		border-radius: 2rem;
 	color: black;
 	grid-template-columns: repeat(3, 1fr);
 	grid-template-rows: repeat(3, max(70px, 3rem));
-	grid-row-gap: 24px;
-	backdrop-filter: blur(20px) saturate(200%);
+	grid-row-gap: 1.5rem;
 }
+
 
 #town #store #storeBox div {
 	position: relative;
 	display: inline-block;
 	margin: 0;
-	border-radius: 12px;
+	border-radius: var(--radius-md);
 	color: black;
 	cursor: pointer;
-	transition: all 0.32s ease-in-out;
+	transition: all 0.32s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 #town #store #storeBox div:hover {
@@ -57,27 +48,27 @@
 
 #town #store #storeBox img {
 	position: absolute;
-	top: 8px;
+	top: 0.5rem;
 	right: 0;
-	bottom: 4px;
+	bottom: 0.25rem;
 	left: 0;
 	display: block;
 	margin: auto;
 	padding: 0;
-	border-radius: 12px;
-	box-shadow: transparent 0 0 0 2px;
-	transition: all 0.32s ease-in-out;
+	border-radius: var(--radius-md);
+	box-shadow: transparent 0 0 0 0.125rem;
+	transition: all 0.32s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 #town #store #storeBox #storeItemBoxX, #town #store #storeBox #storeItemBoxY {
 	position: absolute;
 	z-index: -1;
-	padding: 8px;
-	width: 120px;
-	height: 70px;
-	border-radius: 16px;
+	padding: 0.5rem;
+	width: 7.5rem;
+	height: 4.375rem;
+	border-radius: var(--radius);
 	background-color: white;
-	transition: all 0.24s ease-in-out;
+	transition: all 0.24s cubic-bezier(0.4, 0, 0.2, 1);
 	pointer-events: none;
 	filter: blur(4px);
 }
@@ -101,8 +92,8 @@
 	left: 2px;
 	bottom: 0;
 	margin: auto;
-	width: 16px;
-	height: 16px;
+	width: 1rem;
+	height: 1rem;
 	background-image: url("../images/interface/coin.svg");
 	background-size: contain;
 	content: "";
@@ -115,10 +106,11 @@
     right: 2rem;
 	padding: 2rem;
 	width: 20rem;
-	border-radius: 2rem;
-	background-color: rgba(0,0,0,.48);
-	backdrop-filter: blur(20px) saturate(200%);
+				border-radius: 2rem;
 	color: white;
+	background-color: var(--glass_bg);
+	backdrop-filter: var(--glass_backdrop);
+
 }
 
 #town #store #navbar {
@@ -126,20 +118,19 @@
 	top: 7.125rem;
 	left: 10rem;
 	padding: 0;
-	width: 45px;
-	height: 45px;
+	width: 2.8125rem;
+	height: 2.8125rem;
 	border: transparent solid 2px;
 	border-radius: 50%;
-	background-color: rgba(0, 0, 0, .48);
-	background-image: url("../images/interface/cards.svg");
+		background-image: url("../images/interface/cards.svg");
 	background-position: center;
 	background-size: 80%;
 	background-repeat: no-repeat;
 	color: black;
 	cursor: pointer;
-	transition: all .24s ease-in-out;
-	backdrop-filter: saturate(200%) blur(20px);
+	transition: all .24s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 
 .store_purchase {
     top: 0;
@@ -148,7 +139,7 @@
     height: var(--window_height);
     z-index: 9999;
     text-align: center;
-    transition: all .24s ease-in-out;
+    transition: all .24s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .store_purchase div {
@@ -163,7 +154,7 @@
     padding: 2rem;
     border-radius: 2rem;
     box-shadow: var(--shadow);
-    animation: purchase 0.48s forwards ease-in-out;
+    animation: purchase 0.48s forwards cubic-bezier(0.4, 0, 0.2, 1);
 	overflow: hidden;
 	height: 0;
 }
@@ -230,27 +221,4 @@
     background-position: center;
     background-size: contain;
     display: inline-block;
-}
-@keyframes purchase {
-    from {
-        opacity: 0;
-        bottom: -3rem;
-		height: 14.5rem;
-    }
-    to {
-        opacity: 1;
-        bottom: 2rem;
-		height: 22.5rem;
-    }
-}
-
-@keyframes purchaseRemove {
-	from{
-		height: 22.5rem;
-	}
-    to {
-        opacity: 0;
-		height: 14.5rem;
-		bottom: -3rem;
-    }
 }

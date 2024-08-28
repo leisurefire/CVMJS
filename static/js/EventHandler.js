@@ -1,8 +1,38 @@
+"use strict";
 var _a;
-import { GameReadyPage, GEH, MaterialButton, MaterialCard, MaterialIconButton, MaterialNavigationBar, MaterialRangeInput, MaterialSwitch, ToastBox, WarnMessageBox } from "./Core.js";
+import { i18n } from "./i18n/index.js";
 import { FoodDetails, getFoodDetails } from "./Foods.js";
-import { ABOUT_INFO, AUDIO_EFFECT, GAME_ERROR_CODE_005, GAME_ERROR_CODE_006, GAME_ERROR_CODE_007, GAME_UI_TEXT_007, GAME_UI_TEXT_008, GAME_UI_TEXT_009, GAME_UI_TEXT_010, MUSIC, NOT_ENOUGH_COIN, OK, PURCHASE, SECOND, SUN_AUTO_COLLECT, UPDATE_ANNOUNCEMENT } from "./language/Chinese.js";
 import { level } from "./Level.js";
+// 从Core.js导入必要的组件
+import { GameReadyPage, GEH, MaterialButton, MaterialCard, MaterialIconButton, MaterialNavigationBar, MaterialRangeInput, MaterialSwitch, ToastBox, WarnMessageBox } from "./Core.js";
+// ---- Small LRU Cache for images ----
+class LruCache {
+    max;
+    map = new Map();
+    constructor(max) {
+        this.max = max;
+    }
+    get(key) {
+        const v = this.map.get(key);
+        if (v !== undefined) {
+            this.map.delete(key);
+            this.map.set(key, v);
+        }
+        return v;
+    }
+    set(key, val) {
+        if (this.map.has(key))
+            this.map.delete(key);
+        this.map.set(key, val);
+        if (this.map.size > this.max) {
+            const it = this.map.keys().next();
+            if (!it.done) {
+                this.map.delete(it.value);
+            }
+        }
+    }
+    has(key) { return this.map.has(key); }
+}
 document.ondragstart = function () {
     return false;
 };
@@ -25,21 +55,50 @@ const levels = new Map([
     [12, "CurryIslandNight"],
     [13, "Abyss"],
     [20, "MarshmallowSky"],
+    [99, "Rouge"],
 ]);
 const DataBase = "CVMJSDataBase";
+const levelDetailsCache = new Map();
 export const getLevelDetails = async (type) => {
     try {
-        // noinspection TypeScriptCheckImport
-        const module = await import(`./level/${levels.get(type)}.js`);
-        return module.default;
+        if (!levelDetailsCache.has(type)) {
+            // noinspection TypeScriptCheckImport
+            const p = import(`./level/${levels.get(type)}.js`).then(m => m.default);
+            levelDetailsCache.set(type, p);
+        }
+        return await levelDetailsCache.get(type);
     }
     catch (error) {
         ToastBox(`${error}`);
     }
 };
+// 受限音效节流：每个 origin 分音效名限流
 const restrictedAudioPlaybackTime = new WeakMap();
 const restrictedAudio = new Set(['ken']); // 老鼠啃食更新是100ms，一只老鼠放两次很吵
-const gameAudio = new Map();
+let audioCtx = null;
+const effectBuffers = new Map();
+async function playSfxWebAudio(name, volume = 1) {
+    try {
+        // @ts-ignore
+        audioCtx ??= new window.AudioContext();
+        let buf = effectBuffers.get(name);
+        if (!buf) {
+            const res = await fetch(`../static/audio/${name}.mp3`);
+            const arr = await res.arrayBuffer();
+            buf = await audioCtx.decodeAudioData(arr);
+            effectBuffers.set(name, buf);
+        }
+        const src = audioCtx.createBufferSource();
+        const gain = audioCtx.createGain();
+        gain.gain.value = volume;
+        src.buffer = buf;
+        src.connect(gain).connect(audioCtx.destination);
+        src.start();
+    }
+    catch (e) {
+        // fallback 在外层继续
+    }
+}
 const gameMusic = new Map([
     [0, "chengzhen"], //城镇
     [1, "zhandou_day_1"], //美味岛日先锋
@@ -52,9 +111,14 @@ const gameMusic = new Map([
     [8, null], //美味岛夜Boss
     [9, "zhandou_day_2"],
     [17, "zhandou_day_3"], //浮空岛日先锋
+    [99, "zhandou_day_4"],
 ]);
-const effectCanvas = new OffscreenCanvas(100, 100);
+const effectCanvas = (typeof OffscreenCanvas !== 'undefined') ? new OffscreenCanvas(100, 100) : document.createElement('canvas');
 const ctx = effectCanvas.getContext('2d', { willReadFrequently: true });
+// IndexedDB 版本控制，资源升级时可选择清空缓存
+const DB_VERSION = 2;
+const DB_STORE = 'ImageBuffer';
+const idle = (cb) => window.requestIdleCallback ? window.requestIdleCallback(cb) : setTimeout(cb, 0);
 class EventHandler {
     static icons = new Map([
         ["about", undefined],
@@ -78,19 +142,22 @@ class EventHandler {
         ["info", undefined],
         ['unselect', undefined],
         ['close', undefined],
+        ['rouge', undefined],
     ]);
     static mobile = false;
     static backgroundMusic;
     static instance;
-    static #images = new Map();
+    static #images = new LruCache(400);
     scale = 1; //网页缩放比例
     effectVolume = 1; //音效音量大小
     musicVolume = 1; //音乐音量大小
     speed = 1;
     GameEnd = false;
     composeAnimTimer = null;
+    #resizeRaf = null;
+    #tickRaf = null;
     #state = "town";
-    #stateSet = ["town", "compose", "shop", "battle"];
+    #stateSet = ["town", "start", "compose", "store", "rouge", "battle"];
     #maxCardNum = 9; //最大卡片数量
     #archive = {};
     #config = {};
@@ -101,6 +168,7 @@ class EventHandler {
     #sunAutoCollect = false;
     #cardDetails = document.createElement("div");
     #debug = false;
+    // 静态t方法已移除，请使用i18n.t()代替
     constructor() {
         if (!_a.instance) {
             _a.instance = this;
@@ -112,18 +180,27 @@ class EventHandler {
         if (/Android|HarmonyOS|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
             _a.mobile = true;
         }
-        try {
-            _a.icons.forEach((_, key, map) => fetch(`../static/images/interface/icons/${key}.svg`)
-                .then(res => res.text())
-                .then(text => map.set(key, text)));
-        }
-        catch (error) {
-            ToastBox(`Can't retrieve certain icon(s): ${error}`);
-        }
-        window.addEventListener('load', () => {
+        this.#loadIcons();
+        this.#loadI18n();
+        window.addEventListener('load', async () => {
+            await this.#iconsLoaded;
+            await this.#i18nLoaded;
             this.#getArchive();
             this.#setStoreItems();
             this.#resize();
+            this.#startTick();
+            // 空闲时对卡片图像做轻量预热
+            idle(() => {
+                try {
+                    const n = Math.min(this.cardBag.length, 12);
+                    for (let i = 0; i < n; i++) {
+                        const imgSrc = this.cardBag[i].src;
+                        if (imgSrc)
+                            this.requestImageCache(imgSrc);
+                    }
+                }
+                catch { }
+            });
             const loader = document.getElementById('loader');
             if (loader) {
                 loader.style.display = "none";
@@ -132,7 +209,7 @@ class EventHandler {
             document.addEventListener('levelComplete', (event) => {
                 const { NAME, REWARDS } = event.detail.level.constructor;
                 this.#addCoins(REWARDS);
-                ToastBox(`${NAME}挑战完成，你获得了 ${REWARDS} 金币！`);
+                ToastBox(`${i18n.t("NAME")}挑战完成，你获得了 ${i18n.t("REWARDS")} 金币！`);
             });
             // @ts-ignore
             this.coinBar = document.getElementById("coinBar");
@@ -147,9 +224,16 @@ class EventHandler {
                 NavigationBar.addItem("情报", _a.icons.get('compose'), () => {
                     this.#GameStateSwitch('compose');
                 });
-                NavigationBar.addItem("商店", _a.icons.get('store'), () => {
-                    this.#GameStateSwitch('store');
-                });
+                // NavigationBar.addItem("商店",
+                //     EventHandler.icons.get('store'),
+                //     () => {
+                //         this.#GameStateSwitch('store');
+                //     });
+                // NavigationBar.addItem("变幻",
+                //     EventHandler.icons.get('rouge'),
+                //     () => {
+                //         this.#GameStateSwitch('rouge');
+                //     });
                 const Settings = new MaterialIconButton(_a.icons.get('settings'), () => {
                     SettingPage.show();
                 });
@@ -160,8 +244,8 @@ class EventHandler {
                 Information.id = "info";
                 // @ts-ignore
                 // @ts-ignore
-                const InformationPage = new MaterialCard(`<p class="section">${_a.icons.get("about")}${ABOUT_INFO}</p>
-                    <p>${_a.icons.get("update")}${UPDATE_ANNOUNCEMENT}</p>`, `svg {
+                const InformationPage = new MaterialCard(`<p class="section">${_a.icons.get("about")}${i18n.t("ABOUT_INFO")}</p>
+                    <p>${_a.icons.get("update")}${i18n.t("UPDATE_ANNOUNCEMENT")}</p>`, `svg {
                         position: relative;
                         display: block;
                         margin-bottom: 0.25rem;
@@ -203,20 +287,20 @@ class EventHandler {
                     this.#config.musicVolume = Math.floor(value * 100);
                     _a.backgroundMusic.volume = value;
                     this.#saveConfig();
-                }), `${MUSIC}`);
+                }, this.musicVolume * 100), `${i18n.t("MUSIC")}`);
                 createNewLabel(new MaterialRangeInput((value) => {
                     this.effectVolume = value;
                     // @ts-ignore
                     this.#config.effectVolume = Math.floor(value * 100);
                     this.requestPlayAudio('dida');
                     this.#saveConfig();
-                }), `${AUDIO_EFFECT}`);
+                }, this.effectVolume * 100), `${i18n.t("AUDIO_EFFECT")}`);
                 createNewLabel(new MaterialSwitch((value) => {
                     this.#sunAutoCollect = value;
                     // @ts-ignore
                     this.#config.sunAutoCollect = value;
                     this.#saveConfig();
-                }, this.sunAutoCollect), `${SUN_AUTO_COLLECT}`);
+                }, this.sunAutoCollect), `${i18n.t("SUN_AUTO_COLLECT")}`);
                 createNewLabel(new MaterialSwitch((value) => {
                     this.speed = (value ? 1 : 0) + 1;
                 }, false), `两倍速（风驰电掣）`);
@@ -225,7 +309,7 @@ class EventHandler {
             }
             _a.backgroundMusic = new Audio("../static/audio/chengzhen.mp3");
             _a.backgroundMusic.loop = true;
-            _a.backgroundMusic.volume = this.musicVolume / 100;
+            _a.backgroundMusic.volume = this.musicVolume;
             const startPlayPromise = _a.backgroundMusic.play();
             if (startPlayPromise !== undefined) {
                 startPlayPromise.catch((error) => {
@@ -262,6 +346,14 @@ class EventHandler {
                         flip.appendChild(button);
                     }
                 });
+                getLevelDetails(99).then((detail) => {
+                    if (detail) {
+                        const button = new MaterialButton(detail.NAME, () => {
+                            GameReadyPage.initialize(99);
+                        }, false);
+                        flip.appendChild(button);
+                    }
+                });
             }
             else {
                 ToastBox(`发生核心错误`);
@@ -270,7 +362,7 @@ class EventHandler {
                 if (window.location.hostname === "127.0.0.1"
                     || window.location.hostname === "localhost") {
                     cBag.innerText = '';
-                    // this.#debug = true;
+                    this.#debug = true;
                     this.cardBag.length = 0;
                     for (let i = 0; i < 45; i++) {
                         this.cardBag.push(new BackpackCard(i, 12, 0));
@@ -278,7 +370,7 @@ class EventHandler {
                 }
             }
         });
-        window.addEventListener('resize', this.#resize);
+        window.addEventListener('resize', this.#onResize);
     }
     get state() {
         return this.#state;
@@ -309,6 +401,18 @@ class EventHandler {
     get debug() {
         return this.#debug;
     }
+    #iconsLoaded = undefined;
+    #i18nLoaded = undefined;
+    #loadIcons() {
+        this.#iconsLoaded = Promise.all(Array.from(_a.icons.keys()).map(key => fetch(`../static/images/interface/icons/${key}.svg`)
+            .then(res => res.text())
+            .then(text => _a.icons.set(key, text))
+            .catch(err => console.error(`Failed to load icon ${key}:`, err)))).then(() => { });
+    }
+    #loadI18n() {
+        // i18n现在由i18n模块处理，这里不需要单独加载
+        this.#i18nLoaded = i18n.getLoadPromise();
+    }
     // }
     get town() {
         return {
@@ -316,6 +420,7 @@ class EventHandler {
             store: document.getElementById("store"),
             CBag: document.getElementById("CBag"),
             coinBar: document.getElementById("coinBar"),
+            rouge: document.getElementById("rouge-like"),
         };
     }
     ;
@@ -327,30 +432,25 @@ class EventHandler {
     };
     requestPlayAudio(name, origin = null) {
         try {
-            if (origin === null && restrictedAudio.has(name)) {
+            if (origin === null && restrictedAudio.has(name))
                 return;
-            }
             const now = Date.now();
-            const lastTime = restrictedAudioPlaybackTime.get(origin) || 0;
-            if (now - lastTime < 1000 && restrictedAudio.has(name)) {
-                return;
-            }
-            let audio1, audio2;
-            if (gameAudio.has(name)) {
-                [audio1, audio2] = gameAudio.get(name);
-            }
-            else {
-                audio1 = new Audio("../static/audio/" + name + ".mp3");
-                audio2 = new Audio("../static/audio/" + name + ".mp3");
-                gameAudio.set(name, [audio1, audio2]);
-            }
-            const volume = this.effectVolume;
-            audio1.volume = volume;
-            audio2.volume = volume;
-            const audio = audio1.paused ? audio1 : audio2;
-            audio.play();
             if (origin !== null) {
-                restrictedAudioPlaybackTime.set(origin, now);
+                let perOrigin = restrictedAudioPlaybackTime.get(origin);
+                if (!perOrigin) {
+                    perOrigin = new Map();
+                    restrictedAudioPlaybackTime.set(origin, perOrigin);
+                }
+                const last = perOrigin.get(name) || 0;
+                const limit = this.#config?.audioLimitMs ?? 1000;
+                if (now - last < limit && restrictedAudio.has(name))
+                    return;
+                perOrigin.set(name, now);
+            }
+            // 优先 WebAudio 播放短音效
+            const webAudioEnabled = (this.#config?.webAudio ?? true);
+            if (webAudioEnabled && window.AudioContext) {
+                playSfxWebAudio(name, this.effectVolume);
             }
         }
         catch (error) {
@@ -367,14 +467,16 @@ class EventHandler {
             }
             catch (error) {
                 ToastBox(`Cannot play this audio: ${error}`);
+                return false;
             }
         }
         else {
             ToastBox(`Cannot find that resource.`);
+            return false;
         }
     }
     requestDrawImage(src, effect = null, intensity = null) {
-        const effectKey = effect !== null ? `${src}?effect=${effect}` : src;
+        const effectKey = effect !== null ? `${src}?effect=${effect}${intensity != null ? `&intensity=${intensity}` : ''}` : src;
         if (_a.#images.has(effectKey)) {
             return _a.#images.get(effectKey);
         }
@@ -397,13 +499,16 @@ class EventHandler {
                     return;
                 }
             }
-            const request = indexedDB.open(DataBase, 1);
-            const storeName = 'ImageBuffer';
+            const request = indexedDB.open(DataBase, DB_VERSION);
+            const storeName = DB_STORE;
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
-                if (!db.objectStoreNames.contains(storeName)) {
-                    db.createObjectStore(storeName, { keyPath: 'id' });
+                if (db.objectStoreNames.contains(storeName)) {
+                    db.deleteObjectStore(storeName);
                 }
+                const store = db.createObjectStore(storeName, { keyPath: 'id' });
+                store.createIndex('w', 'w', { unique: false });
+                store.createIndex('h', 'h', { unique: false });
             };
             request.onsuccess = async (event) => {
                 const db = event.target.result;
@@ -464,7 +569,7 @@ class EventHandler {
                 }
                 const transaction = db.transaction(storeName, 'readwrite');
                 const store = transaction.objectStore(storeName);
-                store.put({ id: src, image: blob });
+                store.put({ id: src, image: blob, w: bitmap.width, h: bitmap.height });
                 // Wait for the transaction to complete or fail
                 transaction.oncomplete = () => {
                     resolve(this.#requestApplyEffect(bitmap, effect, intensity, src));
@@ -486,7 +591,7 @@ class EventHandler {
         };
     }
     async #requestApplyEffect(img, effect, intensity, src) {
-        const effectKey = effect !== null ? `${src}?effect=${effect}` : src;
+        const effectKey = effect !== null ? `${src}?effect=${effect}${intensity != null ? `&intensity=${intensity}` : ''}` : src;
         if (_a.#images.has(effectKey)) {
             return _a.#images.get(effectKey);
         }
@@ -564,33 +669,57 @@ class EventHandler {
             this.#cardDetails.innerHTML += `<div>`
                 + `<a>${_a.icons.get("type")}${detail.category}</a>`
                 + `<a>${_a.icons.get("energy")}${detail.cost + ((detail.addCost) ? "+" : "")}</a>`
-                + `<a>${_a.icons.get("cooltime")}${detail.coolTime / 1000}${SECOND}</a>`
+                + `<a>${_a.icons.get("cooltime")}${detail.coolTime / 1000}${i18n.t("SECOND")}</a>`
                 + `<a>${_a.icons.get("tier")}${star}</a>`
                 + `</div>`;
             if (detail.special != null) {
-                this.#cardDetails.innerHTML += `<br><li><span>${GAME_UI_TEXT_007}</span><span>${detail.special}</span><br></li>`;
+                this.#cardDetails.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_007")}</span><span>${detail.special}</span></li>`;
             }
-            this.#cardDetails.innerHTML += `<br><li><span>${GAME_UI_TEXT_008}</span><span style='color: #006400'>${detail.description}</span></li>`;
-            this.#cardDetails.innerHTML += `<li><span>${GAME_UI_TEXT_009}</span><span style='color: #ff7f50'>${detail.upgrade}</span></li>`;
+            this.#cardDetails.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_008")}</span><span style='color: #006400'>${detail.description}</span></li>`;
+            this.#cardDetails.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_009")}</span><span style='color: #ff7f50'>${detail.upgrade}</span></li>`;
         }
         return this.#cardDetails;
     }
+    #onResize = () => {
+        if (this.#resizeRaf != null)
+            cancelAnimationFrame(this.#resizeRaf);
+        this.#resizeRaf = requestAnimationFrame(this.#resize);
+    };
     #resize = () => {
         this.scale = document.documentElement.clientHeight / 600; //提供缩放比例参数
         if (level?.Battlefield) {
-            level.Battlefield.Canvas.width = document.documentElement.clientWidth;
-            level.Battlefield.Canvas.height = document.documentElement.clientHeight;
-            level.Battlefield.Canvas.getContext('2d').setTransform(1, 0, 0, 1, 0, 0);
-            level.Battlefield.Canvas.getContext('2d').scale(this.scale, this.scale);
-            level.Battlefield.FrequentCanvas.width = document.documentElement.clientWidth;
-            level.Battlefield.FrequentCanvas.height = document.documentElement.clientHeight;
-            level.Battlefield.FrequentCanvas.getContext('2d').setTransform(1, 0, 0, 1, 0, 0);
-            level.Battlefield.FrequentCanvas.getContext('2d').scale(this.scale, this.scale);
+            const ctxBG = level.Battlefield.ctxBG;
+            if (ctxBG) {
+                ctxBG.setTransform(1, 0, 0, 1, 0, 0);
+                ctxBG.scale(this.scale, this.scale);
+            }
+            const ctxFG = level.Battlefield.ctxFG;
+            if (ctxFG) {
+                ctxFG.setTransform(1, 0, 0, 1, 0, 0);
+                ctxFG.scale(this.scale, this.scale);
+            }
             level.Battlefield.SunBar.style.left = `${140 * this.scale}px`;
             level.Battlefield.Shovel.style.left = `${140 * this.scale + 136}px`;
             level.Battlefield.Cards.style.transform = `scale(${this.scale})`;
         }
     };
+    // 统一 Tick：减少分散样式写入
+    #startTick() {
+        const tick = () => {
+            try {
+                for (const bc of this.#cards) {
+                    if (bc && bc.card && typeof bc.card.cooldownProcess === 'function') {
+                        bc.card.cooldownProcess();
+                    }
+                }
+            }
+            catch { }
+            this.#tickRaf = requestAnimationFrame(tick);
+        };
+        if (this.#tickRaf != null)
+            cancelAnimationFrame(this.#tickRaf);
+        this.#tickRaf = requestAnimationFrame(tick);
+    }
     #getArchive() {
         const archive = localStorage.getItem("CVMJSArchive");
         if (archive) {
@@ -627,18 +756,24 @@ class EventHandler {
         const config = localStorage.getItem("CVMJSConfig");
         if (config) {
             this.#config = JSON.parse(config);
-            this.#sunAutoCollect = this.#config.sunAutoCollect;
-            this.musicVolume = this.#config.musicVolume / 100;
-            this.effectVolume = this.#config.effectVolume / 100;
+            if (typeof this.#config.webAudio === 'undefined')
+                this.#config.webAudio = true;
+            if (typeof this.#config.audioLimitMs === 'undefined')
+                this.#config.audioLimitMs = 1000;
         }
         else {
             this.#config = {
                 sunAutoCollect: false,
                 musicVolume: 80,
                 effectVolume: 80,
+                webAudio: true,
+                audioLimitMs: 1000,
             };
-            this.#saveConfig();
         }
+        this.#sunAutoCollect = this.#config.sunAutoCollect;
+        this.musicVolume = this.#config.musicVolume / 100;
+        this.effectVolume = this.#config.effectVolume / 100;
+        this.#saveConfig();
     }
     #addCoins(num) {
         if (num >= 0) {
@@ -720,9 +855,11 @@ class EventHandler {
                     }
                     this.#StoreItems[i * 3 + col] = this.#setNewItem(i * 3 + col);
                 }
+                const frag = document.createDocumentFragment();
                 for (let i = 0; i < 9; i++) {
-                    storeBox.appendChild(this.#StoreItems[i].entity);
+                    frag.appendChild(this.#StoreItems[i].entity);
                 }
+                storeBox.appendChild(frag);
             }
             else {
                 ToastBox(`Page not loaded properly`);
@@ -730,8 +867,8 @@ class EventHandler {
         }
         else {
             WarnMessageBox({
-                Text: `${NOT_ENOUGH_COIN}`,
-                ButtonLabelYes: `${OK}`,
+                Text: `${i18n.t("NOT_ENOUGH_COIN")}`,
+                ButtonLabelYes: `${i18n.t("OK")}`,
             });
         }
     }
@@ -746,13 +883,13 @@ class EventHandler {
             const h2 = document.createElement("h2");
             const img = document.createElement('img');
             const p = document.createElement("p");
-            const button = new MaterialButton(`${OK}`, () => {
+            const button = new MaterialButton(`${i18n.t("OK")}`, () => {
                 this.#purchaseItem(item, entry, pos);
             }, false);
             box.className = "store_purchase";
             document.body.appendChild(box);
             img.src = item.item_img.src;
-            h2.innerHTML = `${PURCHASE} <span style='font-weight: 600'>` + item.detail.cName + '</span>';
+            h2.innerHTML = `${i18n.t("PURCHASE")} <span style='font-weight: 600'>` + item.detail.cName + '</span>';
             p.innerText = `${(item.price || 900)}`;
             box.appendChild(div);
             div.appendChild(h2);
@@ -760,7 +897,7 @@ class EventHandler {
             div.appendChild(p);
             div.appendChild(button);
             box.addEventListener('click', () => {
-                div.style.animation = "purchaseRemove 0.12s ease-in-out";
+                div.style.animation = "purchaseRemove 0.12s cubic-bezier(0.4, 0, 0.2, 1)";
                 div.addEventListener("animationend", () => {
                     box.remove();
                 });
@@ -794,130 +931,6 @@ class EventHandler {
             return true;
         }
     }
-    // login() {
-    //     let username = document.getElementById("username").value;
-    //     let password = document.getElementById("password").value;
-    //     document.getElementById("loginAlert").innerText = "";
-    //
-    //     const user = {
-    //         username: username,
-    //         password: password,
-    //     };
-    //
-    //     fetch(location + 'login', {
-    //         method: 'POST',
-    //         body: JSON.stringify(user),
-    //         headers: {
-    //             'Content-Type': 'application/json'
-    //         }
-    //     })
-    //         .then(res => {
-    //             const error = res.headers.get("ERROR_CODE");
-    //             if (error) {
-    //                 switch (error) {
-    //                     case "000": {
-    //                         document.getElementById("loginAlert").innerText = `${SERVER_ERROR_CODE_000}`;
-    //                         return false;
-    //                     }
-    //                     case "001": {
-    //                         document.getElementById("loginAlert").innerText = `${SERVER_ERROR_CODE_001}`;
-    //                         return false;
-    //                     }
-    //                     case "002": {
-    //                         document.getElementById("loginAlert").innerText = `${SERVER_ERROR_CODE_002}`;
-    //                         return false;
-    //                     }
-    //                     case "003": {
-    //                         res.json()
-    //                             .then(data => {
-    //                                 data = data.WAIT_TIME
-    //                                 const day = Math.floor(data / 86400)
-    //                                 const hour = Math.floor(data / 3600)
-    //                                 const minute = Math.floor(data / 60)
-    //                                 const message = "请在" + (day > 0 ? (day + "天") : "") + (hour > 0 ? (hour + "小时") : "") + (minute > 0 ? (minute + "分钟") : "") + "后重试";
-    //                                 document.getElementById("loginAlert").innerText = `${SERVER_ERROR_CODE_003}` + message;
-    //                             })
-    //                         return false;
-    //                     }
-    //                     default: {
-    //                         document.getElementById("loginAlert").innerText = `${SERVER_ERROR_CODE_233}`;
-    //                         throw `${SERVER_ERROR_CODE_233}`;
-    //                     }
-    //                 }
-    //             } else {
-    //                 res.json()
-    //                     .then(data => {
-    //                         this.#username = data.username;
-    //                         this.#token = data.token;
-    //                         this.#archive = JSON.parse(data.archive);
-    //                         this.#saveArchive();
-    //                         const pass = {
-    //                             username: data.username,
-    //                             token: data.token,
-    //                         };
-    //                         sessionStorage.setItem(`${STORAGE_ACCOUNT_NAME}`, JSON.stringify(pass));
-    //                         location.reload();
-    //                     })
-    //             }
-    //         })
-    //         .catch(error => {
-    //             `Can't retrieve certain icon(s): ${error}`
-    //         })
-    // }
-    // cloudSave() {
-    //     const cert = {
-    //         username: this.#username,
-    //         archive: JSON.stringify(this.#archive),
-    //     };
-    //
-    //     fetch(location + 'api', {
-    //         method: 'POST',
-    //         body: JSON.stringify(cert),
-    //         headers: {
-    //             'API-Token': this.#token,
-    //             'API-Method': `${FETCH_SAVE_ARCHIVE_METHOD}`,
-    //             'Content-Type': 'application/json'
-    //         }
-    //     })
-    //         .then(res => {
-    //             const error = res.headers.get("ERROR_CODE");
-    //             if (error) {
-    //                 switch (error) {
-    //                     case "004" : {
-    //                         alert(SERVER_ERROR_CODE_004)
-    //                         break;
-    //                     }
-    //                     case "005" : {
-    //                         alert("向服务器呈交的内容未通过语义审查，请重新登录。如果仍然出现此问题，请联系 leisure。");
-    //                         break;
-    //                     }
-    //                     default: {
-    //                         throw `${SERVER_ERROR_CODE_233}`
-    //                     }
-    //                 }
-    //             } else {
-    //                 res.json()
-    //                     .then(data => {
-    //                         if (data.token) {
-    //                             let formerPass = sessionStorage.getItem(`${STORAGE_ACCOUNT_NAME}`);
-    //                             if (formerPass) {
-    //                                 this.#token = data.token;
-    //                                 formerPass = JSON.parse(formerPass);
-    //                                 formerPass.token = this.#token;
-    //                                 sessionStorage.setItem(`${STORAGE_ACCOUNT_NAME}`, JSON.stringify(formerPass));
-    //                                 console.log(`${SERVER_SUCCESS_CODE_000}`);
-    //                             } else {
-    //                                 throw `${GAME_ERROR_CODE_000}`
-    //                             }
-    //                         } else {
-    //                             throw `${SERVER_ERROR_CODE_005}`
-    //                         }
-    //                     })
-    //             }
-    //         })
-    //         .catch(error => {
-    //             ToastBox(`${error}`);
-    //         })
     #saveArchive() {
         // if (this.#username) {
         //     this.#cloudSave();
@@ -929,10 +942,11 @@ class EventHandler {
         localStorage.setItem("CVMJSConfig", JSON.stringify(this.#config));
     }
     #GameStateSwitch(des) {
-        this.#state = des;
-        if (this.town.compose && this.town.store && this.town.coinBar && this.town.CBag) {
+        this.state = des;
+        if (this.town.compose && this.town.store && this.town.rouge && this.town.coinBar && this.town.CBag) {
             this.town.compose.style.display = "none";
             this.town.store.style.display = "none";
+            this.town.rouge.style.display = "none";
             switch (des) {
                 case "start": {
                     this.town.coinBar.style.display = "none";
@@ -940,7 +954,14 @@ class EventHandler {
                         this.town.CBag.appendChild(this.cardBag[i].entity);
                     }
                     if (this.composeAnimTimer != null) {
-                        clearInterval(this.composeAnimTimer);
+                        try {
+                            cancelAnimationFrame(this.composeAnimTimer);
+                        }
+                        catch { }
+                        try {
+                            clearInterval(this.composeAnimTimer);
+                        }
+                        catch { }
                     }
                     break;
                 }
@@ -957,12 +978,55 @@ class EventHandler {
                     this.town.store.style.display = "block";
                     this.town.coinBar.style.display = "block";
                     if (this.composeAnimTimer != null) {
-                        clearInterval(this.composeAnimTimer);
+                        try {
+                            cancelAnimationFrame(this.composeAnimTimer);
+                        }
+                        catch { }
+                        try {
+                            clearInterval(this.composeAnimTimer);
+                        }
+                        catch { }
                     }
                     break;
                 }
+                case "rouge": {
+                    this.town.rouge.style.display = "block";
+                    this.town.coinBar.style.display = "none";
+                    if (this.composeAnimTimer != null) {
+                        try {
+                            cancelAnimationFrame(this.composeAnimTimer);
+                        }
+                        catch { }
+                        try {
+                            clearInterval(this.composeAnimTimer);
+                        }
+                        catch { }
+                    }
+                }
             }
         }
+    }
+    // 资源与事件清理
+    destroy() {
+        try {
+            if (this.#tickRaf != null)
+                cancelAnimationFrame(this.#tickRaf);
+            if (this.composeAnimTimer != null) {
+                try {
+                    cancelAnimationFrame(this.composeAnimTimer);
+                }
+                catch { }
+                try {
+                    clearInterval(this.composeAnimTimer);
+                }
+                catch { }
+                this.composeAnimTimer = null;
+            }
+            if (this.#resizeRaf != null)
+                cancelAnimationFrame(this.#resizeRaf);
+            window.removeEventListener('resize', this.#onResize);
+        }
+        catch { }
     }
 }
 _a = EventHandler;
@@ -1052,9 +1116,11 @@ export class Card extends HTMLElement {
         this.#details.className = "game-card-details";
         this.attachShadow({ mode: "open" });
         this.#style.textContent = `
+            :host(.disabled) img{ filter: brightness(50%); }
+            :host(.notenough) span{ color: red; }
             img{
                 width: 100%;
-                height: 100%:
+                height: 100%;
             }
             span{
                 position: absolute;
@@ -1108,15 +1174,20 @@ export class Card extends HTMLElement {
         return this.#remainTime;
     }
     set remainTime(value) {
-        value = Math.max(value, 0);
-        const percent = this.remainTime / this.coolTime * 100;
-        if (percent <= 5) {
-            this.#overlay.style.height = `0`;
+        if (GEH.debug) {
+            this.#remainTime = 0;
         }
         else {
-            this.#overlay.style.height = `${percent}%`;
+            value = Math.max(value, 0);
+            const percent = this.coolTime > 0 ? (value / this.coolTime * 100) : 0;
+            if (percent <= 5) {
+                this.#overlay.style.height = `0`;
+            }
+            else {
+                this.#overlay.style.height = `${percent}%`;
+            }
+            this.#remainTime = value;
         }
-        this.#remainTime = value;
     }
     get detailsHTML() {
         const detail = getFoodDetails(this.type);
@@ -1124,15 +1195,15 @@ export class Card extends HTMLElement {
             let text = "";
             if (level.SunNum >= this.cost) {
                 if (this.cooling) {
-                    text += `<span>${GAME_ERROR_CODE_006}</span>`;
+                    text += `<span>${i18n.t("GAME_ERROR_CODE_006")}</span>`;
                 }
             }
             else {
-                text += `<span>${GAME_ERROR_CODE_005}</span>`;
+                text += `<span>${i18n.t("GAME_ERROR_CODE_005")}</span>`;
             }
             text += `<strong>${detail.cName}</strong><br>${detail.description}`;
             if (detail.addCost && this.cost - detail.cost > 0) {
-                text += `<br><span>${GAME_ERROR_CODE_007}(${this.cost - detail.cost})</font>`;
+                text += `<br><span>${i18n.t("GAME_ERROR_CODE_007")}(${this.cost - detail.cost})</font>`;
             }
             return text;
         }
@@ -1153,7 +1224,7 @@ export class Card extends HTMLElement {
             return false;
         }
         if (level.SunNum < this.cost && !GEH.debug) {
-            level.Battlefield.SunBar.style.animation = `NOT_ENOUGH_SUN 0.64s ease-in-out`;
+            level.Battlefield.SunBar.style.animation = `NOT_ENOUGH_SUN 0.64s cubic-bezier(0.4, 0, 0.2, 1)`;
             return false;
         }
         if (this.cooling) {
@@ -1193,21 +1264,11 @@ export class Card extends HTMLElement {
         this.#details.remove();
     }
     cooldownProcess() {
-        if (!GEH.debug && (level.Battlefield.Cursor.picked || level.SunNum < this.cost || this.cooling)) {
-            this.#entity.style.filter = "brightness(50%)";
-            if (level.SunNum < this.cost) {
-                this.#cost.style.color = 'red';
-            }
-            else {
-                this.#cost.style.color = 'black';
-            }
-            if (this.cooling) {
-                this.remainTime -= this.speed * 100;
-            }
-        }
-        else {
-            this.#entity.style.filter = "none";
-            this.#cost.style.color = 'black';
+        const disabled = !GEH.debug && (level.Battlefield.Cursor.picked || level.SunNum < this.cost || this.cooling);
+        this.classList.toggle('disabled', !!disabled);
+        this.classList.toggle('notenough', !GEH.debug && level.SunNum < this.cost);
+        if (this.cooling) {
+            this.remainTime -= this.speed * 100;
         }
     }
 }
@@ -1285,26 +1346,26 @@ class BackpackCard {
                 InfoDes.innerHTML = "";
                 InfoDes.innerHTML += `<a>${EventHandler.icons.get('type')}${detail.category}</a>`;
                 InfoDes.innerHTML += `<a>${EventHandler.icons.get('energy')}${detail.cost + ((detail.addCost) ? "+" : "")}</a>`;
-                InfoDes.innerHTML += `<a>${EventHandler.icons.get('cooltime')}${detail.coolTime / 1000}${SECOND}</a>`;
+                InfoDes.innerHTML += `<a>${EventHandler.icons.get('cooltime')}${detail.coolTime / 1000}${i18n.t("SECOND")}</a>`;
                 InfoDes.innerHTML += `<br>`;
                 if (detail.special) {
-                    InfoDes.innerHTML += `<br><li><span>${GAME_UI_TEXT_007}</span><span>${detail.special}</span></li>`;
+                    InfoDes.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_007")}</span><span>${detail.special}</span></li>`;
                 }
-                InfoDes.innerHTML += `<br><li><span>${GAME_UI_TEXT_008}</span><span style='color: #006400'>${detail.description}</span></li>`;
-                InfoDes.innerHTML += `<li><span>${GAME_UI_TEXT_009}</span><span style='color: #ff7f50'>${detail.upgrade}</span></li>`;
-                InfoDes.innerHTML += `<br><li>${detail.story}</li>`;
+                InfoDes.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_008")}</span><span style='color: #006400'>${detail.description}</span></li>`;
+                InfoDes.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_009")}</span><span style='color: #ff7f50'>${detail.upgrade}</span></li>`;
+                InfoDes.innerHTML += `<li>${detail.story}</li>`;
                 if (detail.storyContributor) {
-                    InfoDes.innerHTML += "<strong><span style='color: #a9a9a9'>" + `${GAME_UI_TEXT_010}` + "&ensp;&ensp;" + detail.storyContributor + "</span></strong>";
+                    InfoDes.innerHTML += "<strong><span style='color: #a9a9a9'>" + `${i18n.t("GAME_UI_TEXT_010")}` + "&ensp;&ensp;" + detail.storyContributor + "</span></strong>";
                 }
                 if (detail.artist) {
-                    InfoDes.innerHTML += "<br><strong><span style='color: #a9a9a9'>" + `画&ensp;&ensp;&ensp;&ensp;师` + "&ensp;&ensp;" + detail.artist + "</span></strong>";
+                    InfoDes.innerHTML += "<strong><span style='color: #a9a9a9'>" + `画&ensp;&ensp;&ensp;&ensp;师` + "&ensp;&ensp;" + detail.artist + "</span></strong>";
                 }
             }
             const idleLength = detail.idleLength || 12;
             const endLength = detail.endLength || idleLength;
             const CInfoBack = document.getElementById("CInfoBack");
             if (CInfoBack) {
-                CInfoBack.style.backgroundImage = "url(../static/images/interface/compose/" + (detail.type || 0) + ".png";
+                CInfoBack.style.backgroundImage = "url(../static/images/interface/compose/" + (detail.type || 0) + ".png)";
                 CInfoBack.innerHTML = "";
                 if (detail.inside) {
                     this.animInside = document.createElement("img");
@@ -1326,11 +1387,25 @@ class BackpackCard {
                 };
             }
             let temp = 0;
-            clearInterval(GEH.composeAnimTimer);
-            GEH.composeAnimTimer = setInterval(() => {
-                this.#animEntity.style.objectPosition = `${-temp * this.#animEntity.offsetWidth}px 0`;
-                temp = (temp + 1) % endLength;
-            }, 100);
+            if (GEH.composeAnimTimer != null) {
+                cancelAnimationFrame(GEH.composeAnimTimer);
+                clearInterval(GEH.composeAnimTimer);
+            }
+            const frameDuration = 100; // ms per frame
+            let last = performance.now();
+            let acc = 0;
+            const step = (now) => {
+                const dt = now - last;
+                last = now;
+                acc += dt;
+                while (acc >= frameDuration) {
+                    this.#animEntity.style.objectPosition = `${-temp * this.#animEntity.offsetWidth}px 0`;
+                    temp = (temp + 1) % endLength;
+                    acc -= frameDuration;
+                }
+                GEH.composeAnimTimer = requestAnimationFrame(step);
+            };
+            GEH.composeAnimTimer = requestAnimationFrame(step);
         }
     }
     #PrepareGameHandleMouseClick() {
@@ -1356,7 +1431,7 @@ class BackpackCard {
                 GameReadyPage.appendChild(this.anim);
                 this.anim.style.zIndex = "11111";
                 this.anim.style.position = "fixed";
-                this.anim.style.top = this.rect.left + "px";
+                this.anim.style.top = this.rect.top + "px";
                 this.anim.style.left = this.rect.left + "px";
                 this.anim.style.borderRadius = this.#bagEntity.style.borderRadius;
                 this.anim.height = this.rect.height;

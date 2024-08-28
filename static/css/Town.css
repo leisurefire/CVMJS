@@ -11,73 +11,11 @@
     display: none !important;
 }
 
-@keyframes townBoxIn {
-    from{
-        top: 1rem;
-        opacity: 0;
-    }
-    to{
-        top: 0;
-        opacity: 1;
-    }
-}
-
-@keyframes achievement {
-    0% {
-        opacity: 1;
-        top: 588px;
-        transform: scale(0.6);
-    }
-    10% {
-        opacity: 1;
-        top: 526px;
-        transform: scale(1);
-    }
-    20% {
-        opacity: 1;
-        top: 538px;
-        transform: scale(1);
-    }
-    80% {
-        opacity: 1;
-        top: 538px;
-        transform: scale(1);
-    }
-    100% {
-        opacity: 0;
-        top: 588px;
-        transform: scale(0.6);
-    }
-}
-
-@keyframes flipBack {
-    from {
-        background-image: none;
-        width: calc(680px - 52px);
-        transform: rotateY(-180deg);
-    }
-    to {
-        background-image: url("../images/interface/adventure.svg");
-        width: 160px;
-        transform: rotateY(0);
-    }
-}
-
-@keyframes flip {
-    from {
-        width: 160px;
-        transform: rotateY(180deg);
-    }
-    to {
-        width: calc(680px - 52px);
-        transform: rotateY(0);
-    }
-}
 
 #town .overlay {
 	top: 0;
 	z-index: 15;
-	transition: transform, opacity 1.2s ease-in-out;
+	transition: transform, opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 #town #logo {
@@ -112,8 +50,9 @@
 	color: white;
 	text-align: left;
 	line-height: 1rem;
-	transition: all, .32s ease-in-out;
-	backdrop-filter: blur(20px) saturate(200%);
+		transition: all .32s cubic-bezier(0.4, 0, 0.2, 1);
+	
+
 }
 
 #town #coinBar::after {
@@ -176,17 +115,17 @@
 	display: block;
 	overflow: hidden;
 	padding: 0;
-	width: 160px;
-	height: 265px;
+	width: 10rem;
+	height: 16.5625rem;
 	border: transparent solid 2px;
-	border-radius: 32px;
+	border-radius: 2rem;
 	background-color: rgba(0, 0, 0, .48);
 	background-size: contain;
 	background-repeat: no-repeat;
 	color: white;
 	line-height: 1.5rem;
 	cursor: pointer;
-	transition: all .32s ease-in-out;
+	transition: all .32s cubic-bezier(0.4, 0, 0.2, 1);
 	backdrop-filter: blur(20px) saturate(200%);
 	animation: flipBack .32s;
 }
@@ -205,7 +144,7 @@
 }
 
 #town #EpicTask {
-	left: 240px;
+	left: 15rem;
 	background-image: url("../images/interface/epictask.svg");
 }
 
@@ -250,84 +189,49 @@
 	left: 0;
 }
 
-.description {
-	position: fixed;
-	z-index: 9999;
-	padding: 1rem;
-	max-width: 16rem;
-	border-radius: 1rem;
-	background-color: var(--background);
-	box-shadow: var(--shadow);
-	color: var(--outline);
+#town #rouge-like {
+	/* layout & animation now centralized in Style.css */
+	background-image: url("../images/interface/rouge.png");
+	background-size: cover;
+	background-repeat: no-repeat;
+	background-position: center;
+	color: white;
 	text-align: left;
-	font-size: 1rem;
-	transform-origin: top left;
-	animation: desDisplay 0.24s forwards ease-in-out;
-	pointer-events: none;
+	font-weight: 600;
 }
 
-.description h1 {
-	padding: 0 0 0.5rem;
-	margin: 0;
-	width: 100%;
-	text-align: center;
-	font-size: 1rem;
-}
 
-.description div{
-	display: grid;
-	grid-template-columns: repeat(4, 1fr);
-	column-gap: 0.375rem;
-	padding: 0;
-	margin: 0.25rem;
-}
-
-.description a {
-	display: inline-block;
-	padding: 0.5rem;
-	min-width: 2.5rem;
-	border-radius: 0.5rem;
-	background-color: var(--main_color_background);
-	color: var(--outline);
-	text-align: center;
-	font-size: 81%;
-}
-
-.description svg{
-	fill: var(--outline);
+#town #rouge-like h2{
 	position: relative;
-	left: 50%;
-	transform: translateX(-50%);
-	display: block;
-	margin-bottom: 0.5rem;
+	top: 5rem;
+	left: 5rem;
+	font-size: 3rem;
+	font-weight: 900;
+	color: rgba(0, 0, 0, 0.48);
+	display: inline-block;
+	z-index: 1;
 }
 
-.description li{
-	display: flex;
-	gap: 0.5rem;
+#town #rouge-like h2::before {
+	content: attr(data-text);
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	color: transparent;
+	background: rgba(255, 255, 255, 0);
+	backdrop-filter: blur(12px);
+	-webkit-background-clip: text;
+	background-clip: text;
+	pointer-events: none;
+	z-index: -1;
 }
 
-.description li *:nth-child(n + 2){
-	flex-grow: 1;
+
+#town #rouge-like p{
+	position: relative;
+	top: 3rem;
+	left: 5rem;
 }
 
-.description span {
-	text-align: left;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	min-width: 4rem;
-}
-
-@keyframes desDisplay {
-	from {
-		opacity: 0;
-		margin-top: -0.5rem;
-		transform: scaleY(64%);
-	}
-
-	to {
-		opacity: 1;
-		margin-top: 0;
-		transform: scaleY(100%);
-	}
-}
