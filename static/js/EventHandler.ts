@@ -1,8 +1,14 @@
+"use strict";
+import { i18n } from "./i18n/index.js";
+import { FoodDetails, getFoodDetails } from "./Foods.js";
+import { level } from "./Level.js";
+
+// 从Core.js导入必要的组件
 import {
     GameReadyPage,
     GEH,
     MaterialButton,
-    MaterialCard,
+    MaterialCard, MaterialDialog,
     MaterialIconButton,
     MaterialNavigationBar,
     MaterialRangeInput,
@@ -10,36 +16,46 @@ import {
     ToastBox,
     WarnMessageBox
 } from "./Core.js";
-import {FoodDetails, getFoodDetails} from "./Foods.js";
-import {
-    ABOUT_INFO,
-    AUDIO_EFFECT,
-    CANCEL,
-    DAYTIME,
-    GAME_ERROR_CODE_005,
-    GAME_ERROR_CODE_006,
-    GAME_ERROR_CODE_007,
-    GAME_ERROR_CODE_008,
-    GAME_ERROR_CODE_009,
-    GAME_UI_BUTTON_002,
-    GAME_UI_BUTTON_003,
-    GAME_UI_TEXT_007,
-    GAME_UI_TEXT_008,
-    GAME_UI_TEXT_009,
-    GAME_UI_TEXT_010,
-    MUSIC,
-    NIGHTTIME,
-    NOT_ENOUGH_COIN,
-    OK,
-    PURCHASE,
-    RESELECT,
-    SECOND,
-    START_GAME,
-    SUN_AUTO_COLLECT,
-    UPDATE_ANNOUNCEMENT,
-    WATERLINE
-} from "./language/Chinese.js";
-import {level} from "./Level.js";
+
+// ---- Types ----
+interface IArchiveCard { type: number; star: number; skillLevel: number }
+interface IArchive {
+    coin: number;
+    cardBag: IArchiveCard[];
+    mouseDeath: any[];
+    foodPlant: any[];
+    mapVictory: any[];
+    festival: any[];
+    character: Record<string, any>;
+    storeItems?: any[] | null;
+}
+interface IConfig { sunAutoCollect: boolean; musicVolume: number; effectVolume: number; webAudio?: boolean; audioLimitMs?: number }
+
+// ---- Small LRU Cache for images ----
+class LruCache<K, V> {
+    private map = new Map<K, V>();
+    constructor(private max: number) { }
+    get(key: K): V | undefined {
+        const v = this.map.get(key);
+        if (v !== undefined) {
+            this.map.delete(key);
+            this.map.set(key, v);
+        }
+        return v;
+    }
+    set(key: K, val: V) {
+        if (this.map.has(key)) this.map.delete(key);
+        this.map.set(key, val);
+        if (this.map.size > this.max) {
+            const it = this.map.keys().next();
+            if (!it.done) {
+                this.map.delete(it.value as K);
+            }
+        }
+
+    }
+    has(key: K) { return this.map.has(key); }
+}
 
 document.ondragstart = function () {    //禁止对img的拖拽影响观感
     return false;
@@ -63,20 +79,51 @@ const levels = new Map([
     [12, "CurryIslandNight"],
     [13, "Abyss"],
     [20, "MarshmallowSky"],
+    [99, "Rouge"],
 ]);
 const DataBase = "CVMJSDataBase";
+const levelDetailsCache = new Map<number, Promise<any>>();
 export const getLevelDetails = async (type: number) => {
     try {
-        // noinspection TypeScriptCheckImport
-        const module = await import(`./level/${levels.get(type)}.js`);
-        return module.default;
+        if (!levelDetailsCache.has(type)) {
+            // noinspection TypeScriptCheckImport
+            const p = import(`./level/${levels.get(type)}.js`).then(m => m.default);
+            levelDetailsCache.set(type, p);
+        }
+        return await levelDetailsCache.get(type)!;
     } catch (error) {
         ToastBox(`${error}`);
     }
 }
-const restrictedAudioPlaybackTime = new WeakMap();
+
+// 受限音效节流：每个 origin 分音效名限流
+const restrictedAudioPlaybackTime: WeakMap<any, Map<string, number>> = new WeakMap();
 const restrictedAudio = new Set(['ken']); // 老鼠啃食更新是100ms，一只老鼠放两次很吵
-const gameAudio = new Map();
+
+let audioCtx: (AudioContext | null) = null;
+const effectBuffers = new Map<string, AudioBuffer>();
+async function playSfxWebAudio(name: string, volume = 1) {
+    try {
+        // @ts-ignore
+        audioCtx ??= new (window as any).AudioContext();
+        let buf = effectBuffers.get(name);
+        if (!buf) {
+            const res = await fetch(`../static/audio/${name}.mp3`);
+            const arr = await res.arrayBuffer();
+            buf = await audioCtx!.decodeAudioData(arr);
+            effectBuffers.set(name, buf);
+        }
+        const src = audioCtx!.createBufferSource();
+        const gain = audioCtx!.createGain();
+        gain.gain.value = volume;
+        src.buffer = buf;
+        src.connect(gain).connect(audioCtx!.destination);
+        src.start();
+    } catch (e) {
+        // fallback 在外层继续
+    }
+}
+
 const gameMusic = new Map([
     [0, "chengzhen"],          //城镇
     [1, "zhandou_day_1"],      //美味岛日先锋
@@ -89,10 +136,22 @@ const gameMusic = new Map([
     [8, null],                 //美味岛夜Boss
     [9, "zhandou_day_2"],
     [17, "zhandou_day_3"],     //浮空岛日先锋
+    [99, "zhandou_day_4"],
 ]);
-const effectCanvas = new OffscreenCanvas(100, 100);
-const ctx = effectCanvas.getContext('2d', {willReadFrequently: true});
+const effectCanvas: OffscreenCanvas | HTMLCanvasElement = (typeof OffscreenCanvas !== 'undefined') ? new OffscreenCanvas(100, 100) as OffscreenCanvas : document.createElement('canvas');
+
+const ctx = (effectCanvas as any).getContext('2d', { willReadFrequently: true });
+
+// IndexedDB 版本控制，资源升级时可选择清空缓存
+const DB_VERSION = 2;
+const DB_STORE = 'ImageBuffer';
+
+// 空闲时预取
+type IdleCb = (deadline: any) => void;
+const idle = (cb: IdleCb) => (window as any).requestIdleCallback ? (window as any).requestIdleCallback(cb as any) : setTimeout(cb as any, 0);
+
 export default class EventHandler {
+
     static icons = new Map<string, any | undefined>([
         ["about", undefined],
         ["update", undefined],
@@ -115,19 +174,26 @@ export default class EventHandler {
         ["info", undefined],
         ['unselect', undefined],
         ['close', undefined],
+        ['rouge', undefined],
     ]);
     static mobile: boolean = false;
     static backgroundMusic: HTMLAudioElement;
     protected static instance: EventHandler;
-    static #images: Map<string, ImageBitmap> = new Map();
+    static #images: LruCache<string, ImageBitmap> = new LruCache(400);
+
     scale: number = 1;                   //网页缩放比例
     effectVolume: number = 1;		         //音效音量大小
     musicVolume: number = 1;		         //音乐音量大小
     speed: number = 1;
     GameEnd = false;
     composeAnimTimer: number | null = null;
+    #resizeRaf: number | null = null;
+    #tickRaf: number | null = null;
     #state: string = "town";
-    #stateSet: string[] = ["town", "compose", "shop", "battle"];
+
+    #stateSet: string[] = ["town", "start", "compose", "store", "rouge", "battle"];
+
+
     #maxCardNum: number = 9;            //最大卡片数量
     #archive: any = {};
     #config: any = {};
@@ -138,6 +204,9 @@ export default class EventHandler {
     #sunAutoCollect = false;
     #cardDetails = document.createElement("div");
     #debug = false;
+
+    // 静态t方法已移除，请使用i18n.t()代替
+
 
     constructor() {
         if (!EventHandler.instance) {
@@ -151,21 +220,30 @@ export default class EventHandler {
             EventHandler.mobile = true;
         }
 
-        try {
-            EventHandler.icons.forEach((_: string, key: string, map: Map<string, string>) =>
-                fetch(`../static/images/interface/icons/${key}.svg`)
-                    .then(res => res.text())
-                    .then(text => map.set(key, text)));
-        } catch (error) {
-            ToastBox(`Can't retrieve certain icon(s): ${error}`);
-        }
+        this.#loadIcons();
+        this.#loadI18n();
 
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
+            await this.#iconsLoaded;
+            await this.#i18nLoaded;
             this.#getArchive();
             this.#setStoreItems();
             this.#resize();
+            this.#startTick();
+
+            // 空闲时对卡片图像做轻量预热
+            idle(() => {
+                try {
+                    const n = Math.min(this.cardBag.length, 12);
+                    for (let i = 0; i < n; i++) {
+                        const imgSrc = this.cardBag[i].src;
+                        if (imgSrc) this.requestImageCache(imgSrc as any);
+                    }
+                } catch { }
+            });
 
             const loader = document.getElementById('loader');
+
             if (loader) {
                 loader.style.display = "none";
             }
@@ -173,9 +251,9 @@ export default class EventHandler {
             this.#cardDetails.className = "description";
 
             document.addEventListener('levelComplete', (event: any) => {
-                const {NAME, REWARDS} = event.detail.level.constructor;
+                const { NAME, REWARDS } = event.detail.level.constructor;
                 this.#addCoins(REWARDS);
-                ToastBox(`${NAME}挑战完成，你获得了 ${REWARDS} 金币！`);
+                ToastBox(`${i18n.t("NAME")}挑战完成，你获得了 ${i18n.t("REWARDS")} 金币！`);
             })
 
             // @ts-ignore
@@ -196,11 +274,16 @@ export default class EventHandler {
                     () => {
                         this.#GameStateSwitch('compose');
                     });
-                NavigationBar.addItem("商店",
-                    EventHandler.icons.get('store'),
-                    () => {
-                        this.#GameStateSwitch('store');
-                    });
+                // NavigationBar.addItem("商店",
+                //     EventHandler.icons.get('store'),
+                //     () => {
+                //         this.#GameStateSwitch('store');
+                //     });
+                // NavigationBar.addItem("变幻",
+                //     EventHandler.icons.get('rouge'),
+                //     () => {
+                //         this.#GameStateSwitch('rouge');
+                //     });
                 const Settings = new MaterialIconButton(EventHandler.icons.get('settings'), () => {
                     SettingPage.show();
                 });
@@ -212,8 +295,8 @@ export default class EventHandler {
                 // @ts-ignore
                 // @ts-ignore
                 const InformationPage: MaterialCard = new MaterialCard(
-                    `<p class="section">${EventHandler.icons.get("about")}${ABOUT_INFO}</p>
-                    <p>${EventHandler.icons.get("update")}${UPDATE_ANNOUNCEMENT}</p>`,
+                    `<p class="section">${EventHandler.icons.get("about")}${i18n.t("ABOUT_INFO")}</p>
+                    <p>${EventHandler.icons.get("update")}${i18n.t("UPDATE_ANNOUNCEMENT")}</p>`,
                     `svg {
                         position: relative;
                         display: block;
@@ -256,20 +339,20 @@ export default class EventHandler {
                     this.#config.musicVolume = Math.floor(value * 100);
                     EventHandler.backgroundMusic.volume = value;
                     this.#saveConfig();
-                }), `${MUSIC}`);
+                }, this.musicVolume * 100), `${i18n.t("MUSIC")}`);
                 createNewLabel(new MaterialRangeInput((value: number) => {
                     this.effectVolume = value;
                     // @ts-ignore
                     this.#config.effectVolume = Math.floor(value * 100);
                     this.requestPlayAudio('dida');
                     this.#saveConfig();
-                }), `${AUDIO_EFFECT}`);
+                }, this.effectVolume * 100), `${i18n.t("AUDIO_EFFECT")}`);
                 createNewLabel(new MaterialSwitch((value: boolean) => {
                     this.#sunAutoCollect = value;
                     // @ts-ignore
                     this.#config.sunAutoCollect = value;
                     this.#saveConfig();
-                }, this.sunAutoCollect), `${SUN_AUTO_COLLECT}`);
+                }, this.sunAutoCollect), `${i18n.t("SUN_AUTO_COLLECT")}`);
                 createNewLabel(new MaterialSwitch((value: boolean) => {
                     this.speed = (value ? 1 : 0) + 1;
                 }, false), `两倍速（风驰电掣）`);
@@ -280,7 +363,8 @@ export default class EventHandler {
 
             EventHandler.backgroundMusic = new Audio("../static/audio/chengzhen.mp3");
             EventHandler.backgroundMusic.loop = true;
-            EventHandler.backgroundMusic.volume = this.musicVolume / 100;
+            EventHandler.backgroundMusic.volume = this.musicVolume;
+
             const startPlayPromise = EventHandler.backgroundMusic.play();
             if (startPlayPromise !== undefined) {
                 startPlayPromise.catch((error: { name: string; }) => {
@@ -318,6 +402,14 @@ export default class EventHandler {
                         flip.appendChild(button);
                     }
                 });
+                getLevelDetails(99).then((detail) => {
+                    if (detail) {
+                        const button = new MaterialButton(detail.NAME, () => {
+                            GameReadyPage.initialize(99);
+                        }, false);
+                        flip.appendChild(button);
+                    }
+                });
             } else {
                 ToastBox(`发生核心错误`);
             }
@@ -326,7 +418,7 @@ export default class EventHandler {
                 if (window.location.hostname === "127.0.0.1"
                     || window.location.hostname === "localhost") {
                     cBag.innerText = '';
-                    // this.#debug = true;
+                    this.#debug = true;
                     this.cardBag.length = 0;
                     for (let i = 0; i < 45; i++) {
                         this.cardBag.push(new BackpackCard(i, 12, 0));
@@ -334,7 +426,8 @@ export default class EventHandler {
                 }
             }
         })
-        window.addEventListener('resize', this.#resize);
+        window.addEventListener('resize', this.#onResize);
+
     }
 
     get state() {
@@ -373,6 +466,25 @@ export default class EventHandler {
         return this.#debug;
     }
 
+    #iconsLoaded: Promise<void> | undefined = undefined;
+    #i18nLoaded: Promise<void> | undefined = undefined;
+
+    #loadIcons() {
+        this.#iconsLoaded = Promise.all(
+            Array.from(EventHandler.icons.keys()).map(key =>
+                fetch(`../static/images/interface/icons/${key}.svg`)
+                    .then(res => res.text())
+                    .then(text => EventHandler.icons.set(key, text))
+                    .catch(err => console.error(`Failed to load icon ${key}:`, err))
+            )
+        ).then(() => { });
+    }
+
+    #loadI18n() {
+        // i18n现在由i18n模块处理，这里不需要单独加载
+        this.#i18nLoaded = i18n.getLoadPromise();
+    }
+
     // }
     get town() {
         return {
@@ -380,6 +492,7 @@ export default class EventHandler {
             store: document.getElementById("store"),
             CBag: document.getElementById("CBag"),
             coinBar: document.getElementById("coinBar"),
+            rouge: document.getElementById("rouge-like"),
         }
     };
 
@@ -393,39 +506,28 @@ export default class EventHandler {
 
     requestPlayAudio(name: string, origin: any = null) {
         try {
-            if (origin === null && restrictedAudio.has(name)) {
-                return;
-            }
+            if (origin === null && restrictedAudio.has(name)) return;
 
             const now = Date.now();
-            const lastTime = restrictedAudioPlaybackTime.get(origin) || 0;
-            if (now - lastTime < 1000 && restrictedAudio.has(name)) {
-                return;
-            }
-
-            let audio1, audio2;
-
-            if (gameAudio.has(name)) {
-                [audio1, audio2] = gameAudio.get(name);
-            } else {
-                audio1 = new Audio("../static/audio/" + name + ".mp3");
-                audio2 = new Audio("../static/audio/" + name + ".mp3");
-                gameAudio.set(name, [audio1, audio2]);
-            }
-
-            const volume = this.effectVolume;
-            audio1.volume = volume;
-            audio2.volume = volume;
-
-            const audio = audio1.paused ? audio1 : audio2;
-            audio.play();
             if (origin !== null) {
-                restrictedAudioPlaybackTime.set(origin, now);
+                let perOrigin = restrictedAudioPlaybackTime.get(origin);
+                if (!perOrigin) { perOrigin = new Map<string, number>(); restrictedAudioPlaybackTime.set(origin, perOrigin); }
+                const last = perOrigin.get(name) || 0;
+                const limit = this.#config?.audioLimitMs ?? 1000;
+                if (now - last < limit && restrictedAudio.has(name)) return;
+                perOrigin.set(name, now);
+            }
+
+            // 优先 WebAudio 播放短音效
+            const webAudioEnabled = (this.#config?.webAudio ?? true);
+            if (webAudioEnabled && (window as any).AudioContext) {
+                playSfxWebAudio(name, this.effectVolume);
             }
         } catch (error) {
             ToastBox(`Cannot play this audio: ${error}`);
         }
     }
+
 
     requestBackMusicChange(type: number) {
         const music = gameMusic.get(type);
@@ -436,14 +538,18 @@ export default class EventHandler {
                 return true;
             } catch (error) {
                 ToastBox(`Cannot play this audio: ${error}`);
+                return false;
             }
         } else {
             ToastBox(`Cannot find that resource.`);
+            return false;
         }
     }
 
+
     requestDrawImage(src: string, effect: string | null = null, intensity: number | null = null) {
-        const effectKey = effect !== null ? `${src}?effect=${effect}` : src;
+        const effectKey = effect !== null ? `${src}?effect=${effect}${intensity != null ? `&intensity=${intensity}` : ''}` : src;
+
         if (EventHandler.#images.has(effectKey)) {
             return EventHandler.#images.get(effectKey);
         } else {
@@ -466,15 +572,19 @@ export default class EventHandler {
                 }
             }
 
-            const request = indexedDB.open(DataBase, 1);
-            const storeName = 'ImageBuffer';
+            const request = indexedDB.open(DataBase, DB_VERSION);
+            const storeName = DB_STORE;
 
             request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
                 const db = (event.target as IDBOpenDBRequest).result;
-                if (!db.objectStoreNames.contains(storeName)) {
-                    db.createObjectStore(storeName, { keyPath: 'id' });
+                if (db.objectStoreNames.contains(storeName)) {
+                    db.deleteObjectStore(storeName);
                 }
+                const store = db.createObjectStore(storeName, { keyPath: 'id' });
+                store.createIndex('w', 'w', { unique: false });
+                store.createIndex('h', 'h', { unique: false });
             };
+
 
             request.onsuccess = async (event) => {
                 const db = (event.target as IDBRequest).result as IDBDatabase;
@@ -516,70 +626,72 @@ export default class EventHandler {
     }
 
     async #fetchAndCacheImage(
-    src: string,
-    effect: string | null,
-    intensity: number | null,
-    db: IDBDatabase,
-    storeName: string,
-    resolve: (value: unknown) => void,
-    reject: (reason?: any) => void
-): Promise<void> {
-    const img = new Image();
-    img.src = src;
+        src: string,
+        effect: string | null,
+        intensity: number | null,
+        db: IDBDatabase,
+        storeName: string,
+        resolve: (value: unknown) => void,
+        reject: (reason?: any) => void
+    ): Promise<void> {
+        const img = new Image();
+        img.src = src;
 
-    img.onload = async () => {
-        try {
-            const bitmap = await createImageBitmap(img);
-            EventHandler.#images.set(src, bitmap);
+        img.onload = async () => {
+            try {
+                const bitmap = await createImageBitmap(img);
+                EventHandler.#images.set(src, bitmap);
 
-            // Ensure the bitmap has finished processing before accessing its properties
-            await new Promise((resolve) => setTimeout(resolve, 0));
+                // Ensure the bitmap has finished processing before accessing its properties
+                await new Promise((resolve) => setTimeout(resolve, 0));
 
-            const canvas = document.createElement('canvas');
-            canvas.width = bitmap.width;
-            canvas.height = bitmap.height;
+                const canvas = document.createElement('canvas');
+                canvas.width = bitmap.width;
+                canvas.height = bitmap.height;
 
-            const context = canvas.getContext('2d');
-            if (context) {
-                context.drawImage(bitmap, 0, 0);
+                const context = canvas.getContext('2d');
+                if (context) {
+                    context.drawImage(bitmap, 0, 0);
+                }
+
+                // Wrap the canvas.toBlob call in a promise to use with await
+                const blob = await new Promise<Blob | null>((resolveBlob) => canvas.toBlob(resolveBlob));
+
+                if (!blob) {
+                    throw new Error('Blob creation failed.');
+                }
+
+                const transaction = db.transaction(storeName, 'readwrite');
+                const store = transaction.objectStore(storeName);
+                store.put({ id: src, image: blob, w: bitmap.width, h: bitmap.height });
+
+
+                // Wait for the transaction to complete or fail
+                transaction.oncomplete = () => {
+                    resolve(this.#requestApplyEffect(bitmap, effect, intensity, src));
+                };
+
+                transaction.onerror = (event) => {
+                    const request = event.target as IDBRequest;
+                    ToastBox(`Transaction error: ${request.error}`);
+                    reject(request.error);
+                };
+            } catch (error) {
+                ToastBox(`Image loading or processing error: ${error}`);
+                reject(error);
             }
+        };
 
-            // Wrap the canvas.toBlob call in a promise to use with await
-            const blob = await new Promise<Blob | null>((resolveBlob) => canvas.toBlob(resolveBlob));
-
-            if (!blob) {
-                throw new Error('Blob creation failed.');
-            }
-
-            const transaction = db.transaction(storeName, 'readwrite');
-            const store = transaction.objectStore(storeName);
-            store.put({ id: src, image: blob });
-
-            // Wait for the transaction to complete or fail
-            transaction.oncomplete = () => {
-                resolve(this.#requestApplyEffect(bitmap, effect, intensity, src));
-            };
-
-            transaction.onerror = (event) => {
-                const request = event.target as IDBRequest;
-                ToastBox(`Transaction error: ${request.error}`);
-                reject(request.error);
-            };
-        } catch (error) {
-            ToastBox(`Image loading or processing error: ${error}`);
-            reject(error);
-        }
-    };
-
-    img.onerror = (error) => {
-        ToastBox(`Image load error: ${error}`);
-        reject(new Error('Image load error.'));
-    };
-}
+        img.onerror = (error) => {
+            ToastBox(`Image load error: ${error}`);
+            reject(new Error('Image load error.'));
+        };
+    }
 
 
     async #requestApplyEffect(img: ImageBitmap, effect: string | null, intensity: number | null, src: string) {
-        const effectKey = effect !== null ? `${src}?effect=${effect}` : src;
+        const effectKey = effect !== null ? `${src}?effect=${effect}${intensity != null ? `&intensity=${intensity}` : ''}` : src;
+
         if (EventHandler.#images.has(effectKey)) {
             return EventHandler.#images.get(effectKey);
         }
@@ -660,37 +772,47 @@ export default class EventHandler {
         this.#cardDetails.style.left = origin.x + "px";
         this.#cardDetails.style.top = origin.y + "px";
 
-        const detail = getFoodDetails(type) as {cName:string, category:string,
-            cost:number, addCost:boolean, coolTime:number, special: string|undefined, description: string, upgrade: string};
-        if(detail){
+        const detail = getFoodDetails(type) as {
+            cName: string, category: string,
+            cost: number, addCost: boolean, coolTime: number, special: string | undefined, description: string, upgrade: string
+        };
+        if (detail) {
             this.#cardDetails.innerHTML = `<h1>${detail.cName}</h1>`;
             this.#cardDetails.innerHTML += `<div>`
                 + `<a>${EventHandler.icons.get("type")}${detail.category}</a>`
                 + `<a>${EventHandler.icons.get("energy")}${detail.cost + ((detail.addCost) ? "+" : "")}</a>`
-                + `<a>${EventHandler.icons.get("cooltime")}${detail.coolTime / 1000}${SECOND}</a>`
+                + `<a>${EventHandler.icons.get("cooltime")}${detail.coolTime / 1000}${i18n.t("SECOND")}</a>`
                 + `<a>${EventHandler.icons.get("tier")}${star}</a>`
                 + `</div>`;
             if (detail.special != null) {
-                this.#cardDetails.innerHTML += `<br><li><span>${GAME_UI_TEXT_007}</span><span>${detail.special}</span><br></li>`;
+                this.#cardDetails.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_007")}</span><span>${detail.special}</span></li>`;
             }
-            this.#cardDetails.innerHTML += `<br><li><span>${GAME_UI_TEXT_008}</span><span style='color: #006400'>${detail.description}</span></li>`;
-            this.#cardDetails.innerHTML += `<li><span>${GAME_UI_TEXT_009}</span><span style='color: #ff7f50'>${detail.upgrade}</span></li>`;
+            this.#cardDetails.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_008")}</span><span style='color: #006400'>${detail.description}</span></li>`;
+            this.#cardDetails.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_009")}</span><span style='color: #ff7f50'>${detail.upgrade}</span></li>`;
         }
 
         return this.#cardDetails;
     }
 
+    #onResize = () => {
+        if (this.#resizeRaf != null) cancelAnimationFrame(this.#resizeRaf);
+        this.#resizeRaf = requestAnimationFrame(this.#resize);
+    }
+
     #resize = () => {
+
         this.scale = document.documentElement.clientHeight / 600;	//提供缩放比例参数
         if (level?.Battlefield) {
-            level.Battlefield.Canvas.width = document.documentElement.clientWidth;
-            level.Battlefield.Canvas.height = document.documentElement.clientHeight;
-            level.Battlefield.Canvas.getContext('2d').setTransform(1, 0, 0, 1, 0, 0);
-            level.Battlefield.Canvas.getContext('2d').scale(this.scale, this.scale);
-            level.Battlefield.FrequentCanvas.width = document.documentElement.clientWidth;
-            level.Battlefield.FrequentCanvas.height = document.documentElement.clientHeight;
-            level.Battlefield.FrequentCanvas.getContext('2d').setTransform(1, 0, 0, 1, 0, 0);
-            level.Battlefield.FrequentCanvas.getContext('2d').scale(this.scale, this.scale);
+            const ctxBG = level.Battlefield.ctxBG;
+            if (ctxBG) {
+                ctxBG.setTransform(1, 0, 0, 1, 0, 0);
+                ctxBG.scale(this.scale, this.scale);
+            }
+            const ctxFG = level.Battlefield.ctxFG;
+            if (ctxFG) {
+                ctxFG.setTransform(1, 0, 0, 1, 0, 0);
+                ctxFG.scale(this.scale, this.scale);
+            }
 
             level.Battlefield.SunBar.style.left = `${140 * this.scale}px`;
             level.Battlefield.Shovel.style.left = `${140 * this.scale + 136}px`
@@ -698,10 +820,28 @@ export default class EventHandler {
         }
     }
 
+    // 统一 Tick：减少分散样式写入
+    #startTick() {
+        const tick = () => {
+            try {
+                for (const bc of this.#cards) {
+                    if (bc && bc.card && typeof bc.card.cooldownProcess === 'function') {
+                        bc.card.cooldownProcess();
+                    }
+                }
+            } catch { }
+            this.#tickRaf = requestAnimationFrame(tick);
+        };
+        if (this.#tickRaf != null) cancelAnimationFrame(this.#tickRaf);
+        this.#tickRaf = requestAnimationFrame(tick);
+    }
+
+
     #getArchive() {
         const archive = localStorage.getItem("CVMJSArchive");
         if (archive) {
-            this.#archive = JSON.parse(archive);
+            this.#archive = JSON.parse(archive) as IArchive;
+
             if (this.#archive) {
                 this.#coin = this.#archive.coin;
                 this.#StoreItems = this.#archive.storeItems || null;
@@ -713,10 +853,10 @@ export default class EventHandler {
             this.#archive = {
                 coin: 0,
                 cardBag: [
-                    {type: 0, star: 0, skillLevel: 0},
-                    {type: 1, star: 0, skillLevel: 0},
-                    {type: 2, star: 0, skillLevel: 0},
-                    {type: 3, star: 0, skillLevel: 0},
+                    { type: 0, star: 0, skillLevel: 0 },
+                    { type: 1, star: 0, skillLevel: 0 },
+                    { type: 2, star: 0, skillLevel: 0 },
+                    { type: 3, star: 0, skillLevel: 0 },
                 ],
                 mouseDeath: [],
                 foodPlant: [],
@@ -735,18 +875,23 @@ export default class EventHandler {
 
         const config = localStorage.getItem("CVMJSConfig");
         if (config) {
-            this.#config = JSON.parse(config);
-            this.#sunAutoCollect = this.#config.sunAutoCollect;
-            this.musicVolume = this.#config.musicVolume / 100;
-            this.effectVolume = this.#config.effectVolume / 100;
+            this.#config = JSON.parse(config) as IConfig;
+            if (typeof this.#config.webAudio === 'undefined') this.#config.webAudio = true;
+            if (typeof this.#config.audioLimitMs === 'undefined') this.#config.audioLimitMs = 1000;
         } else {
             this.#config = {
                 sunAutoCollect: false,
                 musicVolume: 80,
                 effectVolume: 80,
+                webAudio: true,
+                audioLimitMs: 1000,
             }
-            this.#saveConfig();
         }
+        this.#sunAutoCollect = this.#config.sunAutoCollect;
+        this.musicVolume = this.#config.musicVolume / 100;
+        this.effectVolume = this.#config.effectVolume / 100;
+        this.#saveConfig();
+
     }
 
     #addCoins(num: number) {
@@ -786,7 +931,7 @@ export default class EventHandler {
     #summonStoreItem() {
         let entry = Math.floor(Math.random() * (FoodDetails.size + 1));
         const foodDetails = getFoodDetails(entry);
-        if(foodDetails){
+        if (foodDetails) {
             let rarity = foodDetails.rarity;
             if (this.cardBag.some(value => value.type === entry)) {
                 rarity--;
@@ -831,16 +976,19 @@ export default class EventHandler {
                     }
                     this.#StoreItems[i * 3 + col] = this.#setNewItem(i * 3 + col);
                 }
+                const frag = document.createDocumentFragment();
                 for (let i = 0; i < 9; i++) {
-                    storeBox.appendChild(this.#StoreItems[i].entity);
+                    frag.appendChild(this.#StoreItems[i].entity);
                 }
+                storeBox.appendChild(frag);
+
             } else {
                 ToastBox(`Page not loaded properly`);
             }
         } else {
             WarnMessageBox({
-                Text: `${NOT_ENOUGH_COIN}`,
-                ButtonLabelYes: `${OK}`,
+                Text: `${i18n.t("NOT_ENOUGH_COIN")}`,
+                ButtonLabelYes: `${i18n.t("OK")}`,
             });
         }
     }
@@ -856,13 +1004,13 @@ export default class EventHandler {
             const h2 = document.createElement("h2");
             const img = document.createElement('img');
             const p = document.createElement("p");
-            const button = new MaterialButton(`${OK}`, () => {
+            const button = new MaterialButton(`${i18n.t("OK")}`, () => {
                 this.#purchaseItem(item, entry, pos);
             }, false);
             box.className = "store_purchase";
             document.body.appendChild(box);
             img.src = item.item_img.src;
-            h2.innerHTML = `${PURCHASE} <span style='font-weight: 600'>` + item.detail.cName + '</span>';
+            h2.innerHTML = `${i18n.t("PURCHASE")} <span style='font-weight: 600'>` + item.detail.cName + '</span>';
             p.innerText = `${(item.price || 900)}`;
             box.appendChild(div);
             div.appendChild(h2);
@@ -870,7 +1018,7 @@ export default class EventHandler {
             div.appendChild(p);
             div.appendChild(button);
             box.addEventListener('click', () => {
-                div.style.animation = "purchaseRemove 0.12s ease-in-out";
+                div.style.animation = "purchaseRemove 0.12s cubic-bezier(0.4, 0, 0.2, 1)";
                 div.addEventListener("animationend", () => {
                     box.remove();
                 })
@@ -906,132 +1054,6 @@ export default class EventHandler {
         }
     }
 
-    // login() {
-    //     let username = document.getElementById("username").value;
-    //     let password = document.getElementById("password").value;
-    //     document.getElementById("loginAlert").innerText = "";
-    //
-    //     const user = {
-    //         username: username,
-    //         password: password,
-    //     };
-    //
-    //     fetch(location + 'login', {
-    //         method: 'POST',
-    //         body: JSON.stringify(user),
-    //         headers: {
-    //             'Content-Type': 'application/json'
-    //         }
-    //     })
-    //         .then(res => {
-    //             const error = res.headers.get("ERROR_CODE");
-    //             if (error) {
-    //                 switch (error) {
-    //                     case "000": {
-    //                         document.getElementById("loginAlert").innerText = `${SERVER_ERROR_CODE_000}`;
-    //                         return false;
-    //                     }
-    //                     case "001": {
-    //                         document.getElementById("loginAlert").innerText = `${SERVER_ERROR_CODE_001}`;
-    //                         return false;
-    //                     }
-    //                     case "002": {
-    //                         document.getElementById("loginAlert").innerText = `${SERVER_ERROR_CODE_002}`;
-    //                         return false;
-    //                     }
-    //                     case "003": {
-    //                         res.json()
-    //                             .then(data => {
-    //                                 data = data.WAIT_TIME
-    //                                 const day = Math.floor(data / 86400)
-    //                                 const hour = Math.floor(data / 3600)
-    //                                 const minute = Math.floor(data / 60)
-    //                                 const message = "请在" + (day > 0 ? (day + "天") : "") + (hour > 0 ? (hour + "小时") : "") + (minute > 0 ? (minute + "分钟") : "") + "后重试";
-    //                                 document.getElementById("loginAlert").innerText = `${SERVER_ERROR_CODE_003}` + message;
-    //                             })
-    //                         return false;
-    //                     }
-    //                     default: {
-    //                         document.getElementById("loginAlert").innerText = `${SERVER_ERROR_CODE_233}`;
-    //                         throw `${SERVER_ERROR_CODE_233}`;
-    //                     }
-    //                 }
-    //             } else {
-    //                 res.json()
-    //                     .then(data => {
-    //                         this.#username = data.username;
-    //                         this.#token = data.token;
-    //                         this.#archive = JSON.parse(data.archive);
-    //                         this.#saveArchive();
-    //                         const pass = {
-    //                             username: data.username,
-    //                             token: data.token,
-    //                         };
-    //                         sessionStorage.setItem(`${STORAGE_ACCOUNT_NAME}`, JSON.stringify(pass));
-    //                         location.reload();
-    //                     })
-    //             }
-    //         })
-    //         .catch(error => {
-    //             `Can't retrieve certain icon(s): ${error}`
-    //         })
-    // }
-
-    // cloudSave() {
-    //     const cert = {
-    //         username: this.#username,
-    //         archive: JSON.stringify(this.#archive),
-    //     };
-    //
-    //     fetch(location + 'api', {
-    //         method: 'POST',
-    //         body: JSON.stringify(cert),
-    //         headers: {
-    //             'API-Token': this.#token,
-    //             'API-Method': `${FETCH_SAVE_ARCHIVE_METHOD}`,
-    //             'Content-Type': 'application/json'
-    //         }
-    //     })
-    //         .then(res => {
-    //             const error = res.headers.get("ERROR_CODE");
-    //             if (error) {
-    //                 switch (error) {
-    //                     case "004" : {
-    //                         alert(SERVER_ERROR_CODE_004)
-    //                         break;
-    //                     }
-    //                     case "005" : {
-    //                         alert("向服务器呈交的内容未通过语义审查，请重新登录。如果仍然出现此问题，请联系 leisure。");
-    //                         break;
-    //                     }
-    //                     default: {
-    //                         throw `${SERVER_ERROR_CODE_233}`
-    //                     }
-    //                 }
-    //             } else {
-    //                 res.json()
-    //                     .then(data => {
-    //                         if (data.token) {
-    //                             let formerPass = sessionStorage.getItem(`${STORAGE_ACCOUNT_NAME}`);
-    //                             if (formerPass) {
-    //                                 this.#token = data.token;
-    //                                 formerPass = JSON.parse(formerPass);
-    //                                 formerPass.token = this.#token;
-    //                                 sessionStorage.setItem(`${STORAGE_ACCOUNT_NAME}`, JSON.stringify(formerPass));
-    //                                 console.log(`${SERVER_SUCCESS_CODE_000}`);
-    //                             } else {
-    //                                 throw `${GAME_ERROR_CODE_000}`
-    //                             }
-    //                         } else {
-    //                             throw `${SERVER_ERROR_CODE_005}`
-    //                         }
-    //                     })
-    //             }
-    //         })
-    //         .catch(error => {
-    //             ToastBox(`${error}`);
-    //         })
-
     #saveArchive() {
         // if (this.#username) {
         //     this.#cloudSave();
@@ -1045,10 +1067,12 @@ export default class EventHandler {
     }
 
     #GameStateSwitch(des: string) {
-        this.#state = des;
-        if (this.town.compose && this.town.store && this.town.coinBar && this.town.CBag) {
+        this.state = des;
+
+        if (this.town.compose && this.town.store && this.town.rouge && this.town.coinBar && this.town.CBag) {
             this.town.compose.style.display = "none";
             this.town.store.style.display = "none";
+            this.town.rouge.style.display = "none";
             switch (des) {
                 case "start": {
                     this.town.coinBar.style.display = "none";
@@ -1056,8 +1080,10 @@ export default class EventHandler {
                         this.town.CBag.appendChild(this.cardBag[i].entity);
                     }
                     if (this.composeAnimTimer != null) {
-                        clearInterval(this.composeAnimTimer);
+                        try { cancelAnimationFrame(this.composeAnimTimer as any); } catch { }
+                        try { clearInterval(this.composeAnimTimer as any); } catch { }
                     }
+
                     break;
                 }
                 case "compose": {
@@ -1073,16 +1099,42 @@ export default class EventHandler {
                     this.town.store.style.display = "block";
                     this.town.coinBar.style.display = "block";
                     if (this.composeAnimTimer != null) {
-                        clearInterval(this.composeAnimTimer);
+                        try { cancelAnimationFrame(this.composeAnimTimer as any); } catch { }
+                        try { clearInterval(this.composeAnimTimer as any); } catch { }
                     }
+
                     break;
+                }
+                case "rouge": {
+                    this.town.rouge.style.display = "block";
+                    this.town.coinBar.style.display = "none";
+                    if (this.composeAnimTimer != null) {
+                        try { cancelAnimationFrame(this.composeAnimTimer as any); } catch { }
+                        try { clearInterval(this.composeAnimTimer as any); } catch { }
+                    }
+
                 }
             }
         }
     }
+
+    // 资源与事件清理
+    destroy() {
+        try {
+            if (this.#tickRaf != null) cancelAnimationFrame(this.#tickRaf);
+            if (this.composeAnimTimer != null) {
+                try { cancelAnimationFrame(this.composeAnimTimer as any); } catch { }
+                try { clearInterval(this.composeAnimTimer as any); } catch { }
+                this.composeAnimTimer = null;
+            }
+            if (this.#resizeRaf != null) cancelAnimationFrame(this.#resizeRaf);
+            window.removeEventListener('resize', this.#onResize);
+        } catch { }
+    }
 }
 
 class StoreItem {
+
     entity = document.createElement("div");
     item_img = document.createElement("img");
     item_text = document.createElement("p");
@@ -1173,11 +1225,13 @@ export class Card extends HTMLElement {
         this.star = star;
         this.skillLevel = skill_level;
         this.#details.className = "game-card-details";
-        this.attachShadow({mode: "open"});
+        this.attachShadow({ mode: "open" });
         this.#style.textContent = `
+            :host(.disabled) img{ filter: brightness(50%); }
+            :host(.notenough) span{ color: red; }
             img{
                 width: 100%;
-                height: 100%:
+                height: 100%;
             }
             span{
                 position: absolute;
@@ -1194,6 +1248,7 @@ export class Card extends HTMLElement {
                 background-color: rgba(0,0,0,.32);
             }
         `
+
         if (this.shadowRoot) {
             this.shadowRoot.append(this.#style);
             this.shadowRoot.append(this.#entity);
@@ -1213,7 +1268,7 @@ export class Card extends HTMLElement {
         try {
             const detail = getFoodDetails(value);
             if (detail) {
-                const {name, coolTime, cost} = detail || {};
+                const { name, coolTime, cost } = detail || {};
                 this.name = name;
                 this.coolTime = coolTime;
                 this.cost = cost;
@@ -1235,16 +1290,21 @@ export class Card extends HTMLElement {
     }
 
     set remainTime(value: number) {
-        value = Math.max(value, 0);
-        const percent = this.remainTime / this.coolTime * 100;
-        if(percent <= 5){
-            this.#overlay.style.height = `0`;
+        if (GEH.debug) {
+            this.#remainTime = 0;
         }
         else {
-            this.#overlay.style.height = `${percent}%`;
+            value = Math.max(value, 0);
+            const percent = this.coolTime > 0 ? (value / this.coolTime * 100) : 0;
+            if (percent <= 5) {
+                this.#overlay.style.height = `0`;
+            } else {
+                this.#overlay.style.height = `${percent}%`;
+            }
+            this.#remainTime = value;
         }
-        this.#remainTime = value;
     }
+
 
     get detailsHTML() {
         const detail = getFoodDetails(this.type);
@@ -1252,14 +1312,14 @@ export class Card extends HTMLElement {
             let text = "";
             if (level.SunNum >= this.cost) {
                 if (this.cooling) {
-                    text += `<span>${GAME_ERROR_CODE_006}</span>`;
+                    text += `<span>${i18n.t("GAME_ERROR_CODE_006")}</span>`;
                 }
             } else {
-                text += `<span>${GAME_ERROR_CODE_005}</span>`;
+                text += `<span>${i18n.t("GAME_ERROR_CODE_005")}</span>`;
             }
             text += `<strong>${detail.cName}</strong><br>${detail.description}`;
             if (detail.addCost && this.cost - detail.cost > 0) {
-                text += `<br><span>${GAME_ERROR_CODE_007}(${this.cost - detail.cost})</font>`;
+                text += `<br><span>${i18n.t("GAME_ERROR_CODE_007")}(${this.cost - detail.cost})</font>`;
             }
             return text;
         }
@@ -1283,7 +1343,7 @@ export class Card extends HTMLElement {
             return false;
         }
         if (level.SunNum < this.cost && !GEH.debug) {
-            level.Battlefield.SunBar.style.animation = `NOT_ENOUGH_SUN 0.64s ease-in-out`;
+            level.Battlefield.SunBar.style.animation = `NOT_ENOUGH_SUN 0.64s cubic-bezier(0.4, 0, 0.2, 1)`;
             return false;
         }
         if (this.cooling) {
@@ -1291,13 +1351,13 @@ export class Card extends HTMLElement {
         }
         GEH.requestPlayAudio("naka");
         const detail = getFoodDetails(this.type);
-        if(detail){
+        if (detail) {
             const Handler = {
                 src: `../static/images/foods/${this.name}/idle.png`,
                 slot: this,
                 offset: detail.offset,
                 frames: detail.idleLength,
-                func: ({positionX, positionY}: { positionX: number; positionY: number }) => {
+                func: ({ positionX, positionY }: { positionX: number; positionY: number }) => {
                     if (detail) {
                         return detail.generate(positionX, positionY, this.star, this.skillLevel);
                     } else {
@@ -1324,21 +1384,14 @@ export class Card extends HTMLElement {
     }
 
     cooldownProcess() {
-        if (!GEH.debug && (level.Battlefield.Cursor.picked || level.SunNum < this.cost || this.cooling)) {
-            this.#entity.style.filter = "brightness(50%)";
-            if (level.SunNum < this.cost) {
-                this.#cost.style.color = 'red';
-            } else {
-                this.#cost.style.color = 'black';
-            }
-            if (this.cooling) {
-                this.remainTime -= this.speed * 100;
-            }
-        } else {
-            this.#entity.style.filter = "none";
-            this.#cost.style.color = 'black';
+        const disabled = !GEH.debug && (level.Battlefield.Cursor.picked || level.SunNum < this.cost || this.cooling);
+        this.classList.toggle('disabled', !!disabled);
+        this.classList.toggle('notenough', !GEH.debug && level.SunNum < this.cost);
+        if (this.cooling) {
+            this.remainTime -= this.speed * 100;
         }
     }
+
 }
 
 customElements.define('game-card', Card);
@@ -1415,7 +1468,7 @@ class BackpackCard {
 
     #ComposeHandleMouseClick() {
         const detail = getFoodDetails(this.type);
-        if(detail){
+        if (detail) {
             const CInfoName = document.getElementById('CInfoName');
             if (CInfoName) {
                 CInfoName.innerText = detail.cName;
@@ -1425,19 +1478,19 @@ class BackpackCard {
                 InfoDes.innerHTML = "";
                 InfoDes.innerHTML += `<a>${EventHandler.icons.get('type')}${detail.category}</a>`;
                 InfoDes.innerHTML += `<a>${EventHandler.icons.get('energy')}${detail.cost + ((detail.addCost) ? "+" : "")}</a>`;
-                InfoDes.innerHTML += `<a>${EventHandler.icons.get('cooltime')}${detail.coolTime / 1000}${SECOND}</a>`;
+                InfoDes.innerHTML += `<a>${EventHandler.icons.get('cooltime')}${detail.coolTime / 1000}${i18n.t("SECOND")}</a>`;
                 InfoDes.innerHTML += `<br>`
                 if (detail.special) {
-                    InfoDes.innerHTML += `<br><li><span>${GAME_UI_TEXT_007}</span><span>${detail.special}</span></li>`;
+                    InfoDes.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_007")}</span><span>${detail.special}</span></li>`;
                 }
-                InfoDes.innerHTML += `<br><li><span>${GAME_UI_TEXT_008}</span><span style='color: #006400'>${detail.description}</span></li>`;
-                InfoDes.innerHTML += `<li><span>${GAME_UI_TEXT_009}</span><span style='color: #ff7f50'>${detail.upgrade}</span></li>`;
-                InfoDes.innerHTML += `<br><li>${detail.story}</li>`;
+                InfoDes.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_008")}</span><span style='color: #006400'>${detail.description}</span></li>`;
+                InfoDes.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_009")}</span><span style='color: #ff7f50'>${detail.upgrade}</span></li>`;
+                InfoDes.innerHTML += `<li>${detail.story}</li>`;
                 if (detail.storyContributor) {
-                    InfoDes.innerHTML += "<strong><span style='color: #a9a9a9'>" + `${GAME_UI_TEXT_010}` + "&ensp;&ensp;" + detail.storyContributor + "</span></strong>";
+                    InfoDes.innerHTML += "<strong><span style='color: #a9a9a9'>" + `${i18n.t("GAME_UI_TEXT_010")}` + "&ensp;&ensp;" + detail.storyContributor + "</span></strong>";
                 }
                 if (detail.artist) {
-                    InfoDes.innerHTML += "<br><strong><span style='color: #a9a9a9'>" + `画&ensp;&ensp;&ensp;&ensp;师` + "&ensp;&ensp;" + detail.artist + "</span></strong>";
+                    InfoDes.innerHTML += "<strong><span style='color: #a9a9a9'>" + `画&ensp;&ensp;&ensp;&ensp;师` + "&ensp;&ensp;" + detail.artist + "</span></strong>";
                 }
             }
 
@@ -1445,7 +1498,8 @@ class BackpackCard {
             const endLength = detail.endLength || idleLength;
             const CInfoBack = document.getElementById("CInfoBack");
             if (CInfoBack) {
-                CInfoBack.style.backgroundImage = "url(../static/images/interface/compose/" + (detail.type || 0) + ".png";
+                CInfoBack.style.backgroundImage = "url(../static/images/interface/compose/" + (detail.type || 0) + ".png)";
+
                 CInfoBack.innerHTML = "";
                 if (detail.inside) {
                     this.animInside = document.createElement("img");
@@ -1467,11 +1521,24 @@ class BackpackCard {
                 }
             }
             let temp = 0;
-            clearInterval(GEH.composeAnimTimer!);
-            (GEH.composeAnimTimer as any) = setInterval(() => {
-                this.#animEntity.style.objectPosition = `${-temp * this.#animEntity.offsetWidth}px 0`;
-                temp = (temp + 1) % endLength;
-            }, 100);
+            if ((GEH as any).composeAnimTimer != null) {
+                cancelAnimationFrame((GEH as any).composeAnimTimer);
+                clearInterval((GEH as any).composeAnimTimer);
+            }
+            const frameDuration = 100; // ms per frame
+            let last = performance.now();
+            let acc = 0;
+            const step = (now: number) => {
+                const dt = now - last; last = now; acc += dt;
+                while (acc >= frameDuration) {
+                    this.#animEntity.style.objectPosition = `${-temp * this.#animEntity.offsetWidth}px 0`;
+                    temp = (temp + 1) % endLength;
+                    acc -= frameDuration;
+                }
+                (GEH as any).composeAnimTimer = requestAnimationFrame(step);
+            };
+            (GEH as any).composeAnimTimer = requestAnimationFrame(step);
+
         }
     }
 
@@ -1490,13 +1557,14 @@ class BackpackCard {
             } else {
                 GameCards.appendChild(this.#bagEntity);
                 const detail = getFoodDetails(this.type);
-                if(detail){
+                if (detail) {
                     this.card.cost = detail.cost;
                 }
                 GameReadyPage.appendChild(this.anim);
                 this.anim.style.zIndex = "11111";
                 this.anim.style.position = "fixed";
-                this.anim.style.top = this.rect.left + "px";
+                this.anim.style.top = this.rect.top + "px";
+
                 this.anim.style.left = this.rect.left + "px";
                 this.anim.style.borderRadius = this.#bagEntity.style.borderRadius;
                 this.anim.height = this.rect.height;

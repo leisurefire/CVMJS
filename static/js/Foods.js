@@ -2,12 +2,14 @@ import EventHandler from "./EventHandler.js";
 import { GEH } from "./Core.js";
 import { Boomerang, Bun, Chocolate, ChocolateDot, CoffeeBubble, Egg, FreezingBun, Missile, SausageAir, SausageLand, SnowEgg, Star, WaterBullet, WineBullet } from "./Bullets.js";
 import { level } from "./Level.js";
+import { t } from "./i18n/index.js";
 import { CommonMouse } from "./Mice.js";
 const specialGenerate = function (x, y, star = 0, skillLevel = 0, type = 0) {
     const food = level.Foods[y * level.column_num + x];
     switch (type) {
         case 0: {
-            level.createSpriteAnimation((x * level.row_gap + level.column_start - 20), (y * level.column_gap + level.row_start - 60), "../static/images/foods/icecream/idle.png", 16, { function: () => {
+            level.createSpriteAnimation((x * level.row_gap + level.column_start - 20), (y * level.column_gap + level.row_start - 60), "../static/images/foods/icecream/idle.png", 16, {
+                function: () => {
                     food.layers.forEach((layer) => {
                         const name = layer?.constructor?.name;
                         if (name) {
@@ -19,7 +21,8 @@ const specialGenerate = function (x, y, star = 0, skillLevel = 0, type = 0) {
                         }
                     });
                 },
-                zIndex: y * level.column_num + x + 10 });
+                zIndex: Math.min(y * level.column_num + x + 10, level.row_num * level.column_num)
+            });
             break;
         }
         case 1: {
@@ -32,7 +35,7 @@ const specialGenerate = function (x, y, star = 0, skillLevel = 0, type = 0) {
                         level.Mice[y][x].forEach((value) => value.getDamaged(9999));
                     }
                 },
-                zIndex: y * level.column_num + x + 10
+                zIndex: Math.min(y * level.column_num + x + 10, level.row_num * level.column_num)
             });
             break;
         }
@@ -45,7 +48,7 @@ const specialGenerate = function (x, y, star = 0, skillLevel = 0, type = 0) {
                         food.layer_1 = null;
                     }
                 },
-                zIndex: y * level.column_num + x + 10,
+                zIndex: Math.min(y * level.column_num + x + 10, level.row_num * level.column_num),
             });
             break;
         }
@@ -63,14 +66,18 @@ const specialGenerate = function (x, y, star = 0, skillLevel = 0, type = 0) {
 };
 export class Food {
     static name = "stove"; //名称
-    static cName = "防御卡";
+    static get cName() {
+        return t("A000_CNAME");
+    }
     static assets = ["idle"];
     static offset = [0, 0];
     static category = "";
     static cost = 50;
     static coolTime = 7500;
     static description = "";
-    static upgrade = "强化后提高[星级标识]";
+    static get upgrade() {
+        return t("U000");
+    }
     static rarity = 0;
     static story = "";
     static addCost = false;
@@ -143,7 +150,7 @@ export class Food {
     tick = 0; //当前时间戳
     getDamagedTag = false;
     get ctx() {
-        return level.Battlefield.Canvas.getContext('2d');
+        return level.Battlefield.ctxBG;
     }
     get parent() {
         return level;
@@ -349,10 +356,14 @@ export class Character extends Food {
 }
 class Stove extends Food {
     static name = "stove";
-    static cName = "小火炉";
+    static get cName() {
+        return t("A001_CNAME");
+    }
     static assets = ["idle", "produce"];
     static offset = [9, -58];
-    static category = "辅助型";
+    static get category() {
+        return t("C000");
+    }
     static cost = 50;
     static coolTime = 7500;
     static description = "定时产出额外火苗";
@@ -396,10 +407,15 @@ class Stove extends Food {
 }
 class BunShooter extends Food {
     static name = "bunshooter";
-    static cName = "笼包射手";
+    static get cName() {
+        return t("A002_CNAME");
+    }
     static assets = ["attack", "idle"];
     static offset = [5, -10];
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 100;
     static coolTime = 7500;
     static description = "发射可以造成伤害的包子";
@@ -453,15 +469,20 @@ class BunShooter extends Food {
 }
 class Toast extends Food {
     static name = "toast";
-    static cName = "吐司面包";
+    static get cName() {
+        return t("A003_CNAME");
+    }
     static assets = ["critical_1", "critical_2", "idle"];
     static offset = [1, -2];
-    static category = "防守型";
+    static get category() {
+        return t("C002");
+    }
+    ;
     static cost = 50;
     static coolTime = 30000;
     static description = "阻挡老鼠以保护身后卡片";
     static upgrade = "强化后提高[生命值]";
-    static story = "吐司面包的体格要显得比其它卡片矮胖不少，难怪它老是把“深度优先”挂在嘴边。";
+    static story = "アンパンマン、優しい君は、行け!みんなの梦守るため。";
     width = 68;
     height = 58;
     stateSet = ["idle", "critical_1", "critical_2"];
@@ -498,10 +519,14 @@ class Toast extends Food {
 }
 class FlourSack extends Food {
     static name = "floursack";
-    static cName = "面粉袋";
+    static get cName() {
+        return t("A004_CNAME");
+    }
     static assets = ["attack_l", "attack_r", "idle"];
     static offset = [-15, -70];
-    static category = "进攻型";
+    static get category() {
+        return t("C001");
+    }
     static cost = 50;
     static coolTime = 30000;
     static description = "碾压老鼠，造成伤害后消失";
@@ -611,9 +636,14 @@ class FlourSack extends Food {
 }
 class SnowBunShooter extends BunShooter {
     static name = "snowbunshooter";
-    static cName = "冰冻笼包射手";
+    static get cName() {
+        return t("A005_CNAME");
+    }
     static offset = [5, -13];
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 150;
     static coolTime = 7500;
     static description = "发射可以造成伤害并减速的包子";
@@ -635,7 +665,9 @@ class SnowBunShooter extends BunShooter {
 }
 class RatClip extends Food {
     static name = "ratclip";
-    static cName = "鼠夹地雷";
+    static get cName() {
+        return t("A006_CNAME");
+    }
     static assets = ["explode", "getready", "idle", "ready"];
     static generate(x, y, star, skillLevel) {
         const food = level.Foods[y * level.column_num + x];
@@ -647,7 +679,10 @@ class RatClip extends Food {
     }
     ;
     static offset = [-51, -68];
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 25;
     static coolTime = 30000;
     static description = "需要时间就绪才能引爆的接触型炸弹";
@@ -708,9 +743,14 @@ class RatClip extends Food {
 }
 class SaladPult extends BunShooter {
     static name = "saladpult";
-    static cName = "番茄沙拉投手";
+    static get cName() {
+        return t("A007_CNAME");
+    }
     static offset = [-1, -18];
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 100;
     static coolTime = 7500;
     static description = "投掷在两个目标间弹跳并造成伤害的番茄";
@@ -736,9 +776,13 @@ class SaladPult extends BunShooter {
 }
 class Pudding extends Food {
     static name = "pudding";
-    static cName = "樱桃反弹布丁";
+    static get cName() {
+        return t("A008_CNAME");
+    }
     static offset = [5, -28];
-    static category = "辅助型";
+    static get category() {
+        return t("C000");
+    }
     static cost = 100;
     static coolTime = 7500;
     static description = "使接触到的直线子弹反转";
@@ -759,9 +803,13 @@ class Pudding extends Food {
 }
 class Brazier extends Food {
     static name = "brazier";
-    static cName = "火盆";
+    static get cName() {
+        return t("A009_CNAME");
+    }
     static offset = [4, -4];
-    static category = "辅助型";
+    static get category() {
+        return t("C000");
+    }
     static description = "引燃接触到的直线子弹";
     static upgrade = "强化后提高[伤害倍率]";
     static rarity = 1;
@@ -815,7 +863,9 @@ class Brazier extends Food {
 }
 class WatermelonRind extends Toast {
     static name = "watermelonrind";
-    static cName = "瓜皮护罩";
+    static get cName() {
+        return t("A010_CNAME");
+    }
     static generate(x, y, star, skillLevel) {
         const food = level.Foods[y * level.column_num + x];
         if (food.noPlace || (food.water && !food.layer_2) || food.layer_0) {
@@ -831,7 +881,10 @@ class WatermelonRind extends Toast {
     }
     static assets = ["critical_1", "critical_1_inside", "critical_2", "critical_2_inside", "idle", "idle_inside"];
     static offset = [0, 18];
-    static category = "防守型";
+    static get category() {
+        return t("C002");
+    }
+    ;
     static cost = 125;
     static coolTime = 30000;
     static description = "阻挡老鼠以保护内部卡片";
@@ -860,9 +913,13 @@ class WatermelonRind extends Toast {
 }
 export class Plate extends Food {
     static name = "plate";
-    static cName = "木盘子";
+    static get cName() {
+        return t("A011_CNAME");
+    }
     static offset = [4, 26];
-    static category = "辅助型";
+    static get category() {
+        return t("C000");
+    }
     static cost = 25;
     static description = "在水中承载卡片";
     static upgrade = "强化后缩短[冷却时间]";
@@ -931,9 +988,14 @@ export class Plate extends Food {
 }
 class WaterPipe extends BunShooter {
     static name = "waterpipe";
-    static cName = "双向水管";
+    static get cName() {
+        return t("A012_CNAME");
+    }
     static offset = [1, -20];
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 125;
     static coolTime = 7500;
     static description = "向前后两个方向发射重金属液体";
@@ -968,9 +1030,14 @@ class WaterPipe extends BunShooter {
 }
 class DoubleBunShooter extends BunShooter {
     static name = "doublebunshooter";
-    static cName = "双层笼包射手";
+    static get cName() {
+        return t("A013_CNAME");
+    }
     static offset = [5, -14];
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 200;
     static coolTime = 7500;
     static description = "发射双发包子";
@@ -994,7 +1061,9 @@ class DoubleBunShooter extends BunShooter {
 }
 class HugeStove extends Stove {
     static name = "hugestove";
-    static cName = "大火炉";
+    static get cName() {
+        return t("A014_CNAME");
+    }
     static cost = 150;
     static coolTime = 50000;
     static description = "定时产出额外火苗";
@@ -1046,9 +1115,13 @@ class HugeStove extends Stove {
 }
 class WineGlass extends Food {
     static name = "wineglass";
-    static cName = "酒杯灯";
+    static get cName() {
+        return t("A015_CNAME");
+    }
     static cost = 25;
-    static category = "辅助型";
+    static get category() {
+        return t("C000");
+    }
     static description = "定时产出额外火苗";
     static special = "日间需要休眠";
     static upgrade = "强化后提高[产出速率]";
@@ -1148,14 +1221,16 @@ class WineGlass extends Food {
 }
 class CoffeeCup extends BunShooter {
     static name = "coffeecup";
-    static cName = "咖啡杯";
+    static get cName() {
+        return t("A016_CNAME");
+    }
     static assets = ["attack", "idle", "sleep"];
     static cost = 0;
     static description = "发射射程有限的咖啡泡";
     static special = "日间需要休眠";
     static upgrade = "强化后提高[攻击伤害]";
     static rarity = 0;
-    static story = "我永恒的灵魂，注视着你的心。纵使黑夜孤寂，白昼如焚。";
+    static story = "我永恒的灵魂，注视着你的心。纵然黑夜孤寂，白昼如焚。";
     static type = 1;
     static offset = [5, 12];
     width = 60;
@@ -1212,9 +1287,12 @@ class CoffeeCup extends BunShooter {
 }
 export class Cat extends Food {
     static name = "cat";
-    static cName = "猫";
+    static get cName() {
+        return t("A00A_CNAME");
+    }
     static assets = ["attack", "awake", "idle"];
     static offset = [-12, 0];
+    static story = "梦想家只能在月光下找寻自己的道路。而他的惩罚，是比其他人更早见到黎明。";
     width = 94;
     height = 64;
     offsetX = 20;
@@ -1276,7 +1354,9 @@ export class Cat extends Food {
 }
 export class Crab extends Cat {
     static name = "crab";
-    static cName = "蟹";
+    static get cName() {
+        return t("A00B_CNAME");
+    }
     static offset = [-16, 0];
     width = 94;
     height = 64;
@@ -1333,7 +1413,10 @@ class Takoyaki extends BunShooter {
 class CokeBomb extends Food {
     static name = "cokebomb";
     static cName = "可乐炸弹";
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 150;
     static coolTime = 50000;
     static description = "爆炸面积中等的即时炸弹";
@@ -1489,7 +1572,9 @@ class CoffeePot extends BunShooter {
 class CatBox extends Food {
     static name = "catbox";
     static cName = "猫猫盒";
-    static category = "辅助型";
+    static get category() {
+        return t("C000");
+    }
     static cost = 50;
     static description = "恫吓老鼠使其换行";
     static upgrade = "强化后提高[生命值]";
@@ -1616,7 +1701,10 @@ class WineRack extends BunShooter {
 class GrilledStarfish extends BunShooter {
     static name = "grilledstarfish";
     static cName = "炭烧海星";
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 125;
     static description = "向五个触角方向发射海星";
     static upgrade = "强化后提高[攻击伤害]";
@@ -1674,7 +1762,10 @@ class GrilledStarfish extends BunShooter {
 class RotaryCoffeePot extends Food {
     static name = "rotarycoffeepot";
     static cName = "旋转咖啡喷壶";
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 150;
     static coolTime = 50000;
     static addCost = true;
@@ -1812,7 +1903,9 @@ class RotaryCoffeePot extends Food {
 }
 export class RatNest extends Food {
     static name = "ratnest";
-    static cName = "老鼠洞";
+    static get cName() {
+        return t("AA00_CNAME");
+    }
     static offset = [0, 4];
     get entity() {
         return "../static/images/interface/ratnest.png";
@@ -1851,7 +1944,9 @@ export class RatNest extends Food {
 class IceBucket extends Food {
     static name = "icebucket";
     static cName = "冰桶炸弹";
-    static category = "辅助型";
+    static get category() {
+        return t("C000");
+    }
     static cost = 75;
     static coolTime = 50000;
     static description = "暂时冻结所有老鼠";
@@ -1980,7 +2075,10 @@ class ChocolatePult extends BunShooter {
 class SteelWool extends Food {
     static name = "steelwool";
     static cName = "钢丝球";
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 25;
     static coolTime = 30000;
     static description = "拖沉靠近它的首个老鼠";
@@ -2072,7 +2170,7 @@ class TeaCup extends CoffeeCup {
     static description = "发射射程有限的咖啡泡";
     static special = "水生，日间需要休眠";
     static upgrade = "强化后提高[攻击伤害]";
-    static story = "水上茶杯并不擅长水上运动——除非在海面上漂浮也算是水上运动。";
+    static story = "浮一生，会四季。";
     static idleLength = 8;
     static offset = [4, 6];
     static type = 3;
@@ -2236,7 +2334,10 @@ class Sausage extends BunShooter {
 class FishBone extends Food {
     static name = "fishbone";
     static cName = "鱼刺";
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 100;
     static description = "穿透攻击践踏其上的敌人";
     static upgrade = "强化后提高[攻击伤害]";
@@ -2342,7 +2443,10 @@ class FishBone extends Food {
 class Hamburger extends Food {
     static name = "hamburger";
     static cName = "汉堡包";
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 150;
     static description = "吞噬前方老鼠";
     static upgrade = "强化后缩短[吞噬间隔]";
@@ -2477,7 +2581,9 @@ class Hamburger extends Food {
 class OilLamp extends Food {
     static name = "oillamp";
     static cName = "油灯";
-    static category = "辅助型";
+    static get category() {
+        return t("C000");
+    }
     static cost = 25;
     static coolTime = 30000;
     static description = "照亮大范围迷雾";
@@ -2534,7 +2640,9 @@ class OilLamp extends Food {
 class Fan extends Food {
     static name = "fan";
     static cName = "换气扇";
-    static category = "辅助型";
+    static get category() {
+        return t("C000");
+    }
     static cost = 100;
     static description = "驱散迷雾和空域老鼠";
     static upgrade = "强化后延长[驱散时间]";
@@ -2692,7 +2800,10 @@ class SteelFishBone extends FishBone {
 class KettleBomb extends IceBucket {
     static name = "kettlebomb";
     static cName = "开水壶炸弹";
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 275;
     static coolTime = 50000;
     static description = "爆炸面积巨大的即时炸弹";
@@ -2760,13 +2871,16 @@ class KettleBomb extends IceBucket {
 class WineBottle extends Food {
     static name = "winebottle";
     static cName = "酒瓶炸弹";
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 125;
     static coolTime = 50000;
     static description = "单行爆炸的即时炸弹";
     static upgrade = "强化后缩短[冷却时间]";
     static rarity = 1;
-    static story = "It started with the wine.";
+    static story = "可曾闲来愁沽酒，偶尔相对饮几盅。";
     static idleLength = 9;
     static endLength = 8;
     static offset = [13, -20];
@@ -2817,7 +2931,10 @@ class WineBottle extends Food {
 class ChocolateCannon extends Food {
     static name = "chocolatecannon";
     static cName = "巧克力加农炮";
-    static category = "攻击型";
+    static get category() {
+        return t("C001");
+    }
+    ;
     static cost = 125;
     static coolTime = 50000;
     static description = "定时发射巧克力炮弹";
@@ -2860,7 +2977,8 @@ class ChocolateCannon extends Food {
         super.behavior();
     }
     fire() {
-        level?.createSpriteAnimation(level.column_start + 8 * level.row_gap - 72, level.row_start + this.row * level.column_gap - 72, "../static/images/bullets/cannonball.png", 12, { func: () => {
+        level?.createSpriteAnimation(level.column_start + 8 * level.row_gap - 72, level.row_start + this.row * level.column_gap - 72, "../static/images/bullets/cannonball.png", 12, {
+            func: () => {
                 GEH.requestPlayAudio("pijiubao");
                 for (let i = this.row - 1; i <= this.row + 1; i++) {
                     if (level.Mice[i] != null) {
@@ -2871,13 +2989,16 @@ class ChocolateCannon extends Food {
                         }
                     }
                 }
-            } });
+            }
+        });
     }
 }
 class AirDefenseShell extends Food {
     static name = "airdefenseshell";
     static cName = "放空贝壳";
-    static category = "辅助型";
+    static get category() {
+        return t("C000");
+    }
     static cost = 100;
     static description = "保护附近防御卡免受空降威胁";
     static upgrade = "强化后提高[生命值]";
@@ -2916,7 +3037,9 @@ class AirDefenseShell extends Food {
 }
 export class TubeIn extends Food {
     static name = "tubein";
-    static cName = "管道";
+    static get cName() {
+        return t("AA01_CNAME");
+    }
     static offset = [-12, 48];
     width = 91;
     height = 62;
@@ -2990,6 +3113,7 @@ export const FoodDetails = new Map([
             upgrade: "强化后缩短[冷却时间]",
             rarity: 1,
             story: "五卷，赢了去睡觉，输了去学习。",
+            assets: ["idle"],
             idleLength: 16,
             generate: (function (x, y, star, skillLevel) {
                 return specialGenerate(x, y, star, skillLevel, 0);
@@ -3006,6 +3130,7 @@ export const FoodDetails = new Map([
             upgrade: "强化后提升[等级标识]",
             rarity: 1,
             story: "零落成泥碾作尘，只有香如故。",
+            assets: ["idle"],
             idleLength: 13,
             endLength: 4,
             generate: (function (x, y, star, skillLevel) {
@@ -3017,7 +3142,7 @@ export const FoodDetails = new Map([
     [26, {
             name: `cork`,
             cName: "软木塞",
-            category: "辅助型",
+            get category() { return t("C000"); },
             cost: 75,
             coolTime: 7500,
             offset: [-2, -20],
@@ -3060,7 +3185,7 @@ export const FoodDetails = new Map([
             name: `marshmallow`,
             cName: "棉花糖",
             offset: [-6, -6],
-            category: "辅助型",
+            get category() { return t("C000"); },
             cost: 25,
             coolTime: 7500,
             description: "填补云洞或是在岩浆上承载卡片",

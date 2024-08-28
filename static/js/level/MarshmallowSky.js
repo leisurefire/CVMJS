@@ -1,47 +1,47 @@
 import EventHandler from "../EventHandler.js";
-import {GEH} from "../Core.js";
-import Level, {level} from "../Level.js";
+import { GEH } from "../Core.js";
+import Level, { level } from "../Level.js";
 
 export default class MarshmallowSky extends Level {
     static NAME = "棉花糖天空";
     static SUGGESTED_TYPE = 1;
     static BACKGROUND = "../static/images/interface/background_20.jpg";
-	cloudPosition = [];
-	cloudCavityGeneratePos = -1;
-	cloudCavityPosition = [];
+    cloudPosition = [];
+    cloudCavityGeneratePos = -1;
+    cloudCavityPosition = [];
 
-	constructor() {
-		super();
-		this.StartWaveCreate();
-	}
+    constructor() {
+        super();
+        this.StartWaveCreate();
+    }
 
-	cloudLineGenerate(arr) {
-		for (let i = 0; i < arr.length; i++) {
-			if (arr[i] === 1) {
-				let front = null;
-				for (let j = 0; j < 7; j++) {
-					const cloud = new Cloud(i, j % 2);
-					if (j === 0) {
-						front = cloud;
-						this.cloudPosition.push(cloud);
-					}
-					cloud.top = (level.row_start + (level.column_gap + 0.6) * i + 11);
-					cloud.left = level.column_start + level.row_gap * (j + 2);
-					front.next = cloud;
-					front = cloud;
-				}
-			}
-		}
-	}
+    cloudLineGenerate(arr) {
+        for (let i = 0; i < arr.length; i++) {
+            if (arr[i] === 1) {
+                let front = null;
+                for (let j = 0; j < 7; j++) {
+                    const cloud = new Cloud(i, j % 2);
+                    if (j === 0) {
+                        front = cloud;
+                        this.cloudPosition.push(cloud);
+                    }
+                    cloud.top = (level.row_start + (level.column_gap + 0.6) * i + 11);
+                    cloud.left = level.column_start + level.row_gap * (j + 2);
+                    front.next = cloud;
+                    front = cloud;
+                }
+            }
+        }
+    }
 
-	cloudCavityGenerate = () => {
-		this.cloudCavityGeneratePos = Math.floor(Math.random() * this.cloudPosition.length);
-	}
+    cloudCavityGenerate = () => {
+        this.cloudCavityGeneratePos = Math.floor(Math.random() * this.cloudPosition.length);
+    }
 
-	StartWaveCreate() {
-		this.waveCreate(0, 1, 1);
-		this.Load();
-	}
+    StartWaveCreate() {
+        this.waveCreate(0, 1, 1);
+        this.Load();
+    }
 
     mapMove() {
         this.cloudCavityPosition = [];
@@ -67,17 +67,17 @@ export default class MarshmallowSky extends Level {
     }
 
     Enter() {
-		const button = document.createElement('button');
-		button.style.bottom = '1rem';
-		button.style.right = '1rem';
-		button.innerText = '进行测试';
+        const button = document.createElement('button');
+        button.style.bottom = '1rem';
+        button.style.right = '1rem';
+        button.innerText = '进行测试';
         button.addEventListener("click", this.cloudCavityGenerate);
-		this.Battlefield.appendChild(button);
-		GEH.requestBackMusicChange(9);
-		this.cloudLineGenerate([1, 1, 1, 1, 1, 1, 1]);
-		// this.firstWaveWait();
-		this.setGuardian();
-	}
+        this.Battlefield.appendChild(button);
+        GEH.requestBackMusicChange(9);
+        this.cloudLineGenerate([1, 1, 1, 1, 1, 1, 1]);
+        // this.firstWaveWait();
+        this.setGuardian();
+    }
 }
 export class Cloud {
     constructor(row, type = 0) {
@@ -86,7 +86,7 @@ export class Cloud {
         this.left = 0;
         this.type = type;
         this.cavity = false;
-        this.ctx = level.Battlefield.Canvas.getContext('2d');
+        this.ctx = level.Battlefield.ctxBG;
         this.row = row;
         this.column = -1;
     }
@@ -111,7 +111,7 @@ export class Cloud {
             level.Foods[this.row * level.column_num + this.column].crashRemove();
         } else if (!this.cavity && this.entity) {
             const entity = GEH.requestDrawImage(this.entity);
-            if(entity){
+            if (entity) {
                 this.ctx.drawImage(entity, this.left, this.top)
             }
         }

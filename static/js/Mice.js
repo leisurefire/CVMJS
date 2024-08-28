@@ -3,8 +3,8 @@ import EventHandler from "./EventHandler.js";
 import { GEH } from "./Core.js";
 import { Stone } from "./Bullets.js";
 import { TubeIn } from "./Foods.js";
-import { GAME_ERROR_CODE_013 } from "./language/Chinese.js";
 import { level } from "./Level.js";
+import { i18n } from "./i18n-preload.js";
 class State {
     #tick = 0;
     #map;
@@ -43,29 +43,38 @@ class State {
     }
 }
 export class Mouse {
-    ctx = level.Battlefield.Canvas.getContext('2d');
+    // ===== 基础属性 =====
+    ctx = level.Battlefield.ctxBG;
     name = "commonmouse";
-    static alternative = [];
-    #health = 240;
-    #armorHealth = 0;
+    // 位置相关
     x;
     y;
     row = -1;
-    ignoringTargetPositionX;
-    ignoringFullDistance;
-    ignoringBeforeSpeed;
-    ignoringBeforeTop;
-    ignoringCurrentDistance;
-    get armorHealth() {
-        return this.#armorHealth;
-    }
-    set armorHealth(value) {
-        if (value < this.#armorHealth) {
-            this.getDamagedTag = 2;
-        }
-        this.#armorHealth = value;
-    }
+    width = 120;
+    height = 105;
+    // 基础数值
+    #health = 240;
+    #armorHealth = 0;
+    fullHealth = this.health;
+    speed = 1;
+    damage = 5;
+    // 状态标识
+    attackable = true;
+    canBeHit = true;
+    canBeThrown = true;
+    canBeFollowed = true;
+    fly = false;
+    getDamagedTag = 0;
+    // UI相关
     progress;
+    eyePos = { x: 6, y: 4 };
+    // ===== 构造函数 =====
+    constructor(x = 0, y = 0) {
+        this.row = y;
+        this.x = x * 60 + 300;
+        this.y = y * 64 + 74;
+    }
+    // ===== 健康值相关 =====
     get health() {
         return this.#health;
     }
@@ -78,59 +87,34 @@ export class Mouse {
         }
         this.#health = value;
     }
+    get armorHealth() {
+        return this.#armorHealth;
+    }
+    set armorHealth(value) {
+        if (value < this.#armorHealth) {
+            this.getDamagedTag = 2;
+        }
+        this.#armorHealth = value;
+    }
     get critical() {
         return this.health <= 80;
     }
-    fullHealth = this.health;
-    width = 120;
-    height = 105;
-    get entity() {
-        if (this.state === "die") {
-            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
-        }
-        else {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "") + ".png";
-        }
+    // ===== 位置计算 =====
+    get positionX() {
+        return EventHandler.getPositionX(this.x + 21);
     }
-    get CanUpdateEntity() {
-        return !this.frozen
-            && !this.halted
-            && !this.changingLine;
-        // && !this.stunned;
+    get column() {
+        return Math.min(Math.max(Math.floor(this.positionX), 0), 9);
     }
-    get Movable() {
-        return this.speed !== 0
-            && !(this.state === "attack")
-            && !(this.state === "die");
-    }
-    speed = 1; //速度，用于调整行为树
-    damage = 5; //一般为5
-    attackable = true; //是否可以被攻击
-    canBeHit = true; //是否可以被直线子弹攻击
-    canBeThrown = true; //是否可以被投掷子弹攻击
-    canBeFollowed = true; //是否可跟踪
-    fly = false; //是否属于空中单位
-    getDamagedTag = 0;
-    freezingLength = 0; //剩余减速时长
-    get freezing() {
-        return this.freezingLength > 0;
-    }
-    frozenLength = 0; //剩余冻结时长
-    get frozen() {
-        return this.frozenLength > 0;
-    }
-    haltedLength = 0; //剩余定身时长
-    get halted() {
-        return this.haltedLength > 0;
-    }
-    haltedAttachment = null; //定身时头上的巧克力贴图
-    changeLineLength = 0;
-    changeLinePos = 0;
-    get changingLine() {
-        return this.changeLineLength > 0;
-    }
-    ignoring = false; //是否正在爬梯子
+    // ===== 状态系统 =====
     #state = "idle";
+    stateSet = ["idle", "attack", "die"];
+    stateLengthSet = new Map([
+        ["idle", 8],
+        ["attack", 4],
+        ["die", 13]
+    ]);
+    tick = 0;
     get state() {
         return this.#state;
     }
@@ -142,24 +126,54 @@ export class Mouse {
     get stateLength() {
         return this.stateLengthSet.get(this.state) || 0;
     }
-    stateSet = ["idle", "attack", "die"];
-    stateLengthSet = new Map([["idle", 8], ["attack", 4], ["die", 13]]);
-    tick = 0; //动画刻，用于控制动画
-    eyePos = {
-        x: 6,
-        y: 4,
-    };
-    constructor(x = 0, y = 0) {
-        this.row = y;
-        this.x = x * 60 + 300;
-        this.y = y * 64 + 74;
+    get entity() {
+        if (this.state === "die") {
+            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
+        }
+        else {
+            return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "") + ".png";
+        }
     }
-    get positionX() {
-        return EventHandler.getPositionX(this.x + 21);
+    // ===== 状态效果系统 =====
+    // 减速效果
+    freezingLength = 0;
+    get freezing() {
+        return this.freezingLength > 0;
     }
-    get column() {
-        return Math.min(Math.max(Math.floor(this.positionX), 0), 9);
+    // 冻结效果
+    frozenLength = 0;
+    get frozen() {
+        return this.frozenLength > 0;
     }
+    // 定身效果
+    haltedLength = 0;
+    haltedAttachment = null;
+    get halted() {
+        return this.haltedLength > 0;
+    }
+    // 换行效果
+    changeLineLength = 0;
+    changeLinePos = 0;
+    get changingLine() {
+        return this.changeLineLength > 0;
+    }
+    // 爬梯子效果
+    ignoring = false;
+    ignoringTargetPositionX;
+    ignoringFullDistance;
+    ignoringBeforeSpeed;
+    ignoringBeforeTop;
+    ignoringCurrentDistance;
+    // ===== 状态判断 =====
+    get CanUpdateEntity() {
+        return !this.frozen && !this.halted && !this.changingLine;
+    }
+    get Movable() {
+        return this.speed !== 0
+            && !(this.state === "attack")
+            && !(this.state === "die");
+    }
+    // ===== 核心行为方法 =====
     behaviorMove() {
         if (Math.floor(this.positionX) < 0) {
             if (this.speed > 0) {
@@ -177,23 +191,30 @@ export class Mouse {
     behaviorAnim() {
         this.attackCheck();
     }
-    changeLineProcess() {
-        if (this.changingLine) {
-            this.changeLineLength -= 50;
-            if (this.changingLine) {
-                if (this.state !== this.stateSet[2]) {
-                    this.state = this.stateSet[0];
-                    this.tick = 0;
+    attackCheck() {
+        if (this.CanUpdateEntity && this.column <= 8) {
+            const food = level.Foods[this.row * level.column_num + this.column];
+            if (food?.hasTarget) {
+                if (food.ignored) {
+                    this.ignore();
+                    return false;
                 }
-                if (this.changeLineLength <= 500) {
-                    this.y += 6.4 * this.changeLinePos;
+                else {
+                    GEH.requestPlayAudio("ken", this);
+                    this.state = this.stateSet[1];
+                    food.getDamaged(this.damage / (this.freezing ? 2 : 1), this);
+                    return food;
                 }
             }
             else {
-                this.row += this.changeLinePos;
+                this.state = this.stateSet[0];
+                this.tick = this.tick % this.stateLength;
+                return false;
             }
         }
+        return false;
     }
+    // ===== 换行系统 =====
     changeLine(pos, animation = false) {
         if (this.CanUpdateEntity) {
             if (level.waterLine && level.waterLine[this.row]) {
@@ -232,66 +253,24 @@ export class Mouse {
             }
         }
     }
-    attackCheck() {
-        if (this.CanUpdateEntity && this.column <= 8) {
-            const food = level.Foods[this.row * level.column_num + this.column];
-            if (food?.hasTarget) {
-                if (food.ignored) {
-                    this.ignore();
-                    return false;
+    changeLineProcess() {
+        if (this.changingLine) {
+            this.changeLineLength -= 50;
+            if (this.changingLine) {
+                if (this.state !== this.stateSet[2]) {
+                    this.state = this.stateSet[0];
+                    this.tick = 0;
                 }
-                else {
-                    GEH.requestPlayAudio("ken", this);
-                    this.state = this.stateSet[1];
-                    food.getDamaged(this.damage / (this.freezing ? 2 : 1), this);
-                    return food;
+                if (this.changeLineLength <= 500) {
+                    this.y += 6.4 * this.changeLinePos;
                 }
             }
             else {
-                this.state = this.stateSet[0];
-                this.tick = this.tick % this.stateLength;
-                return false;
+                this.row += this.changeLinePos;
             }
         }
-        return false;
     }
-    getOverturned(value = 20) {
-        this.getDamaged(value);
-    }
-    getHit(value = 20) {
-        GEH.requestPlayAudio("commonhit");
-        this.getDamaged(value);
-    }
-    getThrown(value = 20) {
-        this.getHit(value);
-    }
-    getFreezingHit(value = 20, length = 10000) {
-        this.getHit(value);
-        this.getFreezing(length);
-    }
-    getBlast(value = 20) {
-        this.getDamaged(value);
-        this.freezingLength = 0;
-        this.frozenLength = 0;
-        this.tick = Math.floor(this.tick);
-        if (this.state === this.stateSet[2]) {
-            this.tick = this.stateLength - 1;
-            level?.createSpriteAnimation(this.positionX * 60 + 300, this.row * 64 + 78, "../static/images/interface/ash.png", 15, { zIndex: this.row * level.column_num + this.column });
-        }
-    }
-    getDamaged(value = 20) {
-        this.health = this.health - value;
-    }
-    getFreezing(length = 10000) {
-        this.freezingLength = Math.max(length, this.freezingLength);
-    }
-    getFrozen(length = 5000) {
-        this.frozenLength = Math.max(length, this.frozenLength);
-    }
-    getHalted(length = 5000, attachment = null) {
-        this.haltedLength = Math.max(length, this.haltedLength);
-        this.haltedAttachment = attachment;
-    }
+    // ===== 爬梯子系统 =====
     ignore() {
         if (this.ignoring) {
             return false;
@@ -324,15 +303,17 @@ export class Mouse {
             }
         }
     }
+    // ===== 状态效果处理 =====
     freezeProcess() {
         if (this.frozenProcess()) {
+            // 冻结状态处理中
         }
         else {
             if (this.freezing) {
                 this.freezingLength -= 50;
             }
             else {
-                this.tick = (Math.floor(this.tick));
+                this.tick = Math.floor(this.tick);
             }
         }
     }
@@ -367,6 +348,45 @@ export class Mouse {
             return false;
         }
     }
+    // ===== 伤害和状态效果应用 =====
+    getDamaged(value = 20) {
+        this.health = this.health - value;
+    }
+    getOverturned(value = 20) {
+        this.getDamaged(value);
+    }
+    getHit(value = 20) {
+        GEH.requestPlayAudio("commonhit");
+        this.getDamaged(value);
+    }
+    getThrown(value = 20) {
+        this.getHit(value);
+    }
+    getFreezingHit(value = 20, length = 10000) {
+        this.getHit(value);
+        this.getFreezing(length);
+    }
+    getBlast(value = 20) {
+        this.getDamaged(value);
+        this.freezingLength = 0;
+        this.frozenLength = 0;
+        this.tick = Math.floor(this.tick);
+        if (this.state === this.stateSet[2]) {
+            this.tick = this.stateLength - 1;
+            level?.createSpriteAnimation(this.positionX * 60 + 300, this.row * 64 + 78, "../static/images/interface/ash.png", 15, { zIndex: this.row * level.column_num + this.column });
+        }
+    }
+    getFreezing(length = 10000) {
+        this.freezingLength = Math.max(length, this.freezingLength);
+    }
+    getFrozen(length = 5000) {
+        this.frozenLength = Math.max(length, this.frozenLength);
+    }
+    getHalted(length = 5000, attachment = null) {
+        this.haltedLength = Math.max(length, this.haltedLength);
+        this.haltedAttachment = attachment;
+    }
+    // ===== 生命周期管理 =====
     die() {
         this.state = this.stateSet[2];
         this.tick = 0;
@@ -2102,7 +2122,7 @@ class RogueMouse extends Mouse {
                     this.tick = this.stateLength - 1;
                     this.y -= 40;
                     if (this.target) {
-                        const ctx = level.Battlefield.Canvas.getContext('2d');
+                        const ctx = level.Battlefield.ctxBG;
                         if (this.target.layer_0) {
                             this.target.layer_0.y -= 40;
                             const img = GEH.requestDrawImage(this.target.layer_0.inside);
@@ -2222,7 +2242,11 @@ class MarioMouse extends BossMouse {
     }
     behaviorAnim() {
         if (this.progress) {
-            this.progress.style.width = (this.health / this.fullHealth * 224) + "px";
+            const widthPx = `${(this.health / this.fullHealth * 224).toFixed(2)}px`;
+            if (this.progress.__lastWidth !== widthPx) {
+                this.progress.style.width = widthPx;
+                this.progress.__lastWidth = widthPx;
+            }
         }
         if (this.state === "idle") {
             this.x = 800;
@@ -2560,7 +2584,7 @@ export const getMouseDetails = function (type = 0) {
                 eName: "flagmouse",
                 assets: ["attack", "attack_critical", "die", "idle", "idle_critical"],
                 description: "举着旗帜的海盗鼠，标志大波鼠军的到来",
-                story: "出发！目标安戈洛！",
+                story: "出发，目标安戈洛！",
                 awardEvents: [
                     { type: 0, num: 25, needChance: 80 },
                 ],
@@ -2656,7 +2680,7 @@ export const getMouseDetails = function (type = 0) {
                 eName: "repairmouse",
                 assets: ["attack", "attack_armored", "attack_armored_critical", "attack_critical", "attack_critical_armored", "attack_critical_armored_critical", "die", "die_armored", "generate_armored", "generate_armored_critical", "generate_critical_armored", "generate_critical_armored_critical", "idle", "idle_armored", "idle_armored_critical", "idle_critical", "idle_critical_armored", "idle_critical_armored_critical", "unarmor", "unarmor_critical"],
                 description: "举着梯子作为防具的海盗鼠，架设有梯子的防御卡会被快速翻过",
-                story: "修理鼠修理修理署的修理枢。",
+                story: "修理鼠修理熟修理署修理枢。",
                 awardEvents: [
                     { type: 0, num: 50, needChance: 80 },
                 ],
@@ -2720,7 +2744,7 @@ export const getMouseDetails = function (type = 0) {
                 eName: "mobilemachineryshop",
                 assets: ["attack", "attack_critical", "die", "idle", "idle_critical", "move", "move_critical"],
                 description: "驾驶工程车的海盗鼠，能向防御卡投掷石头",
-                story: "这里是老鼠的故事",
+                story: "不负责挖坑，只负责填坑。",
                 awardEvents: [
                     { type: 0, num: 75, needChance: 80 },
                 ],
@@ -2736,7 +2760,7 @@ export const getMouseDetails = function (type = 0) {
                 eName: "mole",
                 assets: ["arise", "attack", "attack_critical", "die", "dig", "idle", "idle_critical", "stagger", "stagger_critical"],
                 description: "能够快速移动到战场后方，而后向前偷袭的海盗鼠",
-                story: "这里是老鼠的故事",
+                story: "Honour is a feudal atavism.",
                 awardEvents: [
                     { type: 0, num: 75, needChance: 80 },
                 ],
@@ -2768,7 +2792,7 @@ export const getMouseDetails = function (type = 0) {
                 eName: "roguemouse",
                 assets: ["attack", "idle"],
                 description: "从高空一跃而下、窃取防御卡的海盗鼠",
-                story: "这里是老鼠的故事",
+                story: "盗食而遨游，泛若有系之鼠，虚而遨游者也。",
                 awardEvents: [
                     { type: 0, num: 75, needChance: 80 },
                 ],
@@ -2784,7 +2808,7 @@ export const getMouseDetails = function (type = 0) {
                 eName: "footballfanmousewater",
                 assets: ["attack_inwater", "attack_inwater_armored", "attack_inwater_armored_critical", "attack_inwater_critical", "die", "die_inwater", "dive_inwater", "dive_inwater_armored", "dive_inwater_armored_critical", "dive_inwater_critical", "idle", "idle_armored", "idle_armored_critical", "idle_critical", "idle_inwater", "idle_inwater_armored", "idle_inwater_armored_critical", "idle_inwater_critical", 'unarmor_idle', "unarmor_inwater_attack", "unarmor_inwater_idle"],
                 description: "戴着半截足球作为防具的水路海盗鼠",
-                story: "这里是老鼠的故事",
+                story: "半身不“水”，已释然。",
                 awardEvents: [
                     { type: 0, num: 25, needChance: 80 },
                 ],
@@ -2800,7 +2824,7 @@ export const getMouseDetails = function (type = 0) {
                 eName: "rubbishtruck",
                 assets: ["die", "idle", "idle_critical"],
                 description: "驾驶垃圾车的海盗鼠，攻击造成碾压",
-                story: "这里是老鼠的故事",
+                story: "我从山中来，带着兰花草。种在小园中，希望花开早。",
                 awardEvents: [
                     { type: 0, num: 25, needChance: 80 },
                 ],
@@ -2816,7 +2840,7 @@ export const getMouseDetails = function (type = 0) {
                 eName: "panmousewater",
                 assets: ["attack_inwater", "attack_inwater_armored", "attack_inwater_armored_critical", "attack_inwater_critical", "die", "die_inwater", "dive_inwater", "dive_inwater_armored", "dive_inwater_armored_critical", "dive_inwater_critical", "idle", "idle_armored", "idle_armored_critical", "idle_critical", "idle_inwater", "idle_inwater_armored", "idle_inwater_armored_critical", "idle_inwater_critical", 'unarmor_idle', "unarmor_inwater_attack", "unarmor_inwater_idle"],
                 description: "戴着铁锅作为防具的水路海盗鼠",
-                story: "这里是老鼠的故事",
+                story: "俯观万物，扰扰焉，如江汉之载浮萍。",
                 awardEvents: [
                     { type: 0, num: 25, needChance: 80 },
                 ],
@@ -2832,7 +2856,7 @@ export const getMouseDetails = function (type = 0) {
                 eName: "mariomouse",
                 assets: ["die", "dig", "dig_critical", "dive", "dive_critical", "idle", "idle_critical", "jump", "jump_critical"],
                 description: "镇守曲奇岛和色拉岛的首领，能够挖掘管道、蹦跳着碾压防御卡",
-                story: "这里是老鼠的故事",
+                story: "Dig Up, Super Star!",
                 awardEvents: [
                     { type: 0, num: 25, needChance: 80 },
                 ],
@@ -2847,7 +2871,7 @@ export const getMouseDetails = function (type = 0) {
                 eName: "tube",
                 assets: ["idle", "idle_critical"],
                 description: "由“洞君”召唤的管道",
-                story: "这里是老鼠的故事",
+                story: "别有洞天二十四，铁锈管道冷冰冰。",
                 summon: (function () {
                     return landSummon(TubeOut);
                 })
@@ -2855,13 +2879,19 @@ export const getMouseDetails = function (type = 0) {
         default:
             return {
                 type: -1,
-                cName: "老鼠",
+                cName: "海盗鼠",
                 eName: "mouse",
                 assets: ["attack", "attack_critical", "die", "idle", "idle_critical"],
-                description: "这里是老鼠的概述",
-                story: "这里是老鼠的故事。",
+                description: "这里是海盗鼠的概述",
+                story: "这里是海盗鼠的故事。",
                 summon: (function () {
-                    throw GAME_ERROR_CODE_013 + type;
+                    // 等待i18n加载完成后再抛出错误
+                    if (i18n.isReady()) {
+                        throw i18n.t("GAME_ERROR_CODE_013") + type;
+                    }
+                    else {
+                        throw "GAME_ERROR_CODE_013" + type;
+                    }
                 })
             };
     }

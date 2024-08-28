@@ -11,5 +11,9 @@
   "license": "ISC",
   "devDependencies": {
     "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "@material/web": "^2.4.1",
+    "lit": "^3.3.1"
   }
 }
