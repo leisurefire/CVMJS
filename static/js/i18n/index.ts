@@ -18,7 +18,7 @@ class I18nModule {
     private isLoaded = false;
     private loadPromise: Promise<void> | null = null;
 
-    private constructor() {}
+    private constructor() { }
 
     static getInstance(): I18nModule {
         if (!I18nModule.instance) {
@@ -36,7 +36,7 @@ class I18nModule {
         }
 
         this.loadPromise = new Promise((resolve, reject) => {
-            fetch(`../static/i18n/${locale}.json`)
+            fetch(`../CVMJS/static/i18n/${locale}.json`)
                 .then(res => res.json())
                 .then(data => {
                     this.dictionary = data;
@@ -71,7 +71,7 @@ class I18nModule {
 
         const segments = key.split('.').filter(Boolean);
         let value: I18nNode | undefined = this.dictionary;
-        
+
         for (const segment of segments) {
             if (value && typeof value === "object" && !Array.isArray(value)) {
                 value = (value as I18nDictionary)[segment];

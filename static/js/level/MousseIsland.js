@@ -1,11 +1,11 @@
-import {GEH} from "../Core.js";
+import { GEH } from "../Core.js";
 import Level from "../Level.js";
 
-export default class  MousseIsland extends Level {
+export default class MousseIsland extends Level {
     static NAME = "慕斯岛";
     static TIME = 1;
     static REWARDS = 700;
-    static BACKGROUND = "../static/images/interface/background_3.jpg";
+    static BACKGROUND = "../CVMJS/static/images/interface/background_3.jpg";
 
     constructor() {
         super();

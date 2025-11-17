@@ -1,10 +1,10 @@
-import {GEH} from "../Core.js";
+import { GEH } from "../Core.js";
 import Level from "../Level.js";
 
 export default class CurryIslandDay extends Level {
     static NAME = "咖喱岛（日）";
     static REWARDS = 1400;
-    static BACKGROUND = "../static/images/interface/background_11.jpg";
+    static BACKGROUND = "../CVMJS/static/images/interface/background_11.jpg";
 
     constructor() {
         super();

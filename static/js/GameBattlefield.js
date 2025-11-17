@@ -28,7 +28,7 @@ export class Sun {
     }
     onAcquire() { }
     onRelease() { }
-    static src = "../static/images/interface/sun.png";
+    static src = "../CVMJS/static/images/interface/sun.png";
     loopTimes = 0;
     tick = 0;
     collected = false;
@@ -118,8 +118,8 @@ export class MapGrid {
     noPlace = false;
     get layers() {
         return [this.#layers[1],
-            this.#layers[0],
-            this.#layers[2]];
+        this.#layers[0],
+        this.#layers[2]];
     }
     get layer_0() {
         return this.#layers[0];
@@ -233,7 +233,7 @@ export class MapGrid {
     }
 }
 export class GameBattlefield extends HTMLElement {
-    static COUNTDOWN = "../static/images/interface/countdown.png";
+    static COUNTDOWN = "../CVMJS/static/images/interface/countdown.png";
     #Parent;
     #Cursor = {
         x: 0,
@@ -397,7 +397,7 @@ export class GameBattlefield extends HTMLElement {
                 height: 27px;
                 border-radius: 0;
                 background-color: transparent;
-                background-image: url("../static/images/flag.svg");
+                background-image: url("../CVMJS/static/images/flag.svg");
                 background-size: cover;
                 transform: scale(0.96);
             }
@@ -467,7 +467,7 @@ export class GameBattlefield extends HTMLElement {
                 height: 52px;
                 border-radius: 52px;
                 background-color: rgba(255,255,255,.64);
-                background-image: url("../static/images/shovel.svg");
+                background-image: url("../CVMJS/static/images/shovel.svg");
                 background-size: 38%;
                 background-position: center;
                 background-repeat: no-repeat;
@@ -485,7 +485,7 @@ export class GameBattlefield extends HTMLElement {
                 height: 3.25rem;
                 border-radius: 50%;
                 background-color: rgba(255,255,255,.64);
-                background-image: url("../static/images/exit.svg");
+                background-image: url("../CVMJS/static/images/exit.svg");
                 background-position: center;
                 background-size: 61%;
                 background-repeat: no-repeat;
@@ -552,7 +552,7 @@ export class GameBattlefield extends HTMLElement {
                 left: 0.375rem;
                 width: 2.5rem;
                 height: 2.5rem;
-                background-image: url("../static/images/sunbar.svg");
+                background-image: url("../CVMJS/static/images/sunbar.svg");
                 background-position: center bottom;
                 background-repeat: no-repeat;
                 border-radius: 50%;
@@ -565,7 +565,7 @@ export class GameBattlefield extends HTMLElement {
                 z-index: 2;
                 width: 349px;
                 height: 165px;
-                background-image: url("../static/images/hugewave.png");
+                background-image: url("../CVMJS/static/images/hugewave.png");
                 opacity: 0;
                 transform: scale(0);
                 animation: hugewave 0.8s forwards;
@@ -579,7 +579,7 @@ export class GameBattlefield extends HTMLElement {
                 z-index: 2;
                 width: 397px;
                 height: 84px;
-                background-image: url("../static/images/finalwave.png");
+                background-image: url("../CVMJS/static/images/finalwave.png");
                 opacity: 0;
                 animation: finalwave 1.2s forwards;
                 pointer-events: none;
@@ -623,7 +623,7 @@ export class GameBattlefield extends HTMLElement {
                 display: block;
                 width: 48px;
                 height: 48px;
-                background-image: url("../static/images/interface/icons/forward.svg");
+                background-image: url("../CVMJS/static/images/interface/icons/forward.svg");
                 background-size: contain;
                 content: "";
             }
@@ -739,7 +739,7 @@ export class GameBattlefield extends HTMLElement {
                 height: 36px;
                 border-radius: 1rem;
                 background-color: rgb(250, 241, 244);
-                background-image: url("../static/images/award.svg");
+                background-image: url("../CVMJS/static/images/award.svg");
                 background-position: center;
                 background-repeat: no-repeat;
                 transform: translateX(-50%);
@@ -776,7 +776,7 @@ export class GameBattlefield extends HTMLElement {
                 height: 30px;
                 border-radius: 12px;
                 background-color: rgb(250, 241, 244);
-                background-image: url("../static/images/items/coin.webp");
+                background-image: url("../CVMJS/static/images/items/coin.webp");
                 background-position: center 6px;
                 background-repeat: no-repeat;
                 color: var(--outline);
@@ -810,7 +810,7 @@ export class GameBattlefield extends HTMLElement {
                 z-index: 99;
                 width: 315px;
                 height: 68px;
-                background-image: url("../static/images/defeat_2.png");
+                background-image: url("../CVMJS/static/images/defeat_2.png");
                 opacity: 0;
                 animation-play-state: running;
                 animation: defeat_2 .7s forwards;
@@ -823,7 +823,7 @@ export class GameBattlefield extends HTMLElement {
                 z-index: 100;
                 width: 152px;
                 height: 79px;
-                background-image: url("../static/images/defeat_1.png");
+                background-image: url("../CVMJS/static/images/defeat_1.png");
                 content: '';
                 animation-play-state: running;
                 animation: defeat_1 .7s forwards;
@@ -1026,7 +1026,7 @@ export class GameBattlefield extends HTMLElement {
         GEH.requestPlayAudio('chanzi');
         this.Shovel.style.backgroundColor = "var(--main_color)";
         const Handler = {
-            src: "../static/images/interface/shovel/default.png",
+            src: "../CVMJS/static/images/interface/shovel/default.png",
             offset: [-15, -25],
             frames: 1,
             func: () => {
@@ -1036,7 +1036,7 @@ export class GameBattlefield extends HTMLElement {
             successFunc: ({ positionX, positionY }) => {
                 const x = (positionX * level.row_gap + level.column_start - 15);
                 const y = (positionY * level.column_gap + level.row_start - 25);
-                level.createSpriteAnimation(x, y, "../static/images/interface/shovel/shovel.png", 7, {
+                level.createSpriteAnimation(x, y, "../CVMJS/static/images/interface/shovel/shovel.png", 7, {
                     zIndex: positionY * level.column_num + positionX,
                 });
                 const grid = level.Foods[positionY * level.column_num + positionX];
@@ -1068,7 +1068,7 @@ export class GameBattlefield extends HTMLElement {
             GEH.requestPlayAudio("fangka");
             const x = (positionX * level.row_gap + level.column_start - 10);
             const y = (positionY * level.column_gap + level.row_start + 20);
-            level.createSpriteAnimation(x, y, "../static/images/interface/smoke", 4, {
+            level.createSpriteAnimation(x, y, "../CVMJS/static/images/interface/smoke", 4, {
                 isSvg: true,
                 scale: 0.24,
                 zIndex: positionY * level.column_num + positionX,
@@ -1079,7 +1079,7 @@ export class GameBattlefield extends HTMLElement {
             GEH.requestPlayAudio("fangka_w");
             const x = (positionX * level.row_gap + level.column_start);
             const y = (positionY * level.column_gap + level.row_start + 25);
-            level.createSpriteAnimation(x, y, "../static/images/interface/spray", 4, {
+            level.createSpriteAnimation(x, y, "../CVMJS/static/images/interface/spray", 4, {
                 isSvg: true,
                 zIndex: positionY * level.column_num + positionX,
             });

@@ -1,4 +1,4 @@
-import {GEH} from "../Core.js";
+import { GEH } from "../Core.js";
 import Level from "../Level.js";
 
 export default class CocoaIslandNight extends Level {
@@ -6,7 +6,7 @@ export default class CocoaIslandNight extends Level {
     static SUGGESTED_TYPE = 0;
     static TIME = 1;
     static REWARDS = 1300;
-    static BACKGROUND = "../static/images/interface/background_10.jpg";
+    static BACKGROUND = "../CVMJS/static/images/interface/background_10.jpg";
 
     constructor() {
         super();

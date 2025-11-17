@@ -128,10 +128,10 @@ export class Mouse {
     }
     get entity() {
         if (this.state === "die") {
-            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + ".png";
         }
         else {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "") + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "") + ".png";
         }
     }
     // ===== 状态效果系统 =====
@@ -321,13 +321,13 @@ export class Mouse {
         if (this.frozen) {
             this.frozenLength -= 50;
             if (this.frozen) {
-                const img = GEH.requestDrawImage("../static/images/interface/ice.png");
+                const img = GEH.requestDrawImage("../CVMJS/static/images/interface/ice.png");
                 if (img) {
                     this.ctx.drawImage(img, level.column_start + this.positionX * level.row_gap - 12, level.row_start + (this.row + 1) * level.column_gap - 32);
                 }
             }
             else {
-                level?.createSpriteAnimation(level.column_start + (this.positionX - 1) * level.row_gap - 24, level.row_start + this.row * level.column_gap - 8, "../static/images/interface/ice_break.png", 6, { zIndex: this.row * level.column_num + this.column });
+                level?.createSpriteAnimation(level.column_start + (this.positionX - 1) * level.row_gap - 24, level.row_start + this.row * level.column_gap - 8, "../CVMJS/static/images/interface/ice_break.png", 6, { zIndex: this.row * level.column_num + this.column });
                 GEH.requestPlayAudio("pobing");
             }
             return true;
@@ -373,7 +373,7 @@ export class Mouse {
         this.tick = Math.floor(this.tick);
         if (this.state === this.stateSet[2]) {
             this.tick = this.stateLength - 1;
-            level?.createSpriteAnimation(this.positionX * 60 + 300, this.row * 64 + 78, "../static/images/interface/ash.png", 15, { zIndex: this.row * level.column_num + this.column });
+            level?.createSpriteAnimation(this.positionX * 60 + 300, this.row * 64 + 78, "../CVMJS/static/images/interface/ash.png", 15, { zIndex: this.row * level.column_num + this.column });
         }
     }
     getFreezing(length = 10000) {
@@ -409,17 +409,17 @@ class ArmoredMouse extends Mouse {
     stateLengthSet = new Map([["idle", 8], ["attack", 4], ["die", 13], ["unarmor", 8]]);
     get entity() {
         if (this.state === this.stateSet[2]) {
-            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + ".png";
         }
         else {
             if (this.state === this.stateSet[3]) {
                 if (this.unarmoredFrom === 'unarmor') {
                     this.unarmoredFrom = 'idle';
                 }
-                return "../static/images/mice/" + this.name + "/" + this.state + "_" + this.unarmoredFrom + ".png";
+                return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + "_" + this.unarmoredFrom + ".png";
             }
             else {
-                return "../static/images/mice/" + this.name + "/" + this.state +
+                return "../CVMJS/static/images/mice/" + this.name + "/" + this.state +
                     (this.critical ? "_critical" : (this.armored ? ("_armored" +
                         (this.armorCritical ? "_critical" : "")) : "")) + ".png";
             }
@@ -481,14 +481,14 @@ class WaterMouse extends Mouse {
     width = 121;
     height = 175;
     inWater = false;
-    ripple = "../static/images/ripple.png";
+    ripple = "../CVMJS/static/images/ripple.png";
     rippleTick = 0;
     get entity() {
         if (this.state === this.stateSet[2]) {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.inWater ? "_inwater" : "") + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.inWater ? "_inwater" : "") + ".png";
         }
         else {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.inWater ? "_inwater" : "")
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.inWater ? "_inwater" : "")
                 + (this.critical ? "_critical" : "") + ".png";
         }
     }
@@ -671,10 +671,10 @@ class SkatingMouse extends Mouse {
     stateLengthSet = new Map([["idle", 8], ["attack", 4], ["die", 14], ["jump", 11]]);
     get entity() {
         if (this.state === this.stateSet[2]) {
-            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + ".png";
         }
         else {
-            return "../static/images/mice/" + this.name + "/" + this.state +
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state +
                 (this.jumped ? "_jumped" : "") + (this.critical ? "_critical" : "") + ".png";
         }
     }
@@ -750,10 +750,10 @@ class KangarooMouse extends Mouse {
     speed = 2;
     get entity() {
         if (this.state === this.stateSet[2]) {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.stopped ? "_stopped" : "") + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.stopped ? "_stopped" : "") + ".png";
         }
         else {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.stopped ? "_stopped" : "")
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.stopped ? "_stopped" : "")
                 + (this.critical ? "_critical" : "") + ".png";
         }
     }
@@ -933,10 +933,10 @@ class FrogMouse extends WaterMouse {
     speed = 2;
     get entity() {
         if (this.state === this.stateSet[2]) {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.inWater ? "_inwater" : "") + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.inWater ? "_inwater" : "") + ".png";
         }
         else {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.inWater ? "_inwater" : "")
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.inWater ? "_inwater" : "")
                 + (this.jumped ? "_jumped" : "") + (this.critical ? "_critical" : "") + ".png";
         }
     }
@@ -1030,16 +1030,16 @@ class FootballFanMouseWater extends WaterMouse {
     unarmorFrom = "idle";
     get entity() {
         if (this.state === this.stateSet[2]) {
-            return "../static/images/mice/" + this.name + "/"
+            return "../CVMJS/static/images/mice/" + this.name + "/"
                 + this.state + (this.inWater ? "_inwater" : "") + ".png";
         }
         else if (this.state === this.stateSet[4]) {
-            return "../static/images/mice/" + this.name + "/"
+            return "../CVMJS/static/images/mice/" + this.name + "/"
                 + this.state + (this.inWater ? "_inwater" : "")
                 + "_" + this.unarmorFrom + ".png";
         }
         else {
-            return "../static/images/mice/" + this.name + "/"
+            return "../CVMJS/static/images/mice/" + this.name + "/"
                 + this.state + (this.inWater ? "_inwater" : "")
                 + (this.armored ? ("_armored" +
                     (this.armorCritical ? "_critical" : "")) : (this.critical ? "_critical" : "")) + ".png";
@@ -1175,10 +1175,10 @@ class SinkMouse extends ArmoredMouse {
     height = 96;
     get entity() {
         if (this.state === this.stateSet[2]) {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.armored ? "_armored" : "") + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.armored ? "_armored" : "") + ".png";
         }
         else {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "")
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "")
                 + (this.armored ? ("_armored" + (this.armorCritical ? "_critical" : "")) : "") + ".png";
         }
     }
@@ -1246,10 +1246,10 @@ class PotMouse extends SinkMouse {
     };
     get entity() {
         if (this.state === this.stateSet[2]) {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.armored ? "_armored" : "") + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.armored ? "_armored" : "") + ".png";
         }
         else {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "")
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "")
                 + (this.armored ? "_armored" : "") + ".png";
         }
     }
@@ -1301,7 +1301,7 @@ class MechanicalMouse extends Mouse {
     }
     get entity() {
         if (this.state === 'explode') {
-            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + ".png";
         }
         else {
             return super.entity;
@@ -1362,10 +1362,10 @@ class NinjaMouse extends Mouse {
     }
     get entity() {
         if (this.state === 'die') {
-            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + ".png";
         }
         else {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.summoned ? "_summoned" : "")
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.summoned ? "_summoned" : "")
                 + (this.critical ? "_critical" : "") + ".png";
         }
     }
@@ -1550,10 +1550,10 @@ class NinjaGuardMouse extends Mouse {
     }
     get entity() {
         if (this.state === this.stateSet[2] || this.state === this.stateSet[3]) {
-            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + ".png";
         }
         else {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "") + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "") + ".png";
         }
     }
     get positionX() {
@@ -1648,15 +1648,15 @@ class RepairMouse extends SinkMouse {
     }
     get entity() {
         if (this.state === this.stateSet[2]) {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.armored ? "_armored" : "") + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.armored ? "_armored" : "") + ".png";
         }
         else {
             if (this.state === this.stateSet[4]) {
-                return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "")
+                return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "")
                     + "_armored" + (this.armorCritical ? "_critical" : "") + ".png";
             }
             else {
-                return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "")
+                return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "")
                     + (this.armored ? ("_armored" + (this.armorCritical ? "_critical" : "")) : "") + ".png";
             }
         }
@@ -1717,16 +1717,16 @@ class GiantMouse extends Mouse {
     }
     get entity() {
         if (this.state === 'die') {
-            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + ".png";
         }
         else {
             if (this.critical) {
                 this.stateLengthSet.set("idle", 20);
-                return "../static/images/mice/" + this.name + "/" + this.state + "_critical" + ".png";
+                return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + "_critical" + ".png";
             }
             else {
                 this.stateLengthSet.set("idle", 19);
-                return "../static/images/mice/" + this.name + "/" + this.state + ".png";
+                return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + ".png";
             }
         }
     }
@@ -1903,10 +1903,10 @@ class Mole extends Mouse {
     }
     get entity() {
         if (this.state === 'die' || this.state === 'dig' || this.state === 'arise') {
-            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + ".png";
         }
         else {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "") + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "") + ".png";
         }
     }
     constructor(x = 0, y = 0) {
@@ -1984,10 +1984,10 @@ class GlidingMouse extends Mouse {
     speed = 2;
     get entity() {
         if (this.state === 'die' || this.state === 'fly' || this.state === 'drop') {
-            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + ".png";
         }
         else {
-            return "../static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "") + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + (this.critical ? "_critical" : "") + ".png";
         }
     }
     constructor(x = 0, y = 0) {
@@ -2061,15 +2061,15 @@ class RogueMouse extends Mouse {
     speed = 0;
     target = { layer_0: null, layer_1: null, layer_2: null };
     get sign() {
-        return "../static/images/mice/" + this.name + "/sign.png";
+        return "../CVMJS/static/images/mice/" + this.name + "/sign.png";
     }
     rope;
     get entity() {
         if (this.state === this.stateSet[2]) {
-            return "../static/images/mice/" + this.name + "/" + "idle" + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + "idle" + ".png";
         }
         else {
-            return "../static/images/mice/" + this.name + "/" + this.state + ".png";
+            return "../CVMJS/static/images/mice/" + this.name + "/" + this.state + ".png";
         }
     }
     constructor(x = 0, y = 0) {
@@ -2400,7 +2400,7 @@ class TubeOut extends Obstacle {
         return this.tick !== this.stateLength - 1;
     }
     get entity() {
-        return "../static/images/interface/" + this.name + (this.critical ? "_critical" : "") + ".png";
+        return "../CVMJS/static/images/interface/" + this.name + (this.critical ? "_critical" : "") + ".png";
     }
     constructor(x = 0, y = 0) {
         super(x, y);

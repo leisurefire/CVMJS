@@ -1,4 +1,4 @@
-import {GEH} from "../Core.js";
+import { GEH } from "../Core.js";
 import Level from "../Level.js";
 
 export default class Temple extends Level {
@@ -6,7 +6,7 @@ export default class Temple extends Level {
     static WAVES = 6;
     static TIME = 1;
     static REWARDS = 1600;
-    static BACKGROUND = "../static/images/interface/background_6.jpg";
+    static BACKGROUND = "../CVMJS/static/images/interface/background_6.jpg";
 
     constructor() {
         super();
