@@ -2234,6 +2234,8 @@ class MarioMouse extends BossMouse {
     }
     constructor(x = 0, y = 0) {
         super(x, y);
+        this.stateSet = ['idle', "dig", 'die', 'dive', 'jump'];
+        this.stateLengthSet = new Map([["idle", 21], ["die", 18], ["dig", 8], ["dive", 18], ["jump", 14]]);
         this.health = 10800;
         this.fullHealth = this.health;
         this.x = x * 60 + 260;
@@ -2277,8 +2279,9 @@ class MarioMouse extends BossMouse {
                     this.tunnelSet();
                     const temp = Math.floor(Math.random() * level.row_num);
                     for (let i = 0; i < level.row_num; i++) {
-                        if (level.waterLine === null
-                            || level.waterLine[this.row] === level.waterLine[(temp + i) % level.row_num]) {
+                        if (!level.waterLine
+                            || (level.waterLine[this.row] !== undefined
+                                && level.waterLine[this.row] === level.waterLine[(temp + i) % level.row_num])) {
                             const out = new TubeOut(level.column_num - this.tunnelLength, (temp + i) % level.row_num);
                             level.Mice[this.row][this.column].push(out);
                             if (level.Foods[(temp + i) % level.row_num * level.column_num + level.column_num - this.tunnelLength] == null) {

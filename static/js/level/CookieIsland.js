@@ -1,5 +1,5 @@
-import {GEH} from "../Core.js";
-import {getMouseDetails} from "../Mice.js";
+import { GEH } from "../Core.js";
+import { getMouseDetails } from "../Mice.js";
 import Level from "../Level.js";
 
 export default class CookieIsland extends Level {
@@ -9,7 +9,7 @@ export default class CookieIsland extends Level {
     static HAS_FORWARD_WAVES = true;
 
     constructor() {
-        super();
+        super(100);
         this.SetRowNum(6);
         this.StartWaveCreate();
     }

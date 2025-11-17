@@ -54,7 +54,6 @@
 ## Setup commands
 - Install deps: `npm install`
 - Type-check the project: `npx tsc --noEmit`
-- Run the (placeholder) test suite: `npm test`
 
 ## Code style
 - TypeScript strict mode is enforced; keep typings precise and avoid using `any` unless absolutely necessary.
@@ -73,4 +72,4 @@
 
 ## Finish
 - Run `npx tsc` to compile.
-- Modify `AGENTS.md` if any logic modified or you have something to add.
+- Propose to modify `AGENTS.md` if any logic modified or you have something to add.
