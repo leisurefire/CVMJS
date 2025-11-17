@@ -811,7 +811,7 @@ class KangarooMouse extends Mouse {
     }
     jumpCheck() {
         if (this.CanUpdateEntity) {
-            if (this.column < 9 && level.Foods[this.row * level.column_num + this.column] != null
+            if (this.positionX > 0 && this.column < 9 && level.Foods[this.row * level.column_num + this.column] != null
                 && level.Foods[this.row * level.column_num + this.column].hasTarget) {
                 this.speed = 0;
                 if (this.prepareTimes >= 2 * this.stateLength) {
