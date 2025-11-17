@@ -2995,7 +2995,7 @@ class ChocolateCannon extends Food {
 }
 class AirDefenseShell extends Food {
     static name = "airdefenseshell";
-    static cName = "放空贝壳";
+    static cName = "防空贝壳";
     static get category() {
         return t("C000");
     }
