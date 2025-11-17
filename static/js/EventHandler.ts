@@ -108,7 +108,7 @@ async function playSfxWebAudio(name: string, volume = 1) {
         audioCtx ??= new (window as any).AudioContext();
         let buf = effectBuffers.get(name);
         if (!buf) {
-            const res = await fetch(`../audio/${name}.mp3`);
+            const res = await fetch(`../CVMJS/static/audio/${name}.mp3`);
             const arr = await res.arrayBuffer();
             buf = await audioCtx!.decodeAudioData(arr);
             effectBuffers.set(name, buf);
@@ -361,7 +361,7 @@ export default class EventHandler {
                     SettingPage]);
             }
 
-            EventHandler.backgroundMusic = new Audio("../audio/chengzhen.mp3");
+            EventHandler.backgroundMusic = new Audio("../CVMJS/static/audio/chengzhen.mp3");
             EventHandler.backgroundMusic.loop = true;
             EventHandler.backgroundMusic.volume = this.musicVolume;
 
@@ -472,7 +472,7 @@ export default class EventHandler {
     #loadIcons() {
         this.#iconsLoaded = Promise.all(
             Array.from(EventHandler.icons.keys()).map(key =>
-                fetch(`../images/interface/icons/${key}.svg`)
+                fetch(`../CVMJS/static/images/interface/icons/${key}.svg`)
                     .then(res => res.text())
                     .then(text => EventHandler.icons.set(key, text))
                     .catch(err => console.error(`Failed to load icon ${key}:`, err))
@@ -533,7 +533,7 @@ export default class EventHandler {
         const music = gameMusic.get(type);
         if (music) {
             try {
-                EventHandler.backgroundMusic.src = `../audio/${music}.mp3`;
+                EventHandler.backgroundMusic.src = `../CVMJS/static/audio/${music}.mp3`;
                 EventHandler.backgroundMusic.play();
                 return true;
             } catch (error) {
@@ -1145,7 +1145,7 @@ class StoreItem {
         this.detail = getFoodDetails(type);
         this.price = this.detail.price || 900;
 
-        this.item_img.src = "../images/cards/" + this.detail.name + ".png";
+        this.item_img.src = "../CVMJS/static/images/cards/" + this.detail.name + ".png";
         this.item_text.innerText = this.price.toString();
 
         this.entity.appendChild(this.item_img);
@@ -1273,7 +1273,7 @@ export class Card extends HTMLElement {
                 this.coolTime = coolTime;
                 this.cost = cost;
                 this.#cost.textContent = cost.toString();
-                this.#entity.src = `../images/cards/${this.name}.png`;
+                this.#entity.src = `../CVMJS/static/images/cards/${this.name}.png`;
             }
         } catch (error: any) {
             ToastBox(error);
@@ -1353,7 +1353,7 @@ export class Card extends HTMLElement {
         const detail = getFoodDetails(this.type);
         if (detail) {
             const Handler = {
-                src: `../images/foods/${this.name}/idle.png`,
+                src: `../CVMJS/static/images/foods/${this.name}/idle.png`,
                 slot: this,
                 offset: detail.offset,
                 frames: detail.idleLength,
@@ -1405,7 +1405,7 @@ class BackpackCard {
     animInside: HTMLImageElement | undefined;
     card: Card;
     animID: number | undefined;
-    src: string = `../images/cards/stove.png`;
+    src: string = `../CVMJS/static/images/cards/stove.png`;
     details?: HTMLElement;
     #chosen = false;
     #bagEntity = document.createElement('img');
@@ -1416,7 +1416,7 @@ class BackpackCard {
         this.star = star;
         this.skillLevel = skillLevel;
         this.card = new Card(type, star, skillLevel);
-        this.src = `../images/cards/${this.card.name}.png`;
+        this.src = `../CVMJS/static/images/cards/${this.card.name}.png`;
 
         this.entity.src = this.src;
         this.#bagEntity.src = this.src;
@@ -1498,18 +1498,18 @@ class BackpackCard {
             const endLength = detail.endLength || idleLength;
             const CInfoBack = document.getElementById("CInfoBack");
             if (CInfoBack) {
-                CInfoBack.style.backgroundImage = "url(../images/interface/compose/" + (detail.type || 0) + ".png)";
+                CInfoBack.style.backgroundImage = "url(../CVMJS/static/images/interface/compose/" + (detail.type || 0) + ".png)";
 
                 CInfoBack.innerHTML = "";
                 if (detail.inside) {
                     this.animInside = document.createElement("img");
-                    this.animInside.src = "../images/foods/" + detail.name + "/idle_inside.png";
+                    this.animInside.src = "../CVMJS/static/images/foods/" + detail.name + "/idle_inside.png";
                     this.animInside.style.position = "absolute";
                     this.animInside.style.left = `${detail?.offset[0] + 115}px`;
                     this.animInside.style.top = `${detail?.offset[1] + 40}px`;
                     CInfoBack.appendChild(this.animInside);
                 }
-                this.#animEntity.src = "../images/foods/" + detail.name + "/idle.png";
+                this.#animEntity.src = "../CVMJS/static/images/foods/" + detail.name + "/idle.png";
                 this.#animEntity.onload = () => {
                     this.#animEntity.style.objectPosition = "0 0"
                     this.#animEntity.style.objectFit = "none";
