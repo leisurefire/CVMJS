@@ -1,16 +1,11 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
-
-var UserTable = map[string]*UserBehavior{}
 
 // --------------------- 数据结构迁移 ---------------------
 
@@ -32,97 +27,6 @@ var cardUpgradeDict = map[int]CardUpgradeInfo{
     8: {24.65, 8000, 1},
     9: {0, 0, 1},
 }
-
-func getTimestamp() int64 {
-    return time.Now().Unix()
-}
-
-func getToken(parameter string, timestamp int64) string {
-    date := fmt.Sprintf("%d", timestamp)
-    data := parameter + date
-
-    h := sha256.Sum256([]byte(data))
-    part := hex.EncodeToString(h[:])[:8]
-
-    h2 := sha256.Sum256([]byte(part))
-    return hex.EncodeToString(h2[:])[:12]
-}
-
-type UpgradeDetail struct {
-    NeedChance    float64 `json:"needChance"`
-    OverallChance float64 `json:"overallChance"`
-}
-
-type UserBehavior struct {
-    Username          string
-    LoginTime         time.Time
-    ActionTime        time.Time
-    Archive           map[string]interface{}
-    UpgradeTableDetail []UpgradeDetail
-    UpgradeSuccess    int
-    UpgradeFail       int
-    UpgradeLastOutcome bool
-    LoginAttempts      int
-}
-
-func (u *UserBehavior) RecordUpgradeDetails(need, overall float64) bool {
-    u.UpgradeTableDetail = append(u.UpgradeTableDetail, UpgradeDetail{
-        NeedChance:    need,
-        OverallChance: overall,
-    })
-
-    u.UpgradeLastOutcome = false
-    if overall >= need {
-        u.UpgradeSuccess++
-        if need >= 50 {
-            u.UpgradeLastOutcome = true
-        }
-    } else {
-        u.UpgradeFail++
-    }
-    return true
-}
-
-func (u *UserBehavior) TimeCheck() float64 {
-    return u.ActionTime.Sub(u.LoginTime).Seconds()
-}
-
-func (u *UserBehavior) ExpireCheck(out *time.Time) bool {
-    var diff float64
-    if out != nil {
-        diff = out.Sub(u.ActionTime).Seconds()
-    } else {
-        diff = u.TimeCheck()
-    }
-    return diff > 3600
-}
-
-func (u *UserBehavior) Remove() {
-    delete(UserTable, u.Username)
-}
-
-type TimeInfo struct {
-    Timestamp int64 `json:"timestamp"`
-    Year      int   `json:"year"`
-    Month     int   `json:"month"`
-    Day       int   `json:"day"`
-    Hour      int   `json:"hour"`
-    Minute    int   `json:"minute"`
-}
-
-func NewTimeInfo() *TimeInfo {
-    ts := getTimestamp()
-    t := time.Unix(ts, 0)
-    return &TimeInfo{
-        Timestamp: ts,
-        Year:      t.Year(),
-        Month:     int(t.Month()),
-        Day:       t.Day(),
-        Hour:      t.Hour(),
-        Minute:    t.Minute(),
-    }
-}
-
 // --------------------- TextTemplate 对应 ---------------------
 
 var TextTemplate = map[string]interface{}{
