@@ -83,7 +83,7 @@ async function playSfxWebAudio(name, volume = 1) {
         audioCtx ??= new window.AudioContext();
         let buf = effectBuffers.get(name);
         if (!buf) {
-            const res = await fetch(`./static/audio/${name}.mp3`);
+            const res = await fetch(`/static/audio/${name}.mp3`);
             const arr = await res.arrayBuffer();
             buf = await audioCtx.decodeAudioData(arr);
             effectBuffers.set(name, buf);
@@ -307,7 +307,7 @@ class EventHandler {
                 town.append(...[NavigationBar, GameReadyPage, Settings, Information, InformationPage, Achievement,
                     SettingPage]);
             }
-            _a.backgroundMusic = new Audio("./static/audio/chengzhen.mp3");
+            _a.backgroundMusic = new Audio("/static/audio/chengzhen.mp3");
             _a.backgroundMusic.loop = true;
             _a.backgroundMusic.volume = this.musicVolume;
             const startPlayPromise = _a.backgroundMusic.play();
@@ -404,7 +404,7 @@ class EventHandler {
     #iconsLoaded = undefined;
     #i18nLoaded = undefined;
     #loadIcons() {
-        this.#iconsLoaded = Promise.all(Array.from(_a.icons.keys()).map(key => fetch(`./static/images/interface/icons/${key}.svg`)
+        this.#iconsLoaded = Promise.all(Array.from(_a.icons.keys()).map(key => fetch(`/static/images/interface/icons/${key}.svg`)
             .then(res => res.text())
             .then(text => _a.icons.set(key, text))
             .catch(err => console.error(`Failed to load icon ${key}:`, err)))).then(() => { });
@@ -461,7 +461,7 @@ class EventHandler {
         const music = gameMusic.get(type);
         if (music) {
             try {
-                _a.backgroundMusic.src = `./static/audio/${music}.mp3`;
+                _a.backgroundMusic.src = `/static/audio/${music}.mp3`;
                 _a.backgroundMusic.play();
                 return true;
             }
@@ -1040,7 +1040,7 @@ class StoreItem {
     constructor(type) {
         this.detail = getFoodDetails(type);
         this.price = this.detail.price || 900;
-        this.item_img.src = "./static/images/cards/" + this.detail.name + ".png";
+        this.item_img.src = "/static/images/cards/" + this.detail.name + ".png";
         this.item_text.innerText = this.price.toString();
         this.entity.appendChild(this.item_img);
         this.entity.appendChild(this.item_text);
@@ -1159,7 +1159,7 @@ export class Card extends HTMLElement {
                 this.coolTime = coolTime;
                 this.cost = cost;
                 this.#cost.textContent = cost.toString();
-                this.#entity.src = `./static/images/cards/${this.name}.png`;
+                this.#entity.src = `/static/images/cards/${this.name}.png`;
             }
         }
         catch (error) {
@@ -1234,7 +1234,7 @@ export class Card extends HTMLElement {
         const detail = getFoodDetails(this.type);
         if (detail) {
             const Handler = {
-                src: `./static/images/foods/${this.name}/idle.png`,
+                src: `/static/images/foods/${this.name}/idle.png`,
                 slot: this,
                 offset: detail.offset,
                 frames: detail.idleLength,
@@ -1282,7 +1282,7 @@ class BackpackCard {
     animInside;
     card;
     animID;
-    src = `./static/images/cards/stove.png`;
+    src = `/static/images/cards/stove.png`;
     details;
     #chosen = false;
     #bagEntity = document.createElement('img');
@@ -1292,7 +1292,7 @@ class BackpackCard {
         this.star = star;
         this.skillLevel = skillLevel;
         this.card = new Card(type, star, skillLevel);
-        this.src = `./static/images/cards/${this.card.name}.png`;
+        this.src = `/static/images/cards/${this.card.name}.png`;
         this.entity.src = this.src;
         this.#bagEntity.src = this.src;
         this.anim.src = this.src;
@@ -1365,17 +1365,17 @@ class BackpackCard {
             const endLength = detail.endLength || idleLength;
             const CInfoBack = document.getElementById("CInfoBack");
             if (CInfoBack) {
-                CInfoBack.style.backgroundImage = "url(./static/images/interface/compose/" + (detail.type || 0) + ".png)";
+                CInfoBack.style.backgroundImage = "url(/static/images/interface/compose/" + (detail.type || 0) + ".png)";
                 CInfoBack.innerHTML = "";
                 if (detail.inside) {
                     this.animInside = document.createElement("img");
-                    this.animInside.src = "./static/images/foods/" + detail.name + "/idle_inside.png";
+                    this.animInside.src = "/static/images/foods/" + detail.name + "/idle_inside.png";
                     this.animInside.style.position = "absolute";
                     this.animInside.style.left = `${detail?.offset[0] + 115}px`;
                     this.animInside.style.top = `${detail?.offset[1] + 40}px`;
                     CInfoBack.appendChild(this.animInside);
                 }
-                this.#animEntity.src = "./static/images/foods/" + detail.name + "/idle.png";
+                this.#animEntity.src = "/static/images/foods/" + detail.name + "/idle.png";
                 this.#animEntity.onload = () => {
                     this.#animEntity.style.objectPosition = "0 0";
                     this.#animEntity.style.objectFit = "none";
