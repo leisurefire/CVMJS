@@ -7,7 +7,7 @@ export default class Rouge extends Level {
     static SUGGESTED_TYPE = 0;
     static WAVES = 0;
     static REWARDS = 0;
-    static BACKGROUND = "../static/images/interface/background_233.jpg";
+    static BACKGROUND = "../CVMJS/static/images/interface/background_233.jpg";
 
     constructor(level = 7, pivot = 0) {
         super(2000);

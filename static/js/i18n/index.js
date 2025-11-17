@@ -19,20 +19,20 @@ class I18nModule {
             return this.loadPromise;
         }
         this.loadPromise = new Promise((resolve, reject) => {
-            fetch(`../static/i18n/${locale}.json`)
+            fetch(`../CVMJS/static/i18n/${locale}.json`)
                 .then(res => res.json())
                 .then(data => {
-                this.dictionary = data;
-                this.isLoaded = true;
-                resolve();
-            })
+                    this.dictionary = data;
+                    this.isLoaded = true;
+                    resolve();
+                })
                 .catch(err => {
-                console.error('Failed to load i18n:', err);
-                // 设置空字典作为fallback
-                this.dictionary = {};
-                this.isLoaded = true;
-                resolve(); // 不要reject，让应用继续运行
-            });
+                    console.error('Failed to load i18n:', err);
+                    // 设置空字典作为fallback
+                    this.dictionary = {};
+                    this.isLoaded = true;
+                    resolve(); // 不要reject，让应用继续运行
+                });
         });
         return this.loadPromise;
     }

@@ -1,6 +1,6 @@
 class FennelRaft extends Level {
     static name = "茴香竹筏";
-    mapAnim = "../static/images/interface/raft.png";
+    mapAnim = "../CVMJS/static/images/interface/raft.png";
     moveTime = 0;
 	constructor() {
 		super(3);
@@ -396,9 +396,9 @@ class BreadMaker extends Food {
 
 	get entity() {
 		if (this.state === 'idle') {
-			return "../static/images/foods/" + this.constructor.name + "/" + this.state + (this.inserted ? "_inserted" : "") + ".png";
+			return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + (this.inserted ? "_inserted" : "") + ".png";
 		} else {
-			return "../static/images/foods/" + this.constructor.name + "/" + this.state + ".png";
+			return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + ".png";
 		}
 	}
 

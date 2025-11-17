@@ -1,11 +1,11 @@
-import {GEH} from "../Core.js";
+import { GEH } from "../Core.js";
 import Level from "../Level.js";
 
 export default class CocoaIslandDay extends Level {
     static NAME = "可可岛（日）";
     static SUGGESTED_TYPE = 0;
     static REWARDS = 1200;
-    static BACKGROUND = "../static/images/interface/background_9.jpg";
+    static BACKGROUND = "../CVMJS/static/images/interface/background_9.jpg";
 
     constructor() {
         super();

@@ -1,11 +1,11 @@
-import {GEH} from "../Core.js";
+import { GEH } from "../Core.js";
 import Level from "../Level.js";
 
 export default class ChampagneIsland extends Level {
     static NAME = "香槟岛（陆）";
     static TIME = 1;
     static REWARDS = 800;
-    static BACKGROUND = "../static/images/interface/background_4.jpg";
+    static BACKGROUND = "../CVMJS/static/images/interface/background_4.jpg";
 
     constructor() {
         super();

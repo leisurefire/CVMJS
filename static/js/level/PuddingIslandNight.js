@@ -1,11 +1,11 @@
-import {GEH} from "../Core.js";
+import { GEH } from "../Core.js";
 import Level from "../Level.js";
 
 export default class PuddingIslandNight extends Level {
     static NAME = "布丁岛（夜）";
     static TIME = 1;
     static REWARDS = 1100;
-    static BACKGROUND = "../static/images/interface/background_8.jpg";
+    static BACKGROUND = "../CVMJS/static/images/interface/background_8.jpg";
 
     constructor() {
         super();

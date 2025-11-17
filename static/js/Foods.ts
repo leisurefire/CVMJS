@@ -25,7 +25,7 @@ const specialGenerate = function (x: number, y: number, star = 0, skillLevel = 0
 			level.createSpriteAnimation(
 				(x * level.row_gap + level.column_start - 20),
 				(y * level.column_gap + level.row_start - 60),
-				"../static/images/foods/icecream/idle.png",
+				"../CVMJS/static/images/foods/icecream/idle.png",
 				16,
 				{
 					function: () => {
@@ -49,7 +49,7 @@ const specialGenerate = function (x: number, y: number, star = 0, skillLevel = 0
 			level.createSpriteAnimation(
 				(x * level.row_gap + level.column_start - 10),
 				(y * level.column_gap + level.row_start - 40),
-				"../static/images/foods/groundcoffee/idle.png",
+				"../CVMJS/static/images/foods/groundcoffee/idle.png",
 				13,
 				{
 					function: () => {
@@ -70,7 +70,7 @@ const specialGenerate = function (x: number, y: number, star = 0, skillLevel = 0
 			level.createSpriteAnimation(
 				(x * level.row_gap + level.column_start - 2),
 				(y * level.column_gap + level.row_start - 20),
-				"../static/images/foods/cork/idle.png",
+				"../CVMJS/static/images/foods/cork/idle.png",
 				40,
 				{
 					function: () => {
@@ -147,7 +147,7 @@ export class Food {
 
 		return false;
 	};
-	static SHADOW_IMAGE = "../static/images/interface/shadow.svg";
+	static SHADOW_IMAGE = "../CVMJS/static/images/interface/shadow.svg";
 	#health = 300;
 	get health() {
 		return this.#health;
@@ -164,7 +164,7 @@ export class Food {
 	width = 50;
 	height = 50;
 	get entity() {
-		return "../static/images/foods/" + this.constructor.name + "/" + this.state + ".png";
+		return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + ".png";
 	}
 
 	row = 0;			//所在行
@@ -245,7 +245,7 @@ export class Food {
 					throw "未加载的卡片星级";
 				}
 			}
-			this.starAnim = "../static/images/interface/star/" + this.star + ".png";
+			this.starAnim = "../CVMJS/static/images/interface/star/" + this.star + ".png";
 		}
 		level.Battlefield.playPlantAnimation(type, x, y);
 	}
@@ -283,7 +283,7 @@ export class Food {
 	}
 	ignore(src = "ladder") {
 		this.ignored = true;
-		this.ladder = "../static/images/interface/" + src + ".png";
+		this.ladder = "../CVMJS/static/images/interface/" + src + ".png";
 	}
 
 	hugeWaveHandler() {
@@ -347,11 +347,11 @@ export class Character extends Food {
 	behaviorInterval: number = 0;
 	remainTime: number = 0;
 	get entity() {
-		return "../static/images/character/" + this.constructor.name + "/" + this.state + ".png";
+		return "../CVMJS/static/images/character/" + this.constructor.name + "/" + this.state + ".png";
 	}
 
 	get weapon() {
-		return "../static/images/character/weapon/bun/" + this.state + ".png";
+		return "../CVMJS/static/images/character/weapon/bun/" + this.state + ".png";
 	}
 
 	constructor(x = 0, y = 0, type = 0) {
@@ -977,7 +977,7 @@ class WatermelonRind extends Toast {
 	stateLength = 10;
 	fullHealth: number = 0;
 	get inside() {
-		return "../static/images/foods/" + this.constructor.name + "/" + this.state + "_inside.png";
+		return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + "_inside.png";
 	}
 
 	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
@@ -1034,7 +1034,7 @@ export class Plate extends Food {
 	width = 60;
 	height = 43;
 	stateLength = 8;
-	ripple = "../static/images/ripple.png";
+	ripple = "../CVMJS/static/images/ripple.png";
 	rippleTick = 0;
 
 	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
@@ -1230,7 +1230,7 @@ class WineGlass extends Food {
 	static offset = [13, -56];
 
 	get entity() {
-		return "../static/images/foods/" + this.constructor.name + "/" + this.state + (this.produceTimes > this.growTime ? "_grown" : "") + ".png";
+		return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + (this.produceTimes > this.growTime ? "_grown" : "") + ".png";
 	}
 
 	width = 45;
@@ -1239,7 +1239,7 @@ class WineGlass extends Food {
 	stateSet = ["idle", "produce", "grow", "sleep"];
 	produceTimes = 0;
 	growTime = 4;
-	sleepAnim = "../static/images/sleep.png";
+	sleepAnim = "../CVMJS/static/images/sleep.png";
 	sleepAnimTick = 0;
 	readonly behaviorInterval: number = 0;
 	remainTime: number = 0;
@@ -1340,7 +1340,7 @@ class CoffeeCup extends BunShooter {
 	height = 42;
 	stateSet = ["idle", "attack", "sleep"];
 	stateLengthSet = [12, 6, 12];
-	sleepAnim = "../static/images/sleep.png";
+	sleepAnim = "../CVMJS/static/images/sleep.png";
 	sleepAnimTick = 0;
 
 	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
@@ -1625,7 +1625,7 @@ class CoffeePot extends BunShooter {
 	stateLengthSet = [12, 11, 10, 5];
 	stateLength = this.stateLengthSet[0];
 	attackTick = [9];
-	sleepAnim = "../static/images/sleep.png";
+	sleepAnim = "../CVMJS/static/images/sleep.png";
 	sleepAnimTick = 0;
 	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
 		super(x, y, type, star, skillLevel);
@@ -1677,7 +1677,7 @@ class CoffeePot extends BunShooter {
 			for (let i = this.column; i < Math.min(level.Mice[this.row].length, this.column + 5); i++) {
 				if (level.Mice[this.row][i] != null && level.Mice[this.row][i].length > 0) {
 					level?.createSpriteAnimation(this.x + 66, this.y + 10,
-						"../static/images/bullets/coffeesmog.png", 10, { vertical: true });
+						"../CVMJS/static/images/bullets/coffeesmog.png", 10, { vertical: true });
 					return true;
 				}
 			}
@@ -1716,12 +1716,12 @@ class CatBox extends Food {
 	get entity() {
 		if (this.health <= this.fullHealth * 2 / 3) {
 			if (this.health <= this.fullHealth / 3) {
-				return "../static/images/foods/" + this.constructor.name + "/" + this.state + "_critical_2.png";
+				return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + "_critical_2.png";
 			} else {
-				return "../static/images/foods/" + this.constructor.name + "/" + this.state + "_critical_1.png";
+				return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + "_critical_1.png";
 			}
 		} else {
-			return "../static/images/foods/" + this.constructor.name + "/" + this.state + ".png";
+			return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + ".png";
 		}
 	}
 
@@ -1930,7 +1930,7 @@ class RotaryCoffeePot extends Food {
 	stateSet = ["idle", "attack", "sleep", "awake"];
 	stateLengthSet = [22, 22, 18, 7];
 	stateLength = this.stateLengthSet[0];
-	sleepAnim = "../static/images/sleep.png";
+	sleepAnim = "../CVMJS/static/images/sleep.png";
 	sleepAnimTick = 0;
 	behaviorInterval = 1200;
 	remainTime = this.behaviorInterval;
@@ -2027,7 +2027,7 @@ class RotaryCoffeePot extends Food {
 
 	fire() {
 		GEH.requestPlayAudio("kafeihu");
-		level?.createSpriteAnimation(this.x - 24, this.y - 54, "../static/images/bullets/bubble_circle.png", 12);
+		level?.createSpriteAnimation(this.x - 24, this.y - 54, "../CVMJS/static/images/bullets/bubble_circle.png", 12);
 		for (let i = Math.max(0, this.row - 1); i <= Math.min(this.row + 1, level.row_num - 1); i++) {
 			if (level.Mice[i] != null) {
 				for (let j = Math.max(0, this.column - 1); j <= Math.min(this.column + 1, level.column_num); j++) {
@@ -2055,7 +2055,7 @@ export class RatNest extends Food {
 	}
 	static offset = [0, 4];
 	get entity() {
-		return "../static/images/interface/ratnest.png";
+		return "../CVMJS/static/images/interface/ratnest.png";
 	}
 
 	width = 65;
@@ -2187,12 +2187,12 @@ class ChocolatePult extends BunShooter {
 	get entity() {
 		if (this.state === 'attack') {
 			if (this.attackType) {
-				return "../static/images/foods/" + this.constructor.name + "/" + this.state + "_1.png";
+				return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + "_1.png";
 			} else {
-				return "../static/images/foods/" + this.constructor.name + "/" + this.state + "_0.png";
+				return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + "_0.png";
 			}
 		} else {
-			return "../static/images/foods/" + this.constructor.name + "/" + this.state + ".png";
+			return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + ".png";
 		}
 	}
 
@@ -2267,10 +2267,10 @@ class SteelWool extends Food {
 	target: Mouse | null = null;
 	stateLength = 6;
 
-	dragAnim = "../static/images/foods/steelwool/drag.png";
+	dragAnim = "../CVMJS/static/images/foods/steelwool/drag.png";
 	dragAnimTick = 0;
 
-	ripple = "../static/images/ripple.png";
+	ripple = "../CVMJS/static/images/ripple.png";
 	rippleTick = 0;
 
 	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
@@ -2337,7 +2337,7 @@ class TeaCup extends CoffeeCup {
 	stateSet = ["idle", "attack", "sleep"];
 	stateLengthSet = [8, 7, 8];
 	stateLength = this.stateLengthSet[0];
-	ripple = "../static/images/ripple.png";
+	ripple = "../CVMJS/static/images/ripple.png";
 	rippleTick = 0;
 
 	constructor(x = 0, y = 0, type = 0, star = 0, skillLevel = 0) {
@@ -2407,12 +2407,12 @@ class Sausage extends BunShooter {
 	get entity() {
 		if (this.state === this.stateSet[1]) {
 			if (this.attackMode) {
-				return "../static/images/foods/" + this.constructor.name + "/" + this.state + '_1' + ".png";
+				return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + '_1' + ".png";
 			} else {
-				return "../static/images/foods/" + this.constructor.name + "/" + this.state + ".png";
+				return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + ".png";
 			}
 		} else {
-			return "../static/images/foods/" + this.constructor.name + "/" + this.state + ".png";
+			return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + ".png";
 		}
 	}
 
@@ -3091,13 +3091,13 @@ class WineBottle extends Food {
 				level?.createSpriteAnimation(
 					level.column_start + (this.column + offset - 1) * level.row_gap - 2,
 					level.row_start + (this.row) * level.column_gap - 48,
-					"../static/images/bullets/flame.png", 7);
+					"../CVMJS/static/images/bullets/flame.png", 7);
 			}
 			if (this.column - offset >= 0) {
 				level?.createSpriteAnimation(
 					level.column_start + (this.column - offset) * level.row_gap - 2,
 					level.row_start + (this.row) * level.column_gap - 48,
-					"../static/images/bullets/flame.png", 7);
+					"../CVMJS/static/images/bullets/flame.png", 7);
 			}
 			if ((this.column + offset > level.column_num + 1 && this.column - offset < 0) || this.tick === this.stateLength - 1) {
 				this.remove();
@@ -3173,7 +3173,7 @@ class ChocolateCannon extends Food {
 	fire() {
 		level?.createSpriteAnimation(level.column_start + 8 * level.row_gap - 72,
 			level.row_start + this.row * level.column_gap - 72,
-			"../static/images/bullets/cannonball.png", 12,
+			"../CVMJS/static/images/bullets/cannonball.png", 12,
 			{
 				func: () => {
 					GEH.requestPlayAudio("pijiubao");
@@ -3250,7 +3250,7 @@ export class TubeIn extends Food {
 	line = 1;
 
 	get entity() {
-		return "../static/images/interface/tube_0.png";
+		return "../CVMJS/static/images/interface/tube_0.png";
 	}
 
 	constructor(x = 0, y = 0, type = 0) {

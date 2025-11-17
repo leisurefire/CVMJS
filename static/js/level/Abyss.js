@@ -7,9 +7,9 @@ export default class Abyss extends Level {
     static SUGGESTED_TYPE = 0;
     static WAVES = 9;
     static REWARDS = 3200;
-    static BACKGROUND = "../static/images/interface/background_13.jpg";
+    static BACKGROUND = "../CVMJS/static/images/interface/background_13.jpg";
     static MAP_ANIMATION = {
-        SRC: "../static/images/interface/water_2.png",
+        SRC: "../CVMJS/static/images/interface/water_2.png",
         X: 36,
         Y: 222,
         WIDTH: 834,

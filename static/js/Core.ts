@@ -431,7 +431,7 @@ export class MaterialLoader extends HTMLElement {
     const loader = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 
     style.textContent = `
-      .material-loader-background { margin:0; position:fixed; height:100%; width:100%; background-image: url("../static/images/interface/loader_2.png"); background-size:cover; background-repeat:no-repeat; }
+      .material-loader-background { margin:0; position:fixed; height:100%; width:100%; background-image: url("../CVMJS/static/images/interface/loader_2.png"); background-size:cover; background-repeat:no-repeat; }
       span{ position:fixed; color:white; margin:auto; left:0; right:0; top:1rem; width:fit-content; text-align:center; }
       svg{ position:fixed; margin:auto; right:3rem; bottom:2rem; height:150px; width:150px; }
             circle { fill:none; stroke:white; stroke-linecap:round; stroke-width:0.75rem; stroke-dasharray:252; stroke-dashoffset:252; animation: circle 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite; transform: rotate(-90deg); transform-origin:center; transform-box: fill-box; }
@@ -441,7 +441,7 @@ export class MaterialLoader extends HTMLElement {
     `;
 
     background.className = "material-loader-background";
-    logo.src = "../static/images/logo.svg";
+    logo.src = "../CVMJS/static/images/logo.svg";
     text.innerText =
       "本程序美术资料及部分音频版权归上海欢乐互娱网络科技有限公司所有，而仍保留法律范围内最大限度的权益；除资料引用外，本程序与前述公司并无任何关联。" +
       "\n健康游戏忠告：抵制不良游戏，拒绝盗版游戏。注意自我防护，谨防受骗上当。适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活。";
@@ -731,7 +731,7 @@ class GameReadyPagePrototype extends HTMLElement {
       .game-ready-page-level-info div a:last-of-type{ margin-right:0; }
       .game-ready-page-level-info div a>svg { display:block; margin-left:50%; margin-bottom:0.25rem; transform: translateX(-50%); background-color:transparent; }
       .game-ready-page-backpack-cards { position:relative; float:right; top:0.625rem; right:1rem; display:grid; overflow-x:hidden; overflow-y:scroll; height:min(calc(100% - 20.5rem), calc(31.25em)); width: calc(100% - 12rem); border-radius:1rem; grid-template-columns: repeat(auto-fit, 5.125rem); grid-template-rows: repeat(auto-fit, 3rem); column-gap:0.5rem; row-gap:0.5rem; padding:1rem; }
-      .game-ready-page-backpack-cards img { object-fit:cover; border-radius:0.5rem; background-color:#e7bdb1; background-image: url("../static/images/undo.svg"); background-position:center; background-repeat:no-repeat; }
+      .game-ready-page-backpack-cards img { object-fit:cover; border-radius:0.5rem; background-color:#e7bdb1; background-image: url("../CVMJS/static/images/undo.svg"); background-position:center; background-repeat:no-repeat; }
       .game-ready-page-backpack-reselect{ position:absolute; left:9rem; bottom:1.125rem; }
       .game-ready-page-backpack-start, .game-ready-page-backpack-cancel { position:absolute; bottom:1.125rem; right:1.5rem; float:right; display:inline-block; }
       .game-ready-page-backpack-cancel { right:9rem; }
@@ -817,8 +817,8 @@ class GameReadyPagePrototype extends HTMLElement {
 
     this.#Box.style.backgroundImage =
       type === 99
-        ? "linear-gradient(to top, var(--background) 50%, transparent 100%), url(../static/images/interface/rouge.png)"
-        : `linear-gradient(to top, var(--background) 50%, transparent 100%), url(../static/images/interface/background_${type || 0}.jpg)`;
+        ? "linear-gradient(to top, var(--background) 50%, transparent 100%), url(../CVMJS/static/images/interface/rouge.png)"
+        : `linear-gradient(to top, var(--background) 50%, transparent 100%), url(../CVMJS/static/images/interface/background_${type || 0}.jpg)`;
 
     // clear lists
     this.GameCards.replaceChildren();

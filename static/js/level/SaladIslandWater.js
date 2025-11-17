@@ -5,9 +5,9 @@ export default class SaladIslandWater extends Level {
     static NAME = "色拉岛（水）";
     static SUGGESTED_TYPE = 0;
     static REWARDS = 600;
-    static BACKGROUND = "../static/images/interface/background_2.jpg";
+    static BACKGROUND = "../CVMJS/static/images/interface/background_2.jpg";
     static MAP_ANIMATION = {
-        SRC: "../static/images/interface/water_0.png",
+        SRC: "../CVMJS/static/images/interface/water_0.png",
         X: 302,
         Y: 243,
         WIDTH: 548,
