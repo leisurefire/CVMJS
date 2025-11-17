@@ -9,7 +9,7 @@ export default class CookieIsland extends Level {
     static HAS_FORWARD_WAVES = true;
 
     constructor() {
-        super(100);
+        super();
         this.SetRowNum(6);
         this.StartWaveCreate();
     }
