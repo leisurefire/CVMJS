@@ -118,8 +118,8 @@ export class MapGrid {
     noPlace = false;
     get layers() {
         return [this.#layers[1],
-        this.#layers[0],
-        this.#layers[2]];
+            this.#layers[0],
+            this.#layers[2]];
     }
     get layer_0() {
         return this.#layers[0];
