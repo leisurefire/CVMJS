@@ -412,48 +412,37 @@ export class GameBattlefield extends HTMLElement {
                 height: 52px;
                 border-radius: 52px;
                 background-color: black;
-                ;
                 font-weight: 600;
                 transform: scale(0.96);
             }
             
             #BossBar::before {
                 position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 200%;
-                background: radial-gradient(100% 225% at 100% 0%, #FF0000 0%, #000000 100%), linear-gradient(236deg, #00C2FF 0%, #000000 100%), linear-gradient(135deg, #CDFFEB 0%, #CDFFEB 36%, #009F9D 36%, #009F9D 60%, #07456F 60%, #07456F 67%, #0F0A3C 67%, #0F0A3C 100%);
+                top: -4px;
+                left: -4px;
+                right: -4px;
+                bottom: -4px;
+                border-radius: 56px;
+                background: conic-gradient(from 0deg, #FF0000, #00C2FF, #CDFFEB, #009F9D, #07456F, #0F0A3C, #FF0000);
                 content: "";
-                animation: boss 8s infinite cubic-bezier(0.4, 0, 0.2, 1);
-                background-blend-mode: overlay, hard-light, normal;
+                animation: boss 8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+                z-index: -1;
             }
             
             @keyframes boss {
-                0%, 100% {
-                    opacity: 0;
-                    filter: blur(6px);
+                0%{
+                    transform: rotate(0deg);
+                    filter: blur(48px);
                 }
-            
-                20% {
-                    opacity: 1;
-                }
-            
-                0% {
-                    transform: rotate(0) scale(1);
-                }
-            
-                100% {
-                    transform: rotate(360deg) scale(1.5);
-                }
-            
                 50% {
-                    opacity: 1;
-                    transform: rotate(360deg) scale(2) translateX(-50%);
-                    filter: blur(20px);
+                    transform: rotate(360deg);
+                    filter: blur(64px);
+                }
+                100% {
+                    transform: rotate(360deg);
+                    filter: blur(48px);
                 }
             }
-            
             #BossBar #BossProgress {
                 position: absolute;
                 top: 0;

@@ -3040,7 +3040,7 @@ export class TubeIn extends Food {
     static get cName() {
         return t("AA01_CNAME");
     }
-    static offset = [-12, 48];
+    static offset = [-12, 16];
     width = 91;
     height = 62;
     attackable = false;

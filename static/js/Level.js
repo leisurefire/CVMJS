@@ -191,7 +191,7 @@ class Level {
     constructor(interval) {
         if (interval) {
             this.#NextWaveRemainingTime = interval;
-            // this.#WaveInterval = interval;
+            this.#WaveInterval = interval;
         }
         try {
             if (level) {

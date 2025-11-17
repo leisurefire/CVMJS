@@ -21,7 +21,13 @@ export default class SaladIslandWater extends Level {
         this.StartWaveCreate();
     }
 
+    CreateBossBar(target) {
+        GEH.requestBackMusicChange(7);
+        return super.CreateBossBar(target);
+    }
+
     StartWaveCreate() {
+        this.waveCreate(23, 1, 1);
         this.waveCreate(0, 1, 1);
         this.waveCreate(0, 1, 1);
         this.waveCreate(0, 1, 1);
