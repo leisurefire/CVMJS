@@ -377,7 +377,7 @@ export class MaterialLoader extends HTMLElement {
         logo.src = "../CVMJS/static/images/logo.svg";
         text.innerText =
             "本程序美术资料及部分音频版权归上海欢乐互娱网络科技有限公司所有，而仍保留法律范围内最大限度的权益；除资料引用外，本程序与前述公司并无任何关联。" +
-            "\n健康游戏忠告：抵制不良游戏，拒绝盗版游戏。注意自我防护，谨防受骗上当。适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活。";
+                "\n健康游戏忠告：抵制不良游戏，拒绝盗版游戏。注意自我防护，谨防受骗上当。适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活。";
         loader.innerHTML = `<circle cx=\"80\" cy=\"80\" r=\"40\"></circle>`;
         shadow.appendChild(style);
         shadow.appendChild(background);

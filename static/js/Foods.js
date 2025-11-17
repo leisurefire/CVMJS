@@ -3103,67 +3103,67 @@ export const FoodDetails = new Map([
     [20, CatBox],
     [21, WineRack],
     [22, {
-        name: `icecream`,
-        cName: `冰淇淋`,
-        category: `辅助型`,
-        cost: 100,
-        coolTime: 60000,
-        offset: [-20, -60],
-        description: "种植在卡片上，使其立即冷却完毕",
-        upgrade: "强化后缩短[冷却时间]",
-        rarity: 1,
-        story: "五卷，赢了去睡觉，输了去学习。",
-        assets: ["idle"],
-        idleLength: 16,
-        generate: (function (x, y, star, skillLevel) {
-            return specialGenerate(x, y, star, skillLevel, 0);
-        })
-    }],
+            name: `icecream`,
+            cName: `冰淇淋`,
+            category: `辅助型`,
+            cost: 100,
+            coolTime: 60000,
+            offset: [-20, -60],
+            description: "种植在卡片上，使其立即冷却完毕",
+            upgrade: "强化后缩短[冷却时间]",
+            rarity: 1,
+            story: "五卷，赢了去睡觉，输了去学习。",
+            assets: ["idle"],
+            idleLength: 16,
+            generate: (function (x, y, star, skillLevel) {
+                return specialGenerate(x, y, star, skillLevel, 0);
+            })
+        }],
     [23, {
-        name: `groundcoffee`,
-        cName: "咖啡粉",
-        category: `辅助型`,
-        cost: 75,
-        coolTime: 7500,
-        offset: [-10, -40],
-        description: "种植在休眠的卡片上，将其唤醒",
-        upgrade: "强化后提升[等级标识]",
-        rarity: 1,
-        story: "零落成泥碾作尘，只有香如故。",
-        assets: ["idle"],
-        idleLength: 13,
-        endLength: 4,
-        generate: (function (x, y, star, skillLevel) {
-            return specialGenerate(x, y, star, skillLevel, 1);
-        })
-    }],
+            name: `groundcoffee`,
+            cName: "咖啡粉",
+            category: `辅助型`,
+            cost: 75,
+            coolTime: 7500,
+            offset: [-10, -40],
+            description: "种植在休眠的卡片上，将其唤醒",
+            upgrade: "强化后提升[等级标识]",
+            rarity: 1,
+            story: "零落成泥碾作尘，只有香如故。",
+            assets: ["idle"],
+            idleLength: 13,
+            endLength: 4,
+            generate: (function (x, y, star, skillLevel) {
+                return specialGenerate(x, y, star, skillLevel, 1);
+            })
+        }],
     [24, GrilledStarfish],
     [25, RotaryCoffeePot],
     [26, {
-        name: `cork`,
-        cName: "软木塞",
-        get category() { return t("C000"); },
-        cost: 75,
-        coolTime: 7500,
-        offset: [-2, -20],
-        description: "填充鼠洞以阻止老鼠钻出",
-        special: "只能放置在鼠洞上",
-        upgrade: "强化后提升[等级标识]",
-        rarity: 0,
-        story: "一无可进的进口，一无可去的去处。",
-        idleLength: 40,
-        endLength: 2,
-        generate: (function (x, y, star, skillLevel) {
-            if (level.Foods[y * level.column_num + x] == null
-                || level.Foods[y * level.column_num + x].layer_1 == null
-                || level.Foods[y * level.column_num + x].layer_1.constructor !== RatNest) {
-                return false;
-            }
-            else {
-                return specialGenerate(x, y, star, skillLevel, 2);
-            }
-        })
-    }],
+            name: `cork`,
+            cName: "软木塞",
+            get category() { return t("C000"); },
+            cost: 75,
+            coolTime: 7500,
+            offset: [-2, -20],
+            description: "填充鼠洞以阻止老鼠钻出",
+            special: "只能放置在鼠洞上",
+            upgrade: "强化后提升[等级标识]",
+            rarity: 0,
+            story: "一无可进的进口，一无可去的去处。",
+            idleLength: 40,
+            endLength: 2,
+            generate: (function (x, y, star, skillLevel) {
+                if (level.Foods[y * level.column_num + x] == null
+                    || level.Foods[y * level.column_num + x].layer_1 == null
+                    || level.Foods[y * level.column_num + x].layer_1.constructor !== RatNest) {
+                    return false;
+                }
+                else {
+                    return specialGenerate(x, y, star, skillLevel, 2);
+                }
+            })
+        }],
     [27, IceBucket],
     [28, ChocolatePult],
     [29, EggPult],
@@ -3182,33 +3182,33 @@ export const FoodDetails = new Map([
     [42, ChocolateCannon],
     [43, AirDefenseShell],
     [44, {
-        name: `marshmallow`,
-        cName: "棉花糖",
-        offset: [-6, -6],
-        get category() { return t("C000"); },
-        cost: 25,
-        coolTime: 7500,
-        description: "填补云洞或是在岩浆上承载卡片",
-        upgrade: "强化后提高[生命值]",
-        rarity: 0,
-        story: "埏埴以为器，当其无，有器之用。凿户牖以为室，当其无，有室之用。故有之以为利，无之以为用。",
-        idleLength: 8,
-        generate: (function (x, y, star, skillLevel) {
-            level.Battlefield.playPlantAnimation(0, x, y);
-            if (level.Foods[y * level.column_num + x] && level.Foods[y * level.column_num + x].lava) {
-            }
-            else if (level && level.cloudCavityPosition) {
-                for (let i = 0; i < level.cloudCavityPosition.length; i++) {
-                    if (level.cloudCavityPosition[i].row === y
-                        && Math.abs(level.cloudCavityPosition[i].column - x) <= 1) {
-                        level.cloudCavityPosition[i].cavity = false;
-                        break;
+            name: `marshmallow`,
+            cName: "棉花糖",
+            offset: [-6, -6],
+            get category() { return t("C000"); },
+            cost: 25,
+            coolTime: 7500,
+            description: "填补云洞或是在岩浆上承载卡片",
+            upgrade: "强化后提高[生命值]",
+            rarity: 0,
+            story: "埏埴以为器，当其无，有器之用。凿户牖以为室，当其无，有室之用。故有之以为利，无之以为用。",
+            idleLength: 8,
+            generate: (function (x, y, star, skillLevel) {
+                level.Battlefield.playPlantAnimation(0, x, y);
+                if (level.Foods[y * level.column_num + x] && level.Foods[y * level.column_num + x].lava) {
+                }
+                else if (level && level.cloudCavityPosition) {
+                    for (let i = 0; i < level.cloudCavityPosition.length; i++) {
+                        if (level.cloudCavityPosition[i].row === y
+                            && Math.abs(level.cloudCavityPosition[i].column - x) <= 1) {
+                            level.cloudCavityPosition[i].cavity = false;
+                            break;
+                        }
                     }
                 }
-            }
-            return true;
-        })
-    }],
+                return true;
+            })
+        }],
 ]);
 export const getFoodDetails = function (type) {
     if (FoodDetails.has(type)) {
