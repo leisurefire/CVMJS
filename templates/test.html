@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<body>
+<canvas id="canvas"></canvas>
+
+<script>
+// -------- CONFIG --------
+const webpURL = "/test/images/idle.webp"; // 你的 webp 动图路径
+
+async function extractWebPFrames(url) {
+    const resp = await fetch(url);
+    const buf = await resp.arrayBuffer();
+
+    const decoder = new ImageDecoder({
+        data: buf,
+        type: "image/webp"
+    });
+
+    await decoder.tracks.ready;
+    const track = decoder.tracks.selectedTrack;
+    console.log("总帧数:", track.frameCount);
+
+    const frames = [];
+
+    for (let i = 0; i < track.frameCount; i++) {
+        const { image, complete } = await decoder.decode({ frameIndex: i });
+        if (!complete) console.warn("Frame incomplete:", i);
+
+        // 关键修复：将 VideoFrame 转成 ImageBitmap（异步）
+        const bitmap = await createImageBitmap(image);
+        image.close(); // 释放 VideoFrame
+
+        frames.push(bitmap);
+    }
+
+    return frames;
+}
+
+async function main() {
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const frames = await extractWebPFrames(webpURL);
+
+    if (frames.length === 0) {
+        console.error("No frames decoded.");
+        return;
+    }
+
+    // 修复后：可以正确获取宽高
+    canvas.width = frames[0].width;
+    canvas.height = frames[0].height;
+
+    console.log("已解码帧数:", frames.length);
+
+    let index = 0;
+    function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(frames[index], 0, 0);
+        index = (index + 1) % frames.length;
+        requestAnimationFrame(render);
+    }
+    render();
+}
+
+main();
+</script>
+</body>
+</html>

@@ -62,6 +62,15 @@
 - UI components use `cubic-bezier(0.4, 0, 0.2, 1)` for all animations and transitions to ensure smooth, consistent motion across the interface.
 
 ## Recent Changes
+- **WebP Animation System (EventHandler.ts, SpriteAnimation.ts)**:
+  - Implemented WebP animation frame decoding and caching using ImageDecoder API to extract frames as ImageBitmap arrays
+  - Added pre-sliced sprite sheet caching optimization using offscreen Canvas for improved rendering performance
+  - Extended SpriteAnimation class to support four rendering modes: WebP, pre-sliced, SVG, and traditional sprite sheets
+  - Introduced unified API `GEH.requestAnimationResource()` that auto-detects format and returns optimized frame data
+  - Implemented LRU cache management (50 WebP limit, 100 sprite sheet limit) with automatic memory cleanup
+  - Fully backward compatible, defaults to traditional rendering mode, enable via `isWebP: true` option
+  - Detailed architecture design available in `docs/webp-animation-architecture.md`
+  - Extended `requestDrawImage()` method with WebP-first fallback: automatically attempts to load `.webp` version, falling back to `.png` on failure, enabling all entities (Stove, MarioMouse, etc.) and background animations (mapMove) to support WebP without code modifications
 - **Bullet Pool Safety (Bullets.ts)**: Added `Stone.reset` implementation so pooled Stone projectiles restore runtime fields (lane, target column, velocity) before reuse, preventing `instance.reset` undefined errors within `acquireBullet`.
 - **Animation Optimization (Core.ts)**: Refactored all component animations to use `cubic-bezier(0.4, 0, 0.2, 1)` timing function for smoother, more natural motion. Improved ripple effects with fade-out animation, optimized transition properties to only animate necessary CSS properties, and standardized animation durations across components for consistency.
 - **SpriteAnimation Architecture Refactor (SpriteAnimation.ts, Level.ts)**:
