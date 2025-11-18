@@ -11,6 +11,7 @@ type SpriteAnimationOptions = {
     func?: () => void;
     zIndex?: number;
     isSvg?: boolean;
+    isWebP?: boolean;
     scale?: number;
 };
 
@@ -27,9 +28,12 @@ export default class SpriteAnimation {
     frameCallback?: () => void;
     zIndex: number;
     isSvg: boolean;
+    isWebP: boolean = false;
     scale: number;
     // 缓存上一帧成功加载的图片，避免 requestDrawImage 偶尔返回 null 时整帧消失
     private _img: any;
+    _webpFrames?: ImageBitmap[];
+    _spriteSlices?: ImageBitmap[];
 
 
     constructor(x: number, y: number, src: string, frames: number, options?: SpriteAnimationOptions) {
@@ -45,6 +49,7 @@ export default class SpriteAnimation {
         const maxZIndex = level.column_num * level.row_num;
         this.zIndex = Math.min(options?.zIndex ?? maxZIndex - 1, maxZIndex - 1);
         this.isSvg = options?.isSvg ?? false;
+        this.isWebP = options?.isWebP ?? false;
         this.scale = options?.scale ?? 1;
         this._img = undefined;
     }
@@ -63,9 +68,12 @@ export default class SpriteAnimation {
         const maxZIndex = level.column_num * level.row_num;
         this.zIndex = Math.min(options?.zIndex ?? maxZIndex - 1, maxZIndex - 1);
         this.isSvg = options?.isSvg ?? false;
+        this.isWebP = options?.isWebP ?? false;
         this.scale = options?.scale ?? 1;
         this.#tick = 0;
-        this._img = undefined; // 清空缓存的图片，确保从头加载新动画
+        this._img = undefined;
+        this._webpFrames = undefined;
+        this._spriteSlices = undefined;
         return this;
     }
 
@@ -76,13 +84,39 @@ export default class SpriteAnimation {
     onRelease(): void { }
 
     render(ctx: CanvasRenderingContext2D): boolean {
+        // 模式1: WebP帧数组
+        if (this._webpFrames) {
+            const frame = this._webpFrames[this.#tick];
+            if (!frame) return false;
+            ctx.drawImage(frame, this.#x, this.#y, frame.width * this.scale, frame.height * this.scale);
+            if (this.#tick === this.#frames - 1) {
+                this.frameCallback?.();
+                return true;
+            }
+            this.#tick++;
+            return false;
+        }
+
+        // 模式2: 精灵图切片
+        if (this._spriteSlices) {
+            const slice = this._spriteSlices[this.#tick];
+            if (!slice) return false;
+            ctx.drawImage(slice, this.#x, this.#y);
+            if (this.#tick === this.#frames - 1) {
+                this.frameCallback?.();
+                return true;
+            }
+            this.#tick++;
+            return false;
+        }
+
+        // 模式3: SVG序列 / 模式4: 传统精灵图
         const rawImg = GEH.requestDrawImage(this.isSvg ? `${this.#src}/${this.#tick}.svg` : this.#src);
         if (rawImg) {
             this._img = rawImg;
         }
         const img = this._img;
         if (!img) {
-            // 图片尚未加载完成，保持当前帧（不自增 tick）
             return false;
         }
         if (this.isSvg) {
@@ -149,8 +183,18 @@ export class SpriteAnimationManager {
     /**
      * 创建并播放动画
      */
-    playAnimation(x: number, y: number, src: string, frames: number, options: any): SpriteAnimation {
+    async playAnimation(x: number, y: number, src: string, frames: number, options: any): Promise<SpriteAnimation> {
+        const resource = await GEH.requestAnimationResource(src, frames, options).catch(() => null);
         const animation = this.acquireAnimation(x, y, src, frames, options);
+
+        if (Array.isArray(resource)) {
+            if (src.endsWith('.webp') || options?.isWebP) {
+                animation._webpFrames = resource;
+            } else {
+                animation._spriteSlices = resource;
+            }
+        }
+
         const targetStack = this._animationStack[animation.zIndex];
         if (targetStack) {
             targetStack.push(animation);

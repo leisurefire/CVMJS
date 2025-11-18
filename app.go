@@ -82,6 +82,12 @@ func main() {
         c.HTML(http.StatusOK, "index.html", TextTemplate)
     })
 
+    router.GET("/test/", func(c *gin.Context) {
+        c.HTML(http.StatusOK, "test.html", TextTemplate)
+    })
+
+    router.StaticFS("/test/images/", http.Dir("test/images"))
+
     fmt.Println("Server running on http://localhost:5000")
     router.Run(":5000")
 }

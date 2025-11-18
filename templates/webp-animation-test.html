@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebP Animation Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #333; }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        canvas {
+            border: 2px solid #ddd;
+            background: #fff;
+            display: block;
+            margin: 10px 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>WebP Animation System Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: EventHandler WebP Cache</h2>
+        <div id="test1-status" class="status info">等待测试...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: SpriteAnimation WebP Rendering</h2>
+        <canvas id="webp-canvas" width="800" height="200"></canvas>
+        <div id="test2-status" class="status info">等待测试...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Traditional Sprite Sheet Compatibility</h2>
+        <canvas id="sprite-canvas" width="800" height="200"></canvas>
+        <div id="test3-status" class="status info">等待测试...</div>
+    </div>
+
+    <script type="module">
+        import { GEH } from '../static/js/Core.js';
+        import { Level } from '../static/js/Level.js';
+
+        const log = (id, message, type = 'info') => {
+            const el = document.getElementById(id);
+            el.textContent = message;
+            el.className = `status ${type}`;
+            console.log(`[${id}]`, message);
+        };
+
+        // Test 1: EventHandler WebP Cache
+        async function test1() {
+            try {
+                log('test1-status', '加载 WebP 帧...', 'info');
+                const frames = await GEH.requestWebPFrames('test/images/idle.webp');
+                
+                if (!frames || frames.length === 0) {
+                    throw new Error('未能加载 WebP 帧');
+                }
+
+                const firstFrame = frames[0];
+                log('test1-status', 
+                    `✓ 成功加载 ${frames.length} 帧，首帧尺寸: ${firstFrame.width}x${firstFrame.height}`, 
+                    'success');
+            } catch (error) {
+                log('test1-status', `✗ 错误: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 2: WebP Animation Rendering
+        async function test2() {
+            try {
+                log('test2-status', '初始化 WebP 动画...', 'info');
+                const canvas = document.getElementById('webp-canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Create minimal level instance
+                const level = new Level();
+                await level.initialize();
+
+                // Play WebP animation
+                level.animationManager.playAnimation(
+                    100, 100,
+                    'test/images/idle.webp',
+                    8,
+                    { isWebP: true, loop: true, fps: 10 }
+                );
+
+                // Render loop
+                let frameCount = 0;
+                const render = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    level.animationManager.updateAnimations(ctx, 9, 5);
+                    frameCount++;
+                    
+                    if (frameCount < 100) {
+                        requestAnimationFrame(render);
+                    } else {
+                        log('test2-status', '✓ WebP 动画渲染成功 (100帧)', 'success');
+                    }
+                };
+                render();
+                
+            } catch (error) {
+                log('test2-status', `✗ 错误: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 3: Traditional Sprite Compatibility
+        async function test3() {
+            try {
+                log('test3-status', '初始化传统精灵图动画...', 'info');
+                const canvas = document.getElementById('sprite-canvas');
+                const ctx = canvas.getContext('2d');
+                
+                const level = new Level();
+                await level.initialize();
+
+                // Play traditional sprite animation
+                level.animationManager.playAnimation(
+                    100, 100,
+                    'test/images/idle.png',
+                    8,
+                    { isWebP: false, loop: true, fps: 10, horizontal: true }
+                );
+
+                // Render loop
+                let frameCount = 0;
+                const render = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    level.animationManager.updateAnimations(ctx, 9, 5);
+                    frameCount++;
+                    
+                    if (frameCount < 100) {
+                        requestAnimationFrame(render);
+                    } else {
+                        log('test3-status', '✓ 传统精灵图渲染成功 (100帧)', 'success');
+                    }
+                };
+                render();
+                
+            } catch (error) {
+                log('test3-status', `✗ 错误: ${error.message}`, 'error');
+            }
+        }
+
+        // Run all tests
+        (async () => {
+            await test1();
+            await test2();
+            await test3();
+        })();
+    </script>
+</body>
+</html>

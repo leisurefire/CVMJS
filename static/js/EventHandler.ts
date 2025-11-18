@@ -180,6 +180,9 @@ export default class EventHandler {
     static backgroundMusic: HTMLAudioElement;
     protected static instance: EventHandler;
     static #images: LruCache<string, ImageBitmap> = new LruCache(400);
+    static #webpFrameCache = new Map<string, ImageBitmap[]>();
+    static #spriteSliceCache = new Map<string, ImageBitmap[]>();
+    static #webpFallbackCache = new Set<string>();
 
     scale: number = 1;                   //网页缩放比例
     effectVolume: number = 1;		         //音效音量大小
@@ -546,14 +549,24 @@ export default class EventHandler {
         }
     }
 
-
     requestDrawImage(src: string, effect: string | null = null, intensity: number | null = null) {
-        const effectKey = effect !== null ? `${src}?effect=${effect}${intensity != null ? `&intensity=${intensity}` : ''}` : src;
+        let actualSrc = src;
+
+        if (src.endsWith('.png') && !EventHandler.#webpFallbackCache.has(src)) {
+            actualSrc = src.replace(/\.png$/, '.webp');
+        }
+
+        const effectKey = effect !== null ? `${actualSrc}?effect=${effect}${intensity != null ? `&intensity=${intensity}` : ''}` : actualSrc;
 
         if (EventHandler.#images.has(effectKey)) {
             return EventHandler.#images.get(effectKey);
         } else {
-            this.requestImageCache(src, effect, intensity);
+            this.requestImageCache(actualSrc, effect, intensity).catch(() => {
+                if (actualSrc !== src) {
+                    EventHandler.#webpFallbackCache.add(src);
+                    this.requestImageCache(src, effect, intensity);
+                }
+            });
             return null;
         }
     }
@@ -766,6 +779,97 @@ export default class EventHandler {
         ctx.restore();
     }
 
+    async requestWebPFrames(src: string): Promise<ImageBitmap[]> {
+        if (EventHandler.#webpFrameCache.has(src)) {
+            return EventHandler.#webpFrameCache.get(src)!;
+        }
+
+        const resp = await fetch(src);
+        const buf = await resp.arrayBuffer();
+        const decoder = new ImageDecoder({ data: buf, type: "image/webp" });
+        await decoder.tracks.ready;
+
+        const frames: ImageBitmap[] = [];
+        const track = decoder.tracks.selectedTrack;
+        if (!track) throw new Error("No track found");
+        const count = track.frameCount;
+
+        for (let i = 0; i < count; i++) {
+            const { image } = await decoder.decode({ frameIndex: i });
+            const bitmap = await createImageBitmap(image);
+            image.close();
+            frames.push(bitmap);
+        }
+
+        if (EventHandler.#webpFrameCache.size >= 50) {
+            const first = EventHandler.#webpFrameCache.keys().next().value;
+            if (first) {
+                EventHandler.#webpFrameCache.get(first)?.forEach(f => f.close());
+                EventHandler.#webpFrameCache.delete(first);
+            }
+        }
+
+        EventHandler.#webpFrameCache.set(src, frames);
+        return frames;
+    }
+
+    async requestSpriteSlices(src: string, frames: number, offsetX: number = 0, offsetY: number = 0, vertical: boolean = false): Promise<ImageBitmap[]> {
+        const key = `${src}?f=${frames}&ox=${offsetX}&oy=${offsetY}&v=${vertical}`;
+        if (EventHandler.#spriteSliceCache.has(key)) {
+            return EventHandler.#spriteSliceCache.get(key)!;
+        }
+
+        const img = await this.requestImageCache(src) as ImageBitmap;
+        const slices: ImageBitmap[] = [];
+
+        if (vertical) {
+            const h = img.height / frames;
+            for (let i = 0; i < frames; i++) {
+                slices.push(await createImageBitmap(img, offsetX, offsetY + h * i, img.width - offsetX, h));
+            }
+        } else {
+            const w = img.width / frames;
+            for (let i = 0; i < frames; i++) {
+                slices.push(await createImageBitmap(img, offsetX + w * i, offsetY, w, img.height - offsetY));
+            }
+        }
+
+        if (EventHandler.#spriteSliceCache.size >= 100) {
+            const first = EventHandler.#spriteSliceCache.keys().next().value;
+            if (first) {
+                EventHandler.#spriteSliceCache.get(first)?.forEach(s => s.close());
+                EventHandler.#spriteSliceCache.delete(first);
+            }
+        }
+
+        EventHandler.#spriteSliceCache.set(key, slices);
+        return slices;
+    }
+
+    async requestAnimationResource(src: string, frames: number, options?: { isWebP?: boolean; isSvg?: boolean; vertical?: boolean; offsetX?: number; offsetY?: number }): Promise<ImageBitmap[] | null> {
+        if (src.endsWith('.webp') || options?.isWebP) {
+            try {
+                return await this.requestWebPFrames(src);
+            } catch {
+                return null;
+            }
+        }
+
+        if (options?.isSvg) {
+            return null;
+        }
+
+        if (frames > 1) {
+            try {
+                return await this.requestSpriteSlices(src, frames, options?.offsetX ?? 0, options?.offsetY ?? 0, options?.vertical ?? false);
+            } catch {
+                return null;
+            }
+        }
+
+        return null;
+    }
+
     requestCardDetailDisplay(origin: { x: number, y: number }, type: number, star: number, skillLevel: number) {
         document.body.appendChild(this.#cardDetails);
 
@@ -820,7 +924,7 @@ export default class EventHandler {
         }
     }
 
-    // 统一 Tick：减少分散样式写入
+    // 统一 Tick:减少分散样式写入
     #startTick() {
         const tick = () => {
             try {
