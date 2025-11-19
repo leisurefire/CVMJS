@@ -596,10 +596,15 @@ export default class EventHandler {
     }
 
     requestDrawImage(src: string, effect: string | null = null, intensity: number | null = null, tryWebP: boolean = false) {
-        let actualSrc = this.resolveResourcePath(src);
+        let actualSrc = src.startsWith('http://') || src.startsWith('https://')
+            ? src
+            : EventHandler.getStaticPath(src);
 
         if (tryWebP && actualSrc.endsWith('.png') && !EventHandler.#webpFallbackCache.has(src)) {
             actualSrc = actualSrc.replace(/\.png$/, '.webp');
+        } else if (actualSrc.endsWith('.webp') && EventHandler.#webpFallbackCache.has(src)) {
+            // 如果直接请求 .webp 且已知该 .webp 不可用，则尝试降级为 .png
+            actualSrc = actualSrc.replace(/\.webp$/, '.png');
         }
 
         const effectKey = effect !== null ? `${actualSrc}?effect=${effect}${intensity != null ? `&intensity=${intensity}` : ''}` : actualSrc;
@@ -608,9 +613,19 @@ export default class EventHandler {
             return EventHandler.#images.get(effectKey);
         } else {
             this.requestImageCache(actualSrc, effect, intensity).catch(() => {
-                if (actualSrc !== this.resolveResourcePath(src)) {
+                // 1. tryWebP=true 且尝试加载生成的 .webp 失败 -> 回退到原始 .png
+                if (tryWebP && actualSrc.endsWith('.webp')) {
                     EventHandler.#webpFallbackCache.add(src);
-                    this.requestImageCache(this.resolveResourcePath(src), effect, intensity);
+                    const fallbackSrc = src.startsWith('http://') || src.startsWith('https://')
+                        ? src
+                        : EventHandler.getStaticPath(src);
+                    this.requestImageCache(fallbackSrc, effect, intensity);
+                }
+                // 2. 直接请求 .webp 失败 -> 尝试降级到同名 .png
+                else if (actualSrc.endsWith('.webp') && !tryWebP) {
+                    EventHandler.#webpFallbackCache.add(src);
+                    const fallbackSrc = actualSrc.replace(/\.webp$/, '.png');
+                    this.requestImageCache(fallbackSrc, effect, intensity);
                 }
             });
             return null;
@@ -831,8 +846,73 @@ export default class EventHandler {
             return EventHandler.#webpFrameCache.get(resolvedSrc)!;
         }
 
-        const resp = await fetch(resolvedSrc);
-        const buf = await resp.arrayBuffer();
+        const processBlob = async (blob: Blob) => {
+            const buf = await blob.arrayBuffer();
+            const decoder = new ImageDecoder({ data: buf, type: "image/webp" });
+            await decoder.tracks.ready;
+
+            const frames: ImageBitmap[] = [];
+            const track = decoder.tracks.selectedTrack;
+            if (!track) throw new Error("No track found");
+            const count = track.frameCount;
+
+            for (let i = 0; i < count; i++) {
+                const { image } = await decoder.decode({ frameIndex: i });
+                const bitmap = await createImageBitmap(image);
+                image.close();
+                frames.push(bitmap);
+            }
+            return frames;
+        };
+
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DataBase, DB_VERSION);
+            const storeName = DB_STORE;
+
+            request.onerror = () => reject(request.error);
+            request.onsuccess = async (event) => {
+                const db = (event.target as IDBRequest).result as IDBDatabase;
+                const transaction = db.transaction(storeName, 'readonly');
+                const store = transaction.objectStore(storeName);
+                const getRequest = store.get(resolvedSrc);
+
+                getRequest.onsuccess = async () => {
+                    const result = getRequest.result;
+                    if (result && result.image) {
+                        try {
+                            const frames = await processBlob(result.image);
+                            this.#cacheFrames(resolvedSrc, frames);
+                            resolve(frames);
+                        } catch (e) {
+                            // Cache corrupted or decode error, fetch fresh
+                            this.#fetchWebP(resolvedSrc, db, storeName).then(resolve).catch(reject);
+                        }
+                    } else {
+                        this.#fetchWebP(resolvedSrc, db, storeName).then(resolve).catch(reject);
+                    }
+                };
+                getRequest.onerror = () => this.#fetchWebP(resolvedSrc, db, storeName).then(resolve).catch(reject);
+            };
+        });
+    }
+
+    #cacheFrames(src: string, frames: ImageBitmap[]) {
+        if (EventHandler.#webpFrameCache.size >= 50) {
+            const first = EventHandler.#webpFrameCache.keys().next().value;
+            if (first) {
+                EventHandler.#webpFrameCache.get(first)?.forEach(f => f.close());
+                EventHandler.#webpFrameCache.delete(first);
+            }
+        }
+        EventHandler.#webpFrameCache.set(src, frames);
+    }
+
+    async #fetchWebP(src: string, db: IDBDatabase, storeName: string): Promise<ImageBitmap[]> {
+        const resp = await fetch(src);
+        const blob = await resp.blob();
+
+        // Process first to ensure valid
+        const buf = await blob.arrayBuffer();
         const decoder = new ImageDecoder({ data: buf, type: "image/webp" });
         await decoder.tracks.ready;
 
@@ -848,15 +928,17 @@ export default class EventHandler {
             frames.push(bitmap);
         }
 
-        if (EventHandler.#webpFrameCache.size >= 50) {
-            const first = EventHandler.#webpFrameCache.keys().next().value;
-            if (first) {
-                EventHandler.#webpFrameCache.get(first)?.forEach(f => f.close());
-                EventHandler.#webpFrameCache.delete(first);
-            }
+        // Store in IDB
+        try {
+            const transaction = db.transaction(storeName, 'readwrite');
+            const store = transaction.objectStore(storeName);
+            // WebP 动画不需要 w/h 索引，存 0 即可
+            store.put({ id: src, image: blob, w: 0, h: 0 });
+        } catch (e) {
+            console.warn("Failed to cache WebP to IDB", e);
         }
 
-        EventHandler.#webpFrameCache.set(resolvedSrc, frames);
+        this.#cacheFrames(src, frames);
         return frames;
     }
 
@@ -892,6 +974,23 @@ export default class EventHandler {
 
         EventHandler.#spriteSliceCache.set(key, slices);
         return slices;
+    }
+
+    /**
+     * 同步获取已缓存的 WebP 帧，如果未缓存则触发加载（静默失败）
+     */
+    getWebPFrame(src: string, index: number): ImageBitmap | null {
+        const resolvedSrc = this.resolveResourcePath(src);
+        if (EventHandler.#webpFrameCache.has(resolvedSrc)) {
+            const frames = EventHandler.#webpFrameCache.get(resolvedSrc)!;
+            if (frames.length === 0) return null;
+            return frames[index % frames.length];
+        }
+        // 尝试触发加载
+        if (src.endsWith('.webp')) {
+            this.requestWebPFrames(src).catch(() => { });
+        }
+        return null;
     }
 
     async requestAnimationResource(src: string, frames: number, options?: { isWebP?: boolean; isSvg?: boolean; vertical?: boolean; offsetX?: number; offsetY?: number }): Promise<ImageBitmap[] | null> {

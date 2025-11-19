@@ -76,7 +76,7 @@ func main() {
     // 映射 /static/ 路径到 ./static 目录，与前端 EventHandler.resolveStaticBaseUrl() 保持一致
     // 前端通过 /images/... 等相对路径访问资源，服务器自动解析为 /static/images/...
     router.StaticFS("/static", http.Dir("static"))
-	
+	router.StaticFS("/images", http.Dir("static/images"))
     // -------- /beta/ 返回模板 --------
     router.LoadHTMLGlob("templates/*")
 

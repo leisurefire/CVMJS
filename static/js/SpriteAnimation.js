@@ -1,6 +1,12 @@
 import { GEH } from "./Core.js";
 import { level } from "./Level.js";
 /**
+ * 类型守卫:判断ctx是否为IRenderer
+ */
+function isIRenderer(ctx) {
+    return typeof ctx.setGlobalAlpha === "function";
+}
+/**
  * SpriteAnimation 对象,用于临时动画展示,可池化复用
  */
 export default class SpriteAnimation {
@@ -80,7 +86,13 @@ export default class SpriteAnimation {
             const slice = this._spriteSlices[this.#tick];
             if (!slice)
                 return false;
-            ctx.drawImage(slice, this.#x, this.#y);
+            // IRenderer要求5参数,Canvas 2D可用3参数
+            if (isIRenderer(ctx)) {
+                ctx.drawImage(slice, this.#x, this.#y, slice.width, slice.height);
+            }
+            else {
+                ctx.drawImage(slice, this.#x, this.#y);
+            }
             if (this.#tick === this.#frames - 1) {
                 this.frameCallback?.();
                 return true;

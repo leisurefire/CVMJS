@@ -15,10 +15,16 @@ export default class Rouge extends Level {
         this.StartWaveCreate(pivot);
     }
 
+    CreateBossBar(target) {
+        GEH.requestBackMusicChange(7);
+        return super.CreateBossBar(target);
+    }
+
     DifficultyEvaluation(pivot) {
         console.log(`第${this.level}关开始了`);
         this.SunNum = this.level * 250 + 250;
         this.waveCreate(0, 1, 1);
+        this.waveCreate(23, 1, 1);
         if (this.level <= 1) {
             this.waveCreate(0, 1, 1);
         }

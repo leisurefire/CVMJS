@@ -2,6 +2,15 @@ import EventHandler from "./EventHandler.js";
 import { GEH } from "./Core.js";
 import { level } from "./Level.js";
 import { Mouse } from "./Mice";
+import type { IRenderer } from "./renderer/IRenderer.js";
+
+/**
+ * 类型守卫函数：判断ctx是否为IRenderer
+ */
+function isIRenderer(ctx: IRenderer | CanvasRenderingContext2D): ctx is IRenderer {
+    return typeof (ctx as IRenderer).setGlobalAlpha === "function";
+}
+
 export class Bullet {
     x: number;
     y: number;
@@ -76,11 +85,11 @@ export class Bullet {
         return this;
     }
 
-
-    createEntity(ctx: CanvasRenderingContext2D) {
+    createEntity(ctx: IRenderer | CanvasRenderingContext2D) {
         const img = GEH.requestDrawImage(this.entity);
         if (img) {
-            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2);
+            const effects = isIRenderer(ctx) ? undefined : undefined;
+            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, effects as any);
         }
     }
 
@@ -218,17 +227,17 @@ export function releaseBullet(instance: Bullet) {
         _bulletPool.set(key, pool);
     }
 }
-
 class BunPrototype extends Bullet {
     CanBoost = true;
     constructor(x = 0, y = 0, dam = 20, angle = 0) {
         super(x, y, dam, angle);
     }
 
-    createEntity(ctx: CanvasRenderingContext2D) {
+    createEntity(ctx: IRenderer | CanvasRenderingContext2D) {
         const img = GEH.requestDrawImage(this.entity, this.angle === 180 ? "mirror" : null);
         if (img) {
-            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2);
+            const effects = isIRenderer(ctx) ? { isMirrored: this.angle === 180 } : undefined;
+            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, effects as any);
         }
     }
 
@@ -240,6 +249,7 @@ class BunPrototype extends Bullet {
         return undefined;
     }
 }
+
 class MissilePrototype extends Bullet {
     #positionY = -1;
     protected front: null | Mouse | Boolean;
@@ -470,14 +480,14 @@ export class FreezingBun extends BunPrototype {
         this.offsetY = this.height;
         this.entity = "/images/bullets/snowbun.png";
     }
-
-    createEntity(ctx: CanvasRenderingContext2D) {
+    createEntity(ctx: IRenderer | CanvasRenderingContext2D) {
         const img = GEH.requestDrawImage(this.entity, this.angle === 180 ? "mirror" : null);
         if (img) {
+            const effects = isIRenderer(ctx) ? { isMirrored: this.angle === 180 } : undefined;
             ctx.drawImage(img,
                 this.offsetX * this.tick, 0,
                 this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2,
-                this.offsetX, this.offsetY);
+                this.offsetX, this.offsetY, effects as any);
             this.tick = (this.tick + 1) % this.frames;
         }
     }
@@ -519,14 +529,14 @@ export class FireBullet extends BunPrototype {
 
         this.entity = "/images/bullets/firebullet.png";
     }
-
-    createEntity(ctx: CanvasRenderingContext2D) {
+    createEntity(ctx: IRenderer | CanvasRenderingContext2D) {
         const img = GEH.requestDrawImage(this.entity, this.angle === 180 ? "mirror" : null);
         if (img) {
+            const effects = isIRenderer(ctx) ? { isMirrored: this.angle === 180 } : undefined;
             ctx.drawImage(img,
                 this.offsetX * this.tick, 0,
                 this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2,
-                this.offsetX, this.offsetY);
+                this.offsetX, this.offsetY, effects as any);
             this.tick = (this.tick + 1) % this.frames;
         }
     }
@@ -615,14 +625,14 @@ export class WineBullet extends BunPrototype {
         }
         return this;
     }
-
-    createEntity(ctx: CanvasRenderingContext2D) {
+    createEntity(ctx: IRenderer | CanvasRenderingContext2D) {
         const img = GEH.requestDrawImage(this.entity, this.angle === 180 ? "mirror" : null);
         if (img) {
+            const effects = isIRenderer(ctx) ? { isMirrored: this.angle === 180 } : undefined;
             ctx.drawImage(img,
                 this.offsetX * this.tick, 0,
                 this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2,
-                this.offsetX, this.offsetY);
+                this.offsetX, this.offsetY, effects as any);
             this.tick = (this.tick + 1) % this.frames;
         }
     }
@@ -687,8 +697,7 @@ export class CoffeeBubble extends Bullet {
 
         this.entity = "/images/bullets/bubble.png";
     }
-
-    createEntity(ctx: CanvasRenderingContext2D) {
+    createEntity(ctx: IRenderer | CanvasRenderingContext2D) {
         const img = GEH.requestDrawImage(this.entity);
         if (img) {
             if (this.tick <= 3) {
@@ -698,7 +707,7 @@ export class CoffeeBubble extends Bullet {
             }
             ctx.drawImage(img, this.offsetX * this.tick, 0,
                 this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2,
-                this.offsetX, this.offsetY);
+                this.offsetX, this.offsetY, undefined as any);
         }
     }
 
@@ -823,11 +832,12 @@ export class Boomerang extends Bullet {
 
         return this.y >= level.row_end + level.row_gap || this.y <= level.row_start - level.row_gap || this.x <= level.column_start - level.column_gap || this.x >= level.column_end + level.column_gap;
     }
-    createEntity(ctx: CanvasRenderingContext2D) {
+
+    createEntity(ctx: IRenderer | CanvasRenderingContext2D) {
         const img = GEH.requestDrawImage(this.entity);
         if (img) {
             ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY,
-                this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY);
+                this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, undefined as any);
             this.tick = (this.tick + 1) % this.frames;
         }
     }
@@ -935,11 +945,12 @@ export class Egg extends MissilePrototype {
         this.offsetY = this.height;
         this.entity = "/images/bullets/egg.png";
     }
-    createEntity(ctx: CanvasRenderingContext2D) {
+
+    createEntity(ctx: IRenderer | CanvasRenderingContext2D) {
         const img = GEH.requestDrawImage(this.entity);
         if (img) {
             ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY,
-                this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY);
+                this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, undefined as any);
             this.tick = (this.tick + 1) % this.frames;
         }
     }
@@ -990,12 +1001,11 @@ export class SnowEgg extends MissilePrototype {
         this.offsetY = this.height;
         this.entity = "/images/bullets/snowegg.png";
     }
-
-    createEntity(ctx: CanvasRenderingContext2D) {
+    createEntity(ctx: IRenderer | CanvasRenderingContext2D) {
         const img = GEH.requestDrawImage(this.entity);
         if (img) {
             ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY,
-                this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY);
+                this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, undefined as any);
             this.tick = (this.tick + 1) % this.frames;
         }
     }
@@ -1054,7 +1064,7 @@ export class Stone {
         return Math.floor(this.positionX);
     }
 
-    constructor(x = 0, y = 0, dam = 20, positionY = null, targetPositionX = null) {
+    constructor(x = 0, y = 0, dam = 20, positionY: number | null = null, targetPositionX: number | null = null) {
 
         this.x = x;
         this.y = y;
@@ -1079,11 +1089,10 @@ export class Stone {
         this.targetPositionX = parameter_1 ?? null;
         return this;
     }
-
-    createEntity(ctx: CanvasRenderingContext2D) {
+    createEntity(ctx: IRenderer | CanvasRenderingContext2D) {
         const img = GEH.requestDrawImage(this.entity);
         if (img) {
-            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2);
+            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, undefined as any);
         }
     }
 

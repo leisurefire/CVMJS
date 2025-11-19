@@ -25,7 +25,7 @@ export default class Level {
     ]);
 
     #row_start = 108;
-    private Battlefield: GameBattlefield = new GameBattlefield(this);
+    private Battlefield!: GameBattlefield;
     private waterLineNum: number | undefined;
     private landLineNum: number | undefined;
     private waterPosition: number[] | undefined;
@@ -193,7 +193,7 @@ export default class Level {
         this.levelTimer = requestAnimationFrame(this.#frameLoop);
     }
 
-    constructor(interval: number | undefined) {
+    constructor(interval: number | undefined, useWebGL: boolean = false) {
         if (interval) {
             this.#NextWaveRemainingTime = interval;
             this.#WaveInterval = interval;
@@ -205,6 +205,7 @@ export default class Level {
             level = this;
             // 初始化动画管理器（栅格数 = row_num * column_num + 1）
             this._animationManager = new SpriteAnimationManager(this.row_num * this.column_num);
+            this.Battlefield = new GameBattlefield(this, useWebGL);
             this.Battlefield.initialize();
             GEH.cards.length = 0;
             GEH.GameEnd = false;
@@ -955,16 +956,16 @@ export default class Level {
                 this.#requestUpdateMouse(i, j, elapsed, miceTemp, airLaneTemp);
             }
         }
-
         // 更新动画（由 animationManager 负责）
-        const ctx = this.Battlefield.ctxBG;
-        if (ctx) {
-            this._animationManager.updateAnimations(ctx, this.column_num, this.row_num);
+        const renderer = (this.Battlefield as any).renderer || this.Battlefield.ctxBG;
+        if (renderer) {
+            this._animationManager.updateAnimations(renderer as any, this.column_num, this.row_num);
         }
 
         this.#Mice = miceTemp;
         this.#AirLane = airLaneTemp;
     }
+
 
     gameEventsHandlerFunc() {
         // start the bound frame loop
