@@ -36,10 +36,10 @@ def sprite_to_webp(input_path, frame_width, output_path):
         duration=FRAME_DURATION_MS,
         loop=0,
         format="WEBP",
-        lossless=True,           # 默认无损（如果想降低体积可改为 False）
+        lossless=False,           # 默认无损（如果想降低体积可改为 False）
         method=6,                # 压缩等级（0-6），6 最优
         minimize_size=True,     # 避免 WebP bug 导致静态
-        quality=90,             # lossless=True 时此参数无影响
+        quality=80,             # lossless=True 时此参数无影响
         disposal=2               # 确保逐帧刷新，不叠加
     )
 
@@ -68,4 +68,4 @@ def main(arg):
     print("全部处理完毕。")
 
 if __name__ == "__main__":
-    main(50)
+    main(75)
