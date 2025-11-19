@@ -98,9 +98,6 @@
 - **对象池**：继续使用已建立的 `Bullets`、`Suns` 和 `SpriteAnimations` 对象池，以减少垃圾回收（GC）造成的卡顿。
 - **WebGL 纹理**：纹理在首次 `drawImage` 调用时懒加载上传到 GPU。
 
-### 测试
-- 参考 `docs/webgl-testing-plan.md` 获取详细的验证步骤，包括如何强制开启/关闭 WebGL 以及检查渲染模式之间的视觉一致性。
-
 ## Setup commands
 - Install deps: `npm install`
 - Type-check the project: `npx tsc --noEmit`
@@ -113,7 +110,6 @@
 
 ## 近期变更 (Recent Changes)
 - **WebGL 迁移完成**：渲染引擎已成功迁移至 WebGL，引入了 `static/js/renderer/*` 核心组件，大幅提升性能。
-- **测试计划可用**：创建了 `docs/webgl-testing-plan.md`，涵盖功能、性能和回归测试。
 - **资源路径统一 (EventHandler.ts, Core.ts, GameBattlefield.ts, i18n/index.ts)**：
   - 实现了 `EventHandler.getStaticPath()` 静态方法用于自动路径解析。
   - 自动检测部署环境（GitHub Pages 与 本地服务器），解决了 404 错误。
