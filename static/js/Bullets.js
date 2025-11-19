@@ -71,9 +71,16 @@ export class Bullet {
     }
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity);
-        if (img) {
-            const effects = isIRenderer(ctx) ? undefined : undefined;
-            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, effects);
+        if (!img) {
+            return;
+        }
+        const dx = this.x - this.width / 2;
+        const dy = this.y - this.height / 2;
+        if (isIRenderer(ctx)) {
+            ctx.drawImage(img, dx, dy, this.width, this.height, undefined);
+        }
+        else {
+            ctx.drawImage(img, dx, dy, this.width, this.height);
         }
     }
     move() {
@@ -192,9 +199,16 @@ class BunPrototype extends Bullet {
     }
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity, this.angle === 180 ? "mirror" : null);
-        if (img) {
-            const effects = isIRenderer(ctx) ? { isMirrored: this.angle === 180 } : undefined;
-            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, effects);
+        if (!img) {
+            return;
+        }
+        const dx = this.x - this.width / 2;
+        const dy = this.y - this.height / 2;
+        if (isIRenderer(ctx)) {
+            ctx.drawImage(img, dx, dy, this.width, this.height, { isMirrored: this.angle === 180 });
+        }
+        else {
+            ctx.drawImage(img, dx, dy, this.width, this.height);
         }
     }
     duplicate() {
@@ -414,11 +428,19 @@ export class FreezingBun extends BunPrototype {
     }
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity, this.angle === 180 ? "mirror" : null);
-        if (img) {
-            const effects = isIRenderer(ctx) ? { isMirrored: this.angle === 180 } : undefined;
-            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, effects);
-            this.tick = (this.tick + 1) % this.frames;
+        if (!img) {
+            return;
         }
+        const sx = this.offsetX * this.tick;
+        const dx = this.x - this.width / 2;
+        const dy = this.y - this.height / 2;
+        if (isIRenderer(ctx)) {
+            ctx.drawImage(img, sx, 0, this.offsetX, this.offsetY, dx, dy, this.offsetX, this.offsetY, { isMirrored: this.angle === 180 });
+        }
+        else {
+            ctx.drawImage(img, sx, 0, this.offsetX, this.offsetY, dx, dy, this.offsetX, this.offsetY);
+        }
+        this.tick = (this.tick + 1) % this.frames;
     }
     duplicate() {
         return this;
@@ -455,11 +477,19 @@ export class FireBullet extends BunPrototype {
     }
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity, this.angle === 180 ? "mirror" : null);
-        if (img) {
-            const effects = isIRenderer(ctx) ? { isMirrored: this.angle === 180 } : undefined;
-            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, effects);
-            this.tick = (this.tick + 1) % this.frames;
+        if (!img) {
+            return;
         }
+        const sx = this.offsetX * this.tick;
+        const dx = this.x - this.width / 2;
+        const dy = this.y - this.height / 2;
+        if (isIRenderer(ctx)) {
+            ctx.drawImage(img, sx, 0, this.offsetX, this.offsetY, dx, dy, this.offsetX, this.offsetY, { isMirrored: this.angle === 180 });
+        }
+        else {
+            ctx.drawImage(img, sx, 0, this.offsetX, this.offsetY, dx, dy, this.offsetX, this.offsetY);
+        }
+        this.tick = (this.tick + 1) % this.frames;
     }
     duplicate() {
         return this;
@@ -541,11 +571,19 @@ export class WineBullet extends BunPrototype {
     }
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity, this.angle === 180 ? "mirror" : null);
-        if (img) {
-            const effects = isIRenderer(ctx) ? { isMirrored: this.angle === 180 } : undefined;
-            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, effects);
-            this.tick = (this.tick + 1) % this.frames;
+        if (!img) {
+            return;
         }
+        const sx = this.offsetX * this.tick;
+        const dx = this.x - this.width / 2;
+        const dy = this.y - this.height / 2;
+        if (isIRenderer(ctx)) {
+            ctx.drawImage(img, sx, 0, this.offsetX, this.offsetY, dx, dy, this.offsetX, this.offsetY, { isMirrored: this.angle === 180 });
+        }
+        else {
+            ctx.drawImage(img, sx, 0, this.offsetX, this.offsetY, dx, dy, this.offsetX, this.offsetY);
+        }
+        this.tick = (this.tick + 1) % this.frames;
     }
     move() {
         if (super.move()) {
@@ -604,14 +642,23 @@ export class CoffeeBubble extends Bullet {
     }
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity);
-        if (img) {
-            if (this.tick <= 3) {
-                this.tick++;
-            }
-            else {
-                this.tick = this.tick === this.frames ? 4 : this.tick + 1;
-            }
-            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, undefined);
+        if (!img) {
+            return;
+        }
+        if (this.tick <= 3) {
+            this.tick++;
+        }
+        else {
+            this.tick = this.tick === this.frames ? 4 : this.tick + 1;
+        }
+        const sx = this.offsetX * this.tick;
+        const dx = this.x - this.width / 2;
+        const dy = this.y - this.height / 2;
+        if (isIRenderer(ctx)) {
+            ctx.drawImage(img, sx, 0, this.offsetX, this.offsetY, dx, dy, this.offsetX, this.offsetY, undefined);
+        }
+        else {
+            ctx.drawImage(img, sx, 0, this.offsetX, this.offsetY, dx, dy, this.offsetX, this.offsetY);
         }
     }
     move() {
@@ -725,10 +772,19 @@ export class Boomerang extends Bullet {
     }
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity);
-        if (img) {
-            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, undefined);
-            this.tick = (this.tick + 1) % this.frames;
+        if (!img) {
+            return;
         }
+        const sx = this.offsetX * this.tick;
+        const dx = this.x - this.width / 2;
+        const dy = this.y - this.height / 2;
+        if (isIRenderer(ctx)) {
+            ctx.drawImage(img, sx, 0, this.offsetX, this.offsetY, dx, dy, this.offsetX, this.offsetY, undefined);
+        }
+        else {
+            ctx.drawImage(img, sx, 0, this.offsetX, this.offsetY, dx, dy, this.offsetX, this.offsetY);
+        }
+        this.tick = (this.tick + 1) % this.frames;
     }
     takeDamage() {
         return null;
@@ -830,10 +886,19 @@ export class Egg extends MissilePrototype {
     }
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity);
-        if (img) {
-            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, undefined);
-            this.tick = (this.tick + 1) % this.frames;
+        if (!img) {
+            return;
         }
+        const sx = this.offsetX * this.tick;
+        const dx = this.x - this.width / 2;
+        const dy = this.y - this.height / 2;
+        if (isIRenderer(ctx)) {
+            ctx.drawImage(img, sx, 0, this.offsetX, this.offsetY, dx, dy, this.offsetX, this.offsetY, undefined);
+        }
+        else {
+            ctx.drawImage(img, sx, 0, this.offsetX, this.offsetY, dx, dy, this.offsetX, this.offsetY);
+        }
+        this.tick = (this.tick + 1) % this.frames;
     }
     createHitAnim() {
         GEH.requestPlayAudio('zadao');
