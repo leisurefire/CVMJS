@@ -4,6 +4,8 @@ import { Character, Food, Plate } from "./Foods.js";
 import { GEH, WarnMessageBox } from "./Core.js";
 import { Mouse } from "./Mice.js";
 import { level } from "./Level.js";
+import type { IRenderer } from "./renderer/IRenderer.js";
+import { WebGLRenderer } from "./renderer/WebGLRenderer.js";
 
 /**
  * 通用节流函数，控制高频调用
@@ -294,6 +296,9 @@ export class GameBattlefield extends HTMLElement {
     _lastWaveNum: string | null = null;
     _lastBossProgressWidth: string | null = null;
 
+    private useWebGL: boolean = false;
+    private renderer: IRenderer | null = null;
+
     appendChild<T extends Node>(node: T) {
         if (this.shadowRoot) {
             return this.shadowRoot.appendChild(node);
@@ -308,9 +313,10 @@ export class GameBattlefield extends HTMLElement {
         this.#Cursor.y = ev.clientY / GEH.scale;
     }
 
-    constructor(Parent: any = null) {
+    constructor(Parent: any = null, useWebGL: boolean = false) {
         super();
         this.#Parent = Parent;
+        this.useWebGL = useWebGL;
         document.body.appendChild(this);
         document.addEventListener('keydown', this.#shortCutHandler);
         this.attachShadow({ mode: "open" });
@@ -969,11 +975,25 @@ export class GameBattlefield extends HTMLElement {
 
         this.Canvas.width = document.documentElement.clientWidth;
         this.Canvas.height = document.documentElement.clientHeight;
-        this.Canvas.width = document.documentElement.clientWidth;
-        this.Canvas.height = document.documentElement.clientHeight;
-        this.ctxBG = this.Canvas.getContext('2d');
-        if (this.ctxBG) {
-            this.ctxBG.scale(GEH.scale, GEH.scale);
+
+        if (this.useWebGL) {
+            try {
+                this.renderer = new WebGLRenderer(this.Canvas);
+                this.renderer.scale(GEH.scale, GEH.scale);
+                console.log('[GameBattlefield] WebGL renderer initialized');
+            } catch (error) {
+                console.warn('[GameBattlefield] WebGL initialization failed, falling back to Canvas 2D:', error);
+                this.useWebGL = false;
+                this.ctxBG = this.Canvas.getContext('2d');
+                if (this.ctxBG) {
+                    this.ctxBG.scale(GEH.scale, GEH.scale);
+                }
+            }
+        } else {
+            this.ctxBG = this.Canvas.getContext('2d');
+            if (this.ctxBG) {
+                this.ctxBG.scale(GEH.scale, GEH.scale);
+            }
         }
         this.FrequentCanvas.width = document.documentElement.clientWidth;
         this.FrequentCanvas.height = document.documentElement.clientHeight;
@@ -1273,28 +1293,41 @@ export class GameBattlefield extends HTMLElement {
 
     updateBackground = (backgroundImage: string, Cards: Card[], SunNum: number) => {
         this.#TotalHitPoints = 0;
-        const ctx = this.ctxBG;
+        const renderer = this.useWebGL ? this.renderer : this.ctxBG;
         const background = GEH.requestDrawImage(backgroundImage);
-        if (ctx && background) {
-            ctx.drawImage(background, 80, 0, 954, 600, 0, 0, 954, 600);
+        if (renderer && background) {
+            renderer.drawImage(background, 80, 0, 954, 600, 0, 0, 954, 600);
             level.mapMove();
             Cards.forEach((value, index) => {
                 value.cooldownProcess();
             })
         }
     }
+    private drawEntity(renderer: IRenderer | CanvasRenderingContext2D, src: string, width: number, height: number, tick: number, x: number, y: number, effect: string | null = null) {
+        if (src.endsWith('.webp') && !effect) {
+            const frame = GEH.getWebPFrame(src, tick);
+            if (frame) {
+                renderer.drawImage(frame, x, y, width, height);
+                return;
+            }
+        }
+        const img = GEH.requestDrawImage(src, effect);
+        if (img) {
+            if (img.width >= width * 2 || (img.width > width && src.endsWith('.png'))) {
+                renderer.drawImage(img, width * tick, 0, width, height, x, y, width, height);
+            } else {
+                renderer.drawImage(img, x, y, width, height);
+            }
+        }
+    }
+
     updateMapGrid = (mapGrid: MapGrid<Food>) => {
-        const ctx = this.ctxBG;
-        if (mapGrid) {
+        const renderer = this.useWebGL ? this.renderer : this.ctxBG;
+        if (mapGrid && renderer) {
             const { layer_0, layer_1, layer_2 } = mapGrid;
             if (layer_2) {
                 layer_2.behavior();
-                const img = GEH.requestDrawImage(layer_2.entity);
-                if (ctx && img) {
-                    ctx.drawImage(img, layer_2.width * layer_2.tick, 0,
-                        layer_2.width, layer_2.height, layer_2.x, layer_2.y,
-                        layer_2.width, layer_2.height);
-                }
+                this.drawEntity(renderer, layer_2.entity, layer_2.width, layer_2.height, layer_2.tick, layer_2.x, layer_2.y);
                 if (layer_2) {
                     layer_2.CreateOverlayAnim();
                 }
@@ -1310,8 +1343,10 @@ export class GameBattlefield extends HTMLElement {
             if (layer_0) {
                 if (layer_0.inside) {
                     const img = GEH.requestDrawImage(layer_0.inside);
-                    if (ctx && img) {
-                        ctx.drawImage(img, layer_0.x, layer_0.y);
+                    if (img) {
+                        const imgWidth = 'width' in img ? img.width : 0;
+                        const imgHeight = 'height' in img ? img.height : 0;
+                        renderer.drawImage(img, layer_0.x, layer_0.y, imgWidth, imgHeight);
                     }
                 }
             }
@@ -1321,12 +1356,7 @@ export class GameBattlefield extends HTMLElement {
                     if (layer_1.remainTime != null) {
                         layer_1.remainTime -= 100;
                     }
-                    const img = GEH.requestDrawImage(layer_1.entity);
-                    if (ctx && img) {
-                        ctx.drawImage(img, layer_1.width * layer_1.tick, 0,
-                            layer_1.width, layer_1.height, layer_1.x, layer_1.y,
-                            layer_1.width, layer_1.height);
-                    }
+                    this.drawEntity(renderer, layer_1.entity, layer_1.width, layer_1.height, layer_1.tick, layer_1.x, layer_1.y);
                     if (layer_1) {
                         layer_1.CreateOverlayAnim();
                     }
@@ -1334,12 +1364,7 @@ export class GameBattlefield extends HTMLElement {
             }
             if (layer_0) {
                 layer_0.behavior();
-                const img = GEH.requestDrawImage(layer_0.entity);
-                if (ctx && img) {
-                    ctx.drawImage(img, layer_0.width * layer_0.tick, 0,
-                        layer_0.width, layer_0.height, layer_0.x, layer_0.y,
-                        layer_0.width, layer_0.height);
-                }
+                this.drawEntity(renderer, layer_0.entity, layer_0.width, layer_0.height, layer_0.tick, layer_0.x, layer_0.y);
                 if (layer_0) {
                     layer_0.CreateOverlayAnim();
                 }
@@ -1347,7 +1372,7 @@ export class GameBattlefield extends HTMLElement {
         }
     }
     updateEnemies = (mouse: Mouse, elapsed: number, miceTemp: Mouse[][][], airLaneTemp: Mouse[][][]) => {
-        const ctx = this.ctxBG;
+        const renderer = this.useWebGL ? this.renderer : this.ctxBG;
         if (mouse) {
             if (mouse.state === "die" || mouse.state === "explode") {
                 if (mouse === this.#OverallFront) {
@@ -1390,23 +1415,14 @@ export class GameBattlefield extends HTMLElement {
             }
             mouse.behaviorMove();
 
-            let img = GEH.requestDrawImage(mouse.entity);
-            if (img) {
-                let effect = null;
-                if (mouse.freezing || mouse.frozen) {
-                    effect = "freezing";
-                } else if (mouse.getDamagedTag > 0) {
-                    effect = "damaged";
-                }
-                if (effect) {
-                    const effectImg = GEH.requestDrawImage(mouse.entity, effect);
-                    if (effectImg) {
-                        img = effectImg;
-                    }
-                }
-                if (ctx) ctx.drawImage(img,
-                    mouse.width * Math.floor(mouse.tick), 0,
-                    mouse.width, mouse.height, mouse.x, mouse.y, mouse.width, mouse.height);
+            let effect: string | null = null;
+            if (mouse.freezing || mouse.frozen) {
+                effect = "freezing";
+            } else if (mouse.getDamagedTag > 0) {
+                effect = "damaged";
+            }
+            if (renderer) {
+                this.drawEntity(renderer, mouse.entity, mouse.width, mouse.height, Math.floor(mouse.tick), mouse.x, mouse.y, effect);
             }
 
             if (mouse.CanUpdateEntity) {
@@ -1451,6 +1467,10 @@ export class GameBattlefield extends HTMLElement {
     }
     remove() {
         document.removeEventListener('keydown', this.#shortCutHandler);
+        if (this.renderer) {
+            this.renderer.dispose();
+            this.renderer = null;
+        }
         super.remove();
     }
 }

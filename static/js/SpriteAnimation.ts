@@ -1,5 +1,13 @@
 import { GEH } from "./Core.js";
 import { level } from "./Level.js";
+import type { IRenderer } from "./renderer/IRenderer.js";
+
+/**
+ * 类型守卫:判断ctx是否为IRenderer
+ */
+function isIRenderer(ctx: IRenderer | CanvasRenderingContext2D): ctx is IRenderer {
+    return typeof (ctx as IRenderer).setGlobalAlpha === "function";
+}
 
 /** SpriteAnimation 选项 */
 type SpriteAnimationOptions = {
@@ -83,7 +91,7 @@ export default class SpriteAnimation {
     /** release 生命周期钩子 */
     onRelease(): void { }
 
-    render(ctx: CanvasRenderingContext2D): boolean {
+    render(ctx: IRenderer | CanvasRenderingContext2D): boolean {
         // 模式1: WebP帧数组
         if (this._webpFrames) {
             const frame = this._webpFrames[this.#tick];
@@ -101,7 +109,12 @@ export default class SpriteAnimation {
         if (this._spriteSlices) {
             const slice = this._spriteSlices[this.#tick];
             if (!slice) return false;
-            ctx.drawImage(slice, this.#x, this.#y);
+            // IRenderer要求5参数,Canvas 2D可用3参数
+            if (isIRenderer(ctx)) {
+                ctx.drawImage(slice, this.#x, this.#y, slice.width, slice.height);
+            } else {
+                ctx.drawImage(slice, this.#x, this.#y);
+            }
             if (this.#tick === this.#frames - 1) {
                 this.frameCallback?.();
                 return true;
@@ -204,7 +217,7 @@ export class SpriteAnimationManager {
     /**
      * 更新并绘制所有动画，返回存活的动画栈
      */
-    updateAnimations(ctx: CanvasRenderingContext2D, gridColumns: number, gridRows: number): SpriteAnimation[][] {
+    updateAnimations(ctx: IRenderer | CanvasRenderingContext2D, gridColumns: number, gridRows: number): SpriteAnimation[][] {
         const animationTemp: SpriteAnimation[][] = Array.from(
             { length: this._animationStack.length },
             () => [] as SpriteAnimation[]

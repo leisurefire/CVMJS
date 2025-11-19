@@ -1,6 +1,12 @@
 import EventHandler from "./EventHandler.js";
 import { GEH } from "./Core.js";
 import { level } from "./Level.js";
+/**
+ * 类型守卫函数：判断ctx是否为IRenderer
+ */
+function isIRenderer(ctx) {
+    return typeof ctx.setGlobalAlpha === "function";
+}
 export class Bullet {
     x;
     y;
@@ -66,7 +72,8 @@ export class Bullet {
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity);
         if (img) {
-            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2);
+            const effects = isIRenderer(ctx) ? undefined : undefined;
+            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, effects);
         }
     }
     move() {
@@ -186,7 +193,8 @@ class BunPrototype extends Bullet {
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity, this.angle === 180 ? "mirror" : null);
         if (img) {
-            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2);
+            const effects = isIRenderer(ctx) ? { isMirrored: this.angle === 180 } : undefined;
+            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, effects);
         }
     }
     duplicate() {
@@ -407,7 +415,8 @@ export class FreezingBun extends BunPrototype {
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity, this.angle === 180 ? "mirror" : null);
         if (img) {
-            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY);
+            const effects = isIRenderer(ctx) ? { isMirrored: this.angle === 180 } : undefined;
+            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, effects);
             this.tick = (this.tick + 1) % this.frames;
         }
     }
@@ -447,7 +456,8 @@ export class FireBullet extends BunPrototype {
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity, this.angle === 180 ? "mirror" : null);
         if (img) {
-            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY);
+            const effects = isIRenderer(ctx) ? { isMirrored: this.angle === 180 } : undefined;
+            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, effects);
             this.tick = (this.tick + 1) % this.frames;
         }
     }
@@ -532,7 +542,8 @@ export class WineBullet extends BunPrototype {
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity, this.angle === 180 ? "mirror" : null);
         if (img) {
-            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY);
+            const effects = isIRenderer(ctx) ? { isMirrored: this.angle === 180 } : undefined;
+            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, effects);
             this.tick = (this.tick + 1) % this.frames;
         }
     }
@@ -600,7 +611,7 @@ export class CoffeeBubble extends Bullet {
             else {
                 this.tick = this.tick === this.frames ? 4 : this.tick + 1;
             }
-            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY);
+            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, undefined);
         }
     }
     move() {
@@ -715,7 +726,7 @@ export class Boomerang extends Bullet {
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity);
         if (img) {
-            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY);
+            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, undefined);
             this.tick = (this.tick + 1) % this.frames;
         }
     }
@@ -820,7 +831,7 @@ export class Egg extends MissilePrototype {
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity);
         if (img) {
-            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY);
+            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, undefined);
             this.tick = (this.tick + 1) % this.frames;
         }
     }
@@ -872,7 +883,7 @@ export class SnowEgg extends MissilePrototype {
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity);
         if (img) {
-            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY);
+            ctx.drawImage(img, this.offsetX * this.tick, 0, this.offsetX, this.offsetY, this.x - this.width / 2, this.y - this.height / 2, this.offsetX, this.offsetY, undefined);
             this.tick = (this.tick + 1) % this.frames;
         }
     }
@@ -952,7 +963,7 @@ export class Stone {
     createEntity(ctx) {
         const img = GEH.requestDrawImage(this.entity);
         if (img) {
-            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2);
+            ctx.drawImage(img, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, undefined);
         }
     }
     move() {
