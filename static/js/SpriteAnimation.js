@@ -4,8 +4,6 @@ import { level } from "./Level.js";
  * SpriteAnimation 对象,用于临时动画展示,可池化复用
  */
 export default class SpriteAnimation {
-    /** 默认帧跳过间隔:每2个游戏帧推进1个动画帧,用于控制动画播放速度 */
-    static DEFAULT_FRAME_SKIP_INTERVAL = 1;
     #x;
     #y;
     #src;
@@ -21,9 +19,6 @@ export default class SpriteAnimation {
     _img;
     _webpFrames;
     _spriteSlices;
-    /** 帧跳过计数器:用于控制动画播放速度 */
-    _frameSkipCounter = 0;
-    _frameSkipInterval = SpriteAnimation.DEFAULT_FRAME_SKIP_INTERVAL;
     constructor(x, y, src, frames, options) {
         if (x == null || y == null || src == null || frames == null) {
             throw new Error(`Certain parameter(s) not specified.`);
@@ -60,30 +55,12 @@ export default class SpriteAnimation {
         this._img = undefined;
         this._webpFrames = undefined;
         this._spriteSlices = undefined;
-        this._frameSkipCounter = 0;
         return this;
     }
     /** acquire 生命周期钩子 */
     onAcquire() { }
     /** release 生命周期钩子 */
     onRelease() { }
-    /**
-     * 推进动画帧
-     * 使用帧跳过计数器控制动画速度,避免动画播放过快
-     * @returns true 表示动画完成,false 表示继续播放
-     */
-    #advanceFrame() {
-        this._frameSkipCounter++;
-        if (this._frameSkipCounter >= this._frameSkipInterval) {
-            this._frameSkipCounter = 0;
-            if (this.#tick === this.#frames - 1) {
-                this.frameCallback?.();
-                return true;
-            }
-            this.#tick++;
-        }
-        return false;
-    }
     render(ctx) {
         // 模式1: WebP帧数组
         if (this._webpFrames) {
@@ -91,7 +68,12 @@ export default class SpriteAnimation {
             if (!frame)
                 return false;
             ctx.drawImage(frame, this.#x, this.#y, frame.width * this.scale, frame.height * this.scale);
-            return this.#advanceFrame();
+            if (this.#tick === this.#frames - 1) {
+                this.frameCallback?.();
+                return true;
+            }
+            this.#tick++;
+            return false;
         }
         // 模式2: 精灵图切片
         if (this._spriteSlices) {
@@ -99,7 +81,12 @@ export default class SpriteAnimation {
             if (!slice)
                 return false;
             ctx.drawImage(slice, this.#x, this.#y);
-            return this.#advanceFrame();
+            if (this.#tick === this.#frames - 1) {
+                this.frameCallback?.();
+                return true;
+            }
+            this.#tick++;
+            return false;
         }
         // 模式3: SVG序列 / 模式4: 传统精灵图
         const rawImg = GEH.requestDrawImage(this.isSvg ? `${this.#src}/${this.#tick}.svg` : this.#src);
@@ -123,7 +110,12 @@ export default class SpriteAnimation {
             const offsetY = img.height;
             ctx.drawImage(img, offsetX * this.#tick, 0, offsetX, offsetY, this.#x, this.#y, offsetX, offsetY);
         }
-        return this.#advanceFrame();
+        if (this.#tick === this.#frames - 1) {
+            this.frameCallback?.();
+            return true;
+        }
+        this.#tick++;
+        return false;
     }
 }
 /**

@@ -5,43 +5,6 @@ import { Stone } from "./Bullets.js";
 import { TubeIn } from "./Foods.js";
 import { level } from "./Level.js";
 import { i18n } from "./i18n-preload.js";
-class State {
-    #tick = 0;
-    #map;
-    #name;
-    #length;
-    get name() {
-        return this.#name;
-    }
-    set name(value) {
-        if (this.#map.has(value)) {
-            this.#name = value;
-            this.#length = this.#map.get(value);
-        }
-    }
-    get length() {
-        return this.#length;
-    }
-    constructor(name, length, map) {
-        this.#map = map;
-        this.#name = name;
-        this.#length = length;
-    }
-    behavior() {
-        this.#tick++;
-    }
-    toString() {
-        return `${this.name}`;
-    }
-    update(map) {
-        if (this.#map.has(map.key)) {
-            this.#map.set(map.key, map.value);
-        }
-        else {
-            throw `Key not found.`;
-        }
-    }
-}
 export class Mouse {
     // ===== 基础属性 =====
     ctx = level.Battlefield.ctxBG;

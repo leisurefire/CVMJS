@@ -478,9 +478,9 @@ class EventHandler {
             return false;
         }
     }
-    requestDrawImage(src, effect = null, intensity = null) {
+    requestDrawImage(src, effect = null, intensity = null, tryWebP = false) {
         let actualSrc = src;
-        if (src.endsWith('.png') && !_a.#webpFallbackCache.has(src)) {
+        if (tryWebP && src.endsWith('.png') && !_a.#webpFallbackCache.has(src)) {
             actualSrc = src.replace(/\.png$/, '.webp');
         }
         const effectKey = effect !== null ? `${actualSrc}?effect=${effect}${intensity != null ? `&intensity=${intensity}` : ''}` : actualSrc;
