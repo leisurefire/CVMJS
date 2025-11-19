@@ -5,7 +5,7 @@ export default class ChampagneIsland extends Level {
     static NAME = "香槟岛（陆）";
     static TIME = 1;
     static REWARDS = 800;
-    static BACKGROUND = "../CVMJS/static/images/interface/background_4.jpg";
+    static BACKGROUND = "/images/interface/background_4.jpg";
 
     constructor() {
         super();

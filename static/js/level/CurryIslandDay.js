@@ -4,7 +4,7 @@ import Level from "../Level.js";
 export default class CurryIslandDay extends Level {
     static NAME = "咖喱岛（日）";
     static REWARDS = 1400;
-    static BACKGROUND = "../CVMJS/static/images/interface/background_11.jpg";
+    static BACKGROUND = "/images/interface/background_11.jpg";
 
     constructor() {
         super();

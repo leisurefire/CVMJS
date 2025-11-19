@@ -46,7 +46,7 @@ export class Bullet {
         this.width = 20;
         this.height = 16;
 
-        this.entity = "../CVMJS/static/images/bullets/bun.png";
+        this.entity = "/images/bullets/bun.png";
 
         this.hitCheck = (mouse) => {
             return (Math.abs(mouse.positionX - this.positionX) <= 0.5
@@ -91,7 +91,7 @@ export class Bullet {
     }
 
     createHitAnim() {
-        level?.createSpriteAnimation(this.x - 14, this.y - 16, "../CVMJS/static/images/bullets/bun_hit.png", 4);
+        level?.createSpriteAnimation(this.x - 14, this.y - 16, "/images/bullets/bun_hit.png", 4);
     }
 
     takeDamage() {
@@ -270,7 +270,7 @@ class MissilePrototype extends Bullet {
         this.positionY = positionY;
         this.notarget = null;
 
-        this.entity = "../CVMJS/static/images/bullets/salad.png";
+        this.entity = "/images/bullets/salad.png";
 
         this.getFront = ((mouse) => {
             return (mouse.attackable
@@ -433,7 +433,7 @@ class MissilePrototype extends Bullet {
     }
 
     createHitAnim() {
-        level?.createSpriteAnimation(this.x - 8, this.y - 6, "../CVMJS/static/images/bullets/salad_hit.png", 4);
+        level?.createSpriteAnimation(this.x - 8, this.y - 6, "/images/bullets/salad_hit.png", 4);
     }
 
     hit(target: null | Mouse) {
@@ -468,7 +468,7 @@ export class FreezingBun extends BunPrototype {
         this.width = 72;
         this.offsetX = 44;
         this.offsetY = this.height;
-        this.entity = "../CVMJS/static/images/bullets/snowbun.png";
+        this.entity = "/images/bullets/snowbun.png";
     }
 
     createEntity(ctx: CanvasRenderingContext2D) {
@@ -491,7 +491,7 @@ export class FreezingBun extends BunPrototype {
     }
 
     createHitAnim() {
-        level?.createSpriteAnimation(this.x - 8, this.y - 16, "../CVMJS/static/images/bullets/snowbun_hit.png", 4);
+        level?.createSpriteAnimation(this.x - 8, this.y - 16, "/images/bullets/snowbun_hit.png", 4);
     }
 
     hit(target: null | Mouse) {
@@ -517,7 +517,7 @@ export class FireBullet extends BunPrototype {
         this.offsetX = 34;
         this.offsetY = this.height;
 
-        this.entity = "../CVMJS/static/images/bullets/firebullet.png";
+        this.entity = "/images/bullets/firebullet.png";
     }
 
     createEntity(ctx: CanvasRenderingContext2D) {
@@ -536,7 +536,7 @@ export class FireBullet extends BunPrototype {
     }
 
     createHitAnim() {
-        level?.createSpriteAnimation(this.x - 5, this.y - 35, "../CVMJS/static/images/bullets/firebullet_hit.png", 5);
+        level?.createSpriteAnimation(this.x - 5, this.y - 35, "/images/bullets/firebullet_hit.png", 5);
     }
 
     hit(target: null | Mouse) {
@@ -565,7 +565,7 @@ export class WaterBullet extends BunPrototype {
         super(x, y, dam, angle);
         this.width = 22;
         this.height = 15;
-        this.entity = "../CVMJS/static/images/bullets/waterbullet.png";
+        this.entity = "/images/bullets/waterbullet.png";
     }
 
     duplicate(): Bullet | undefined {
@@ -577,7 +577,7 @@ export class WaterBullet extends BunPrototype {
     }
 
     createHitAnim() {
-        level?.createSpriteAnimation(this.x - 15, this.y - 24, "../CVMJS/static/images/bullets/waterbullet_hit.png", 2);
+        level?.createSpriteAnimation(this.x - 15, this.y - 24, "/images/bullets/waterbullet_hit.png", 2);
     }
 }
 export class WineBullet extends BunPrototype {
@@ -601,7 +601,7 @@ export class WineBullet extends BunPrototype {
             this.targetY = this.y + 64 * this.line;
         }
 
-        this.entity = "../CVMJS/static/images/bullets/winebullet.png";
+        this.entity = "/images/bullets/winebullet.png";
     }
 
     reset(x = 0, y = 0, dam = 20, angle = 0, parameter_1: any = null, parameter_2: any = null) {
@@ -651,7 +651,7 @@ export class WineBullet extends BunPrototype {
     }
 
     createHitAnim() {
-        level?.createSpriteAnimation(this.x - 15, this.y - 24, "../CVMJS/static/images/bullets/winebullet_hit.png", 6);
+        level?.createSpriteAnimation(this.x - 15, this.y - 24, "/images/bullets/winebullet_hit.png", 6);
     }
 }
 export class Star extends BunPrototype {
@@ -659,7 +659,7 @@ export class Star extends BunPrototype {
         super(x, y, dam, angle);
         this.height = 33;
         this.width = 31;
-        this.entity = "../CVMJS/static/images/bullets/star.png";
+        this.entity = "/images/bullets/star.png";
     }
 
     duplicate(): Bullet | undefined {
@@ -685,7 +685,7 @@ export class CoffeeBubble extends Bullet {
         this.offsetX = this.width;
         this.offsetY = this.height;
 
-        this.entity = "../CVMJS/static/images/bullets/bubble.png";
+        this.entity = "/images/bullets/bubble.png";
     }
 
     createEntity(ctx: CanvasRenderingContext2D) {
@@ -725,7 +725,7 @@ export class SausageAir extends Bullet {
         this.height = 14;
         this.positionY = positionY!;
 
-        this.entity = "../CVMJS/static/images/bullets/sausage.png";
+        this.entity = "/images/bullets/sausage.png";
 
         this.hitCheck = (mouse) => {
             return (Math.abs(mouse.positionX - this.positionX) <= 0.5
@@ -748,7 +748,7 @@ export class SausageAir extends Bullet {
     }
 
     createHitAnim() {
-        level?.createSpriteAnimation(this.x - 24, this.y - 20, "../CVMJS/static/images/bullets/salad_hit.png", 4);
+        level?.createSpriteAnimation(this.x - 24, this.y - 20, "/images/bullets/salad_hit.png", 4);
     }
 }
 export class SausageLand extends BunPrototype {
@@ -756,7 +756,7 @@ export class SausageLand extends BunPrototype {
         super(x, y, dam, 0);
         this.width = 19;
         this.height = 14;
-        this.entity = "../CVMJS/static/images/bullets/sausage.png";
+        this.entity = "/images/bullets/sausage.png";
     }
 
     duplicate(): Bullet | undefined {
@@ -764,7 +764,7 @@ export class SausageLand extends BunPrototype {
     }
 
     createHitAnim() {
-        level?.createSpriteAnimation(this.x - 24, this.y - 20, "../CVMJS/static/images/bullets/salad_hit.png", 4);
+        level?.createSpriteAnimation(this.x - 24, this.y - 20, "/images/bullets/salad_hit.png", 4);
     }
 }
 export class Boomerang extends Bullet {
@@ -789,7 +789,7 @@ export class Boomerang extends Bullet {
 
         this.tick = 0;
         this.frames = 6;
-        this.entity = "../CVMJS/static/images/bullets/boomerang.png";
+        this.entity = "/images/bullets/boomerang.png";
     }
 
     move(pos = null) {
@@ -890,7 +890,7 @@ export class ChocolateDot extends MissilePrototype {
         super(x, y, dam, positionY!);
         this.width = 16;
         this.height = 13;
-        this.entity = "../CVMJS/static/images/bullets/chocolate_0.png";
+        this.entity = "/images/bullets/chocolate_0.png";
     }
 
     createHitAnim() {
@@ -904,7 +904,7 @@ export class Chocolate extends MissilePrototype {
         this.width = 42;
         this.height = 33;
         this.haltTime = haltTime || 5000;
-        this.entity = "../CVMJS/static/images/bullets/chocolate_1.png";
+        this.entity = "/images/bullets/chocolate_1.png";
     }
 
     createHitAnim() {
@@ -915,7 +915,7 @@ export class Chocolate extends MissilePrototype {
         if (target == null) {
             return null;
         } else {
-            target.getHalted(this.haltTime, "../CVMJS/static/images/bullets/halted.png");
+            target.getHalted(this.haltTime, "/images/bullets/halted.png");
             target.getThrown(this.damage);
             return this.target;
         }
@@ -933,7 +933,7 @@ export class Egg extends MissilePrototype {
         this.speed = 14;
         this.offsetX = this.width;
         this.offsetY = this.height;
-        this.entity = "../CVMJS/static/images/bullets/egg.png";
+        this.entity = "/images/bullets/egg.png";
     }
     createEntity(ctx: CanvasRenderingContext2D) {
         const img = GEH.requestDrawImage(this.entity);
@@ -946,7 +946,7 @@ export class Egg extends MissilePrototype {
 
     createHitAnim() {
         GEH.requestPlayAudio('zadao');
-        level?.createSpriteAnimation(this.x - 43, this.y - 48, "../CVMJS/static/images/bullets/egg_hit.png", 5);
+        level?.createSpriteAnimation(this.x - 43, this.y - 48, "/images/bullets/egg_hit.png", 5);
     }
 
     hit(target: Mouse | null) {
@@ -988,7 +988,7 @@ export class SnowEgg extends MissilePrototype {
 
         this.offsetX = this.width;
         this.offsetY = this.height;
-        this.entity = "../CVMJS/static/images/bullets/snowegg.png";
+        this.entity = "/images/bullets/snowegg.png";
     }
 
     createEntity(ctx: CanvasRenderingContext2D) {
@@ -1002,7 +1002,7 @@ export class SnowEgg extends MissilePrototype {
 
     createHitAnim() {
         GEH.requestPlayAudio('zadao');
-        level?.createSpriteAnimation(this.x - 42, this.y - 50, "../CVMJS/static/images/bullets/snowegg_hit.png", 10);
+        level?.createSpriteAnimation(this.x - 42, this.y - 50, "/images/bullets/snowegg_hit.png", 10);
     }
 
     hit(target: null | Mouse) {
@@ -1044,7 +1044,7 @@ export class Stone {
     damage;
     speed = 12;
     speedY = 0;
-    entity = "../CVMJS/static/images/bullets/stone.png";
+    entity = "/images/bullets/stone.png";
     accelerationY?: number;
     get positionX() {
         return EventHandler.getPositionX(this.x);
@@ -1105,7 +1105,7 @@ export class Stone {
     }
 
     createHitAnim() {
-        level?.createSpriteAnimation(this.x - 28, this.y - 32, "../CVMJS/static/images/bullets/stone_hit.png", 5);
+        level?.createSpriteAnimation(this.x - 28, this.y - 32, "/images/bullets/stone_hit.png", 5);
     }
 
     takeDamage() {

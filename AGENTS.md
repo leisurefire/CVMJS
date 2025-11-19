@@ -62,6 +62,14 @@
 - UI components use `cubic-bezier(0.4, 0, 0.2, 1)` for all animations and transitions to ensure smooth, consistent motion across the interface.
 
 ## Recent Changes
+- **Resource Path Unification (EventHandler.ts, Core.ts, GameBattlefield.ts, i18n/index.ts)**:
+  - Implemented `EventHandler.getStaticPath()` static method for automatic path resolution
+  - Automatically detects deployment environment (GitHub Pages vs local server)
+  - GitHub Pages: returns `${location.origin}/CVMJS/static/${relativePath}`
+  - Local server: returns `${location.origin}/static/${relativePath}`
+  - Replaced all 18 hardcoded `../CVMJS/static/` paths across 4 TypeScript files
+  - Ensures compatibility with both https://xxx.github.io/CVMJS/ and http://127.0.0.1:5000/
+  - Affected modules: EventHandler (12 paths), Core (4 paths), GameBattlefield (1 path), i18n (1 path)
 - **WebP Animation System (EventHandler.ts, SpriteAnimation.ts)**:
   - Implemented WebP animation frame decoding and caching using ImageDecoder API to extract frames as ImageBitmap arrays
   - Added pre-sliced sprite sheet caching optimization using offscreen Canvas for improved rendering performance

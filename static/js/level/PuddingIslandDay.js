@@ -4,7 +4,7 @@ import Level from "../Level.js";
 export default class PuddingIslandDay extends Level {
     static NAME = "布丁岛（日）";
     static REWARDS = 1000;
-    static BACKGROUND = "../CVMJS/static/images/interface/background_7.jpg";
+    static BACKGROUND = "/images/interface/background_7.jpg";
 
     constructor() {
         super();

@@ -1,3 +1,5 @@
+import EventHandler from '../EventHandler.js';
+
 // ---- Types ----
 type I18nPrimitive = string | number | boolean;
 interface I18nDictionary {
@@ -36,7 +38,7 @@ class I18nModule {
         }
 
         this.loadPromise = new Promise((resolve, reject) => {
-            fetch(`../CVMJS/static/i18n/${locale}.json`)
+            fetch(EventHandler.getStaticPath(`i18n/${locale}.json`))
                 .then(res => res.json())
                 .then(data => {
                     this.dictionary = data;

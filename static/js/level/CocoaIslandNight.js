@@ -6,7 +6,7 @@ export default class CocoaIslandNight extends Level {
     static SUGGESTED_TYPE = 0;
     static TIME = 1;
     static REWARDS = 1300;
-    static BACKGROUND = "../CVMJS/static/images/interface/background_10.jpg";
+    static BACKGROUND = "/images/interface/background_10.jpg";
 
     constructor() {
         super();

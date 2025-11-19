@@ -6,9 +6,9 @@ export default class CurryIslandNight extends Level {
     static SUGGESTED_TYPE = 0;
     static TIME = 1;
     static REWARDS = 1500;
-    static BACKGROUND = "../CVMJS/static/images/interface/background_12.jpg";
+    static BACKGROUND = "/images/interface/background_12.jpg";
     static MAP_ANIMATION = {
-        SRC: "../CVMJS/static/images/interface/water_1.png",
+        SRC: "/images/interface/water_1.png",
         X: 305,
         Y: 243,
         WIDTH: 548,
