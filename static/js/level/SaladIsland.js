@@ -4,7 +4,7 @@ import Level from "../Level.js";
 export default class SaladIsland extends Level {
     static NAME = "色拉岛（陆）";
     static REWARDS = 500;
-    static BACKGROUND = "../CVMJS/static/images/interface/background_1.jpg";
+    static BACKGROUND = "/images/interface/background_1.jpg";
 
     constructor() {
         super();

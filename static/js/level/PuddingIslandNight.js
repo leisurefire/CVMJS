@@ -5,7 +5,7 @@ export default class PuddingIslandNight extends Level {
     static NAME = "布丁岛（夜）";
     static TIME = 1;
     static REWARDS = 1100;
-    static BACKGROUND = "../CVMJS/static/images/interface/background_8.jpg";
+    static BACKGROUND = "/images/interface/background_8.jpg";
 
     constructor() {
         super();

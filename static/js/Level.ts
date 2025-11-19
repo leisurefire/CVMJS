@@ -18,10 +18,10 @@ export default class Level {
     static REWARDS = 0;
     static HAS_FORWARD_WAVES = false;
     static SUGGESTED_TYPE = null;
-    static BACKGROUND = "../CVMJS/static/images/interface/background_0.jpg";
+    static BACKGROUND = "/images/interface/background_0.jpg";
     static SRC = new Map([
-        ["fog", "../CVMJS/static/images/interface/fog.png"],
-        ["sun", "../CVMJS/static/images/interface/sun.png"],
+        ["fog", "/images/interface/fog.png"],
+        ["sun", "/images/interface/sun.png"],
     ]);
 
     #row_start = 108;
@@ -273,7 +273,7 @@ export default class Level {
             const assets = card.assets;
             if (assets) {
                 for (const asset of assets) {
-                    const src = `../CVMJS/static/images/foods/${card.name}/${asset}.png`;
+                    const src = `/images/foods/${card.name}/${asset}.png`;
                     assetsToLoad.push(src);
                 }
             }
@@ -283,7 +283,7 @@ export default class Level {
             const mouse = getMouseDetails(this.#MouseType[i]);
             const assets = mouse.assets;
             for (let j = 0; j < assets.length; j++) {
-                const src = `../CVMJS/static/images/mice/${mouse.eName}/${assets[j]}.png`;
+                const src = `/images/mice/${mouse.eName}/${assets[j]}.png`;
                 assetsToLoad.push(src);
             }
         }
@@ -363,7 +363,7 @@ export default class Level {
             return false;
         } else {
             const Handler = {
-                src: "../CVMJS/static/images/character/player/idle.png",
+                src: "/images/character/player/idle.png",
                 offset: Character.offset,
                 frames: 8,
                 func: ({ positionX, positionY }: { positionX: number, positionY: number }) => {

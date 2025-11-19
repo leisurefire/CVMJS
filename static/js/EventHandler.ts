@@ -108,7 +108,7 @@ async function playSfxWebAudio(name: string, volume = 1) {
         audioCtx ??= new (window as any).AudioContext();
         let buf = effectBuffers.get(name);
         if (!buf) {
-            const res = await fetch(`../CVMJS/static/audio/${name}.mp3`);
+            const res = await fetch(EventHandler.getStaticPath(`audio/${name}.mp3`));
             const arr = await res.arrayBuffer();
             buf = await audioCtx!.decodeAudioData(arr);
             effectBuffers.set(name, buf);
@@ -151,6 +151,8 @@ type IdleCb = (deadline: any) => void;
 const idle = (cb: IdleCb) => (window as any).requestIdleCallback ? (window as any).requestIdleCallback(cb as any) : setTimeout(cb as any, 0);
 
 export default class EventHandler {
+
+    private _staticBaseUrl: string = "";
 
     static icons = new Map<string, any | undefined>([
         ["about", undefined],
@@ -208,12 +210,56 @@ export default class EventHandler {
     #cardDetails = document.createElement("div");
     #debug = false;
 
-    // 静态t方法已移除，请使用i18n.t()代替
+    /**
+     * 根据运行环境推断静态资源基路径
+     * - GitHub Pages: ${origin}/CVMJS/static
+     * - 本地/其它: ${origin}/static
+     * - 可通过 sessionStorage/localStorage 覆盖
+     */
+    private resolveStaticBaseUrl(): string {
+        const override = sessionStorage.getItem('CVMJS_STATIC_BASE') || localStorage.getItem('CVMJS_STATIC_BASE');
+        if (override) return override;
+
+        const { origin, pathname } = window.location;
+        if (origin.includes('github.io')) {
+            return `${origin}/CVMJS/static`;
+        }
+        if (pathname.includes('/static/')) {
+            return `${origin}/static`;
+        }
+        return `${origin}/static`;
+    }
+
+    /**
+     * 解析资源路径为完整URL
+     * @param relativePath 相对路径,如 "/images/mice/idle.png"
+     * @returns 完整URL
+     */
+    resolveResourcePath(relativePath: string): string {
+        if (!relativePath.startsWith('/')) return relativePath;
+        return `${this._staticBaseUrl}${relativePath}`;
+    }
+
+    /**
+     * 静态方法：根据当前环境自动适配静态资源路径
+     * @param relativePath 相对路径，如 "images/mice/idle.png" 或 "/images/mice/idle.png"
+     * @returns 完整的静态资源URL
+     */
+    static getStaticPath(relativePath: string): string {
+        const path = relativePath.replace(/^\/+/, '');
+        const base = location.pathname.includes('/CVMJS/')
+            ? `${location.origin}/CVMJS/static/`
+            : `${location.origin}/static/`;
+        return base + path;
+    }
+
+    // 静态t方法已移除,请使用i18n.t()代替
 
 
     constructor() {
         if (!EventHandler.instance) {
             EventHandler.instance = this;
+            this._staticBaseUrl = this.resolveStaticBaseUrl();
         } else {
             ToastBox("Try to create a new instance of a class that runs in singleton mode.");
             return EventHandler.instance;
@@ -364,7 +410,7 @@ export default class EventHandler {
                     SettingPage]);
             }
 
-            EventHandler.backgroundMusic = new Audio("../CVMJS/static/audio/chengzhen.mp3");
+            EventHandler.backgroundMusic = new Audio(EventHandler.getStaticPath('audio/chengzhen.mp3'));
             EventHandler.backgroundMusic.loop = true;
             EventHandler.backgroundMusic.volume = this.musicVolume;
 
@@ -475,7 +521,7 @@ export default class EventHandler {
     #loadIcons() {
         this.#iconsLoaded = Promise.all(
             Array.from(EventHandler.icons.keys()).map(key =>
-                fetch(`../CVMJS/static/images/interface/icons/${key}.svg`)
+                fetch(EventHandler.getStaticPath(`images/interface/icons/${key}.svg`))
                     .then(res => res.text())
                     .then(text => EventHandler.icons.set(key, text))
                     .catch(err => console.error(`Failed to load icon ${key}:`, err))
@@ -536,7 +582,7 @@ export default class EventHandler {
         const music = gameMusic.get(type);
         if (music) {
             try {
-                EventHandler.backgroundMusic.src = `../CVMJS/static/audio/${music}.mp3`;
+                EventHandler.backgroundMusic.src = EventHandler.getStaticPath(`audio/${music}.mp3`);
                 EventHandler.backgroundMusic.play();
                 return true;
             } catch (error) {
@@ -550,10 +596,10 @@ export default class EventHandler {
     }
 
     requestDrawImage(src: string, effect: string | null = null, intensity: number | null = null, tryWebP: boolean = false) {
-        let actualSrc = src;
+        let actualSrc = this.resolveResourcePath(src);
 
-        if (tryWebP && src.endsWith('.png') && !EventHandler.#webpFallbackCache.has(src)) {
-            actualSrc = src.replace(/\.png$/, '.webp');
+        if (tryWebP && actualSrc.endsWith('.png') && !EventHandler.#webpFallbackCache.has(src)) {
+            actualSrc = actualSrc.replace(/\.png$/, '.webp');
         }
 
         const effectKey = effect !== null ? `${actualSrc}?effect=${effect}${intensity != null ? `&intensity=${intensity}` : ''}` : actualSrc;
@@ -562,9 +608,9 @@ export default class EventHandler {
             return EventHandler.#images.get(effectKey);
         } else {
             this.requestImageCache(actualSrc, effect, intensity).catch(() => {
-                if (actualSrc !== src) {
+                if (actualSrc !== this.resolveResourcePath(src)) {
                     EventHandler.#webpFallbackCache.add(src);
-                    this.requestImageCache(src, effect, intensity);
+                    this.requestImageCache(this.resolveResourcePath(src), effect, intensity);
                 }
             });
             return null;
@@ -780,11 +826,12 @@ export default class EventHandler {
     }
 
     async requestWebPFrames(src: string): Promise<ImageBitmap[]> {
-        if (EventHandler.#webpFrameCache.has(src)) {
-            return EventHandler.#webpFrameCache.get(src)!;
+        const resolvedSrc = this.resolveResourcePath(src);
+        if (EventHandler.#webpFrameCache.has(resolvedSrc)) {
+            return EventHandler.#webpFrameCache.get(resolvedSrc)!;
         }
 
-        const resp = await fetch(src);
+        const resp = await fetch(resolvedSrc);
         const buf = await resp.arrayBuffer();
         const decoder = new ImageDecoder({ data: buf, type: "image/webp" });
         await decoder.tracks.ready;
@@ -809,17 +856,18 @@ export default class EventHandler {
             }
         }
 
-        EventHandler.#webpFrameCache.set(src, frames);
+        EventHandler.#webpFrameCache.set(resolvedSrc, frames);
         return frames;
     }
 
     async requestSpriteSlices(src: string, frames: number, offsetX: number = 0, offsetY: number = 0, vertical: boolean = false): Promise<ImageBitmap[]> {
-        const key = `${src}?f=${frames}&ox=${offsetX}&oy=${offsetY}&v=${vertical}`;
+        const resolvedSrc = this.resolveResourcePath(src);
+        const key = `${resolvedSrc}?f=${frames}&ox=${offsetX}&oy=${offsetY}&v=${vertical}`;
         if (EventHandler.#spriteSliceCache.has(key)) {
             return EventHandler.#spriteSliceCache.get(key)!;
         }
 
-        const img = await this.requestImageCache(src) as ImageBitmap;
+        const img = await this.requestImageCache(resolvedSrc) as ImageBitmap;
         const slices: ImageBitmap[] = [];
 
         if (vertical) {
@@ -847,9 +895,10 @@ export default class EventHandler {
     }
 
     async requestAnimationResource(src: string, frames: number, options?: { isWebP?: boolean; isSvg?: boolean; vertical?: boolean; offsetX?: number; offsetY?: number }): Promise<ImageBitmap[] | null> {
-        if (src.endsWith('.webp') || options?.isWebP) {
+        const resolvedSrc = this.resolveResourcePath(src);
+        if (resolvedSrc.endsWith('.webp') || options?.isWebP) {
             try {
-                return await this.requestWebPFrames(src);
+                return await this.requestWebPFrames(resolvedSrc);
             } catch {
                 return null;
             }
@@ -861,7 +910,7 @@ export default class EventHandler {
 
         if (frames > 1) {
             try {
-                return await this.requestSpriteSlices(src, frames, options?.offsetX ?? 0, options?.offsetY ?? 0, options?.vertical ?? false);
+                return await this.requestSpriteSlices(resolvedSrc, frames, options?.offsetX ?? 0, options?.offsetY ?? 0, options?.vertical ?? false);
             } catch {
                 return null;
             }
@@ -1249,7 +1298,7 @@ class StoreItem {
         this.detail = getFoodDetails(type);
         this.price = this.detail.price || 900;
 
-        this.item_img.src = "../CVMJS/static/images/cards/" + this.detail.name + ".png";
+        this.item_img.src = EventHandler.getStaticPath(`images/cards/${this.detail.name}.png`);
         this.item_text.innerText = this.price.toString();
 
         this.entity.appendChild(this.item_img);
@@ -1377,7 +1426,7 @@ export class Card extends HTMLElement {
                 this.coolTime = coolTime;
                 this.cost = cost;
                 this.#cost.textContent = cost.toString();
-                this.#entity.src = `../CVMJS/static/images/cards/${this.name}.png`;
+                this.#entity.src = EventHandler.getStaticPath(`images/cards/${this.name}.png`);
             }
         } catch (error: any) {
             ToastBox(error);
@@ -1457,7 +1506,7 @@ export class Card extends HTMLElement {
         const detail = getFoodDetails(this.type);
         if (detail) {
             const Handler = {
-                src: `../CVMJS/static/images/foods/${this.name}/idle.png`,
+                src: EventHandler.getStaticPath(`images/foods/${this.name}/idle.png`),
                 slot: this,
                 offset: detail.offset,
                 frames: detail.idleLength,
@@ -1509,7 +1558,7 @@ class BackpackCard {
     animInside: HTMLImageElement | undefined;
     card: Card;
     animID: number | undefined;
-    src: string = `../CVMJS/static/images/cards/stove.png`;
+    src: string = EventHandler.getStaticPath('images/cards/stove.png');
     details?: HTMLElement;
     #chosen = false;
     #bagEntity = document.createElement('img');
@@ -1520,7 +1569,7 @@ class BackpackCard {
         this.star = star;
         this.skillLevel = skillLevel;
         this.card = new Card(type, star, skillLevel);
-        this.src = `../CVMJS/static/images/cards/${this.card.name}.png`;
+        this.src = EventHandler.getStaticPath(`images/cards/${this.card.name}.png`);
 
         this.entity.src = this.src;
         this.#bagEntity.src = this.src;
@@ -1602,18 +1651,18 @@ class BackpackCard {
             const endLength = detail.endLength || idleLength;
             const CInfoBack = document.getElementById("CInfoBack");
             if (CInfoBack) {
-                CInfoBack.style.backgroundImage = "url(../CVMJS/static/images/interface/compose/" + (detail.type || 0) + ".png)";
+                CInfoBack.style.backgroundImage = `url(${EventHandler.getStaticPath(`images/interface/compose/${detail.type || 0}.png`)})`;
 
                 CInfoBack.innerHTML = "";
                 if (detail.inside) {
                     this.animInside = document.createElement("img");
-                    this.animInside.src = "../CVMJS/static/images/foods/" + detail.name + "/idle_inside.png";
+                    this.animInside.src = EventHandler.getStaticPath(`images/foods/${detail.name}/idle_inside.png`);
                     this.animInside.style.position = "absolute";
                     this.animInside.style.left = `${detail?.offset[0] + 115}px`;
                     this.animInside.style.top = `${detail?.offset[1] + 40}px`;
                     CInfoBack.appendChild(this.animInside);
                 }
-                this.#animEntity.src = "../CVMJS/static/images/foods/" + detail.name + "/idle.png";
+                this.#animEntity.src = EventHandler.getStaticPath(`images/foods/${detail.name}/idle.png`);
                 this.#animEntity.onload = () => {
                     this.#animEntity.style.objectPosition = "0 0"
                     this.#animEntity.style.objectFit = "none";

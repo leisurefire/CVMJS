@@ -5,7 +5,7 @@ export default class MousseIsland extends Level {
     static NAME = "慕斯岛";
     static TIME = 1;
     static REWARDS = 700;
-    static BACKGROUND = "../CVMJS/static/images/interface/background_3.jpg";
+    static BACKGROUND = "/images/interface/background_3.jpg";
 
     constructor() {
         super();

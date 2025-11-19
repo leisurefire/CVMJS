@@ -5,7 +5,7 @@ import Level, { level } from "../Level.js";
 export default class MarshmallowSky extends Level {
     static NAME = "棉花糖天空";
     static SUGGESTED_TYPE = 1;
-    static BACKGROUND = "../CVMJS/static/images/interface/background_20.jpg";
+    static BACKGROUND = "/images/interface/background_20.jpg";
     cloudPosition = [];
     cloudCavityGeneratePos = -1;
     cloudCavityPosition = [];
@@ -92,7 +92,7 @@ export class Cloud {
     }
 
     get entity() {
-        return "../CVMJS/static/images/interface/cloud_" + this.type + ".png";
+        return "/images/interface/cloud_" + this.type + ".png";
     }
 
     move() {

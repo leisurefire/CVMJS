@@ -5,7 +5,7 @@ import Level from "../Level.js";
 export default class CookieIsland extends Level {
     static NAME = "曲奇岛";
     static REWARDS = 400;
-    static BACKGROUND = "../CVMJS/static/images/interface/background_0.jpg";
+    static BACKGROUND = "/images/interface/background_0.jpg";
     static HAS_FORWARD_WAVES = true;
 
     constructor() {

@@ -1,3 +1,4 @@
+import EventHandler from '../EventHandler.js';
 // ---- I18n Module ----
 class I18nModule {
     static instance;
@@ -19,7 +20,7 @@ class I18nModule {
             return this.loadPromise;
         }
         this.loadPromise = new Promise((resolve, reject) => {
-            fetch(`../CVMJS/static/i18n/${locale}.json`)
+            fetch(EventHandler.getStaticPath(`i18n/${locale}.json`))
                 .then(res => res.json())
                 .then(data => {
                 this.dictionary = data;
