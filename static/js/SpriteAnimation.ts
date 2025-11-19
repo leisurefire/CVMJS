@@ -19,9 +19,6 @@ type SpriteAnimationOptions = {
  * SpriteAnimation 对象,用于临时动画展示,可池化复用
  */
 export default class SpriteAnimation {
-    /** 默认帧跳过间隔:每2个游戏帧推进1个动画帧,用于控制动画播放速度 */
-    private static readonly DEFAULT_FRAME_SKIP_INTERVAL = 1;
-
     #x: number;
     #y: number;
     #src: string;
@@ -37,9 +34,6 @@ export default class SpriteAnimation {
     private _img: any;
     _webpFrames?: ImageBitmap[];
     _spriteSlices?: ImageBitmap[];
-    /** 帧跳过计数器:用于控制动画播放速度 */
-    private _frameSkipCounter: number = 0;
-    private _frameSkipInterval: number = SpriteAnimation.DEFAULT_FRAME_SKIP_INTERVAL;
 
 
     constructor(x: number, y: number, src: string, frames: number, options?: SpriteAnimationOptions) {
@@ -80,7 +74,6 @@ export default class SpriteAnimation {
         this._img = undefined;
         this._webpFrames = undefined;
         this._spriteSlices = undefined;
-        this._frameSkipCounter = 0;
         return this;
     }
 
@@ -90,31 +83,18 @@ export default class SpriteAnimation {
     /** release 生命周期钩子 */
     onRelease(): void { }
 
-    /**
-     * 推进动画帧
-     * 使用帧跳过计数器控制动画速度,避免动画播放过快
-     * @returns true 表示动画完成,false 表示继续播放
-     */
-    #advanceFrame(): boolean {
-        this._frameSkipCounter++;
-        if (this._frameSkipCounter >= this._frameSkipInterval) {
-            this._frameSkipCounter = 0;
-            if (this.#tick === this.#frames - 1) {
-                this.frameCallback?.();
-                return true;
-            }
-            this.#tick++;
-        }
-        return false;
-    }
-
     render(ctx: CanvasRenderingContext2D): boolean {
         // 模式1: WebP帧数组
         if (this._webpFrames) {
             const frame = this._webpFrames[this.#tick];
             if (!frame) return false;
             ctx.drawImage(frame, this.#x, this.#y, frame.width * this.scale, frame.height * this.scale);
-            return this.#advanceFrame();
+            if (this.#tick === this.#frames - 1) {
+                this.frameCallback?.();
+                return true;
+            }
+            this.#tick++;
+            return false;
         }
 
         // 模式2: 精灵图切片
@@ -122,7 +102,12 @@ export default class SpriteAnimation {
             const slice = this._spriteSlices[this.#tick];
             if (!slice) return false;
             ctx.drawImage(slice, this.#x, this.#y);
-            return this.#advanceFrame();
+            if (this.#tick === this.#frames - 1) {
+                this.frameCallback?.();
+                return true;
+            }
+            this.#tick++;
+            return false;
         }
 
         // 模式3: SVG序列 / 模式4: 传统精灵图
@@ -145,7 +130,12 @@ export default class SpriteAnimation {
             const offsetY = (img as any).height;
             ctx.drawImage(img as any, offsetX * this.#tick, 0, offsetX, offsetY, this.#x, this.#y, offsetX, offsetY);
         }
-        return this.#advanceFrame();
+        if (this.#tick === this.#frames - 1) {
+            this.frameCallback?.();
+            return true;
+        }
+        this.#tick++;
+        return false;
     }
 }
 

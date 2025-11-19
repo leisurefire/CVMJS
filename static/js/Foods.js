@@ -70,6 +70,7 @@ export class Food {
         return t("A000_CNAME");
     }
     static assets = ["idle"];
+    static assetFormat = "png";
     static offset = [0, 0];
     static category = "";
     static cost = 50;
@@ -130,7 +131,8 @@ export class Food {
     width = 50;
     height = 50;
     get entity() {
-        return "../CVMJS/static/images/foods/" + this.constructor.name + "/" + this.state + ".png";
+        const ctor = this.constructor;
+        return `/images/foods/${ctor.name}/${this.state}.${ctor.assetFormat}`;
     }
     row = 0; //所在行
     column = 0; //所在列
@@ -360,6 +362,7 @@ class Stove extends Food {
         return t("A001_CNAME");
     }
     static assets = ["idle", "produce"];
+    static assetFormat = "webp";
     static offset = [9, -58];
     static get category() {
         return t("C000");
@@ -369,7 +372,7 @@ class Stove extends Food {
     static description = "定时产出额外火苗";
     static upgrade = "强化后提高[产出速率]";
     static rarity = 0;
-    static story = "我们当着火炉，不是照亮自己，而是普照世界。";
+    static story = "我们当着火炉,不是照亮自己,而是普照世界。";
     width = 50;
     height = 112;
     stateLengthSet = [12, 17];

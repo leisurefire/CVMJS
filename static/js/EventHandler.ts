@@ -549,10 +549,10 @@ export default class EventHandler {
         }
     }
 
-    requestDrawImage(src: string, effect: string | null = null, intensity: number | null = null) {
+    requestDrawImage(src: string, effect: string | null = null, intensity: number | null = null, tryWebP: boolean = false) {
         let actualSrc = src;
 
-        if (src.endsWith('.png') && !EventHandler.#webpFallbackCache.has(src)) {
+        if (tryWebP && src.endsWith('.png') && !EventHandler.#webpFallbackCache.has(src)) {
             actualSrc = src.replace(/\.png$/, '.webp');
         }
 

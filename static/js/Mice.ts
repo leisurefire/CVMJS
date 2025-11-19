@@ -7,45 +7,6 @@ import { level } from "./Level.js";
 import { MapGrid } from "./GameBattlefield.js";
 import { i18n } from "./i18n-preload.js";
 
-
-class State {
-    #tick: number = 0;
-    #map: Map<string, number>;
-    #name: string;
-    #length: number;
-    get name() {
-        return this.#name;
-    }
-    set name(value: string) {
-        if (this.#map.has(value)) {
-            this.#name = value;
-            this.#length = this.#map.get(value) as number;
-        }
-    }
-    get length() {
-        return this.#length;
-    }
-    constructor(name: string, length: number, map: Map<string, number>) {
-        this.#map = map;
-        this.#name = name;
-        this.#length = length;
-    }
-    behavior() {
-        this.#tick++;
-    }
-    toString() {
-        return `${this.name}`;
-    }
-    update(map: { key: string, value: number }) {
-        if (this.#map.has(map.key)) {
-            this.#map.set(map.key, map.value);
-        }
-        else {
-            throw `Key not found.`;
-        }
-    }
-}
-
 export class Mouse {
     // ===== 基础属性 =====
     ctx = level.Battlefield.ctxBG as CanvasRenderingContext2D;
