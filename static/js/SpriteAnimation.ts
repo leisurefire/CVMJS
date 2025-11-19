@@ -20,7 +20,7 @@ type SpriteAnimationOptions = {
  */
 export default class SpriteAnimation {
     /** 默认帧跳过间隔:每2个游戏帧推进1个动画帧,用于控制动画播放速度 */
-    private static readonly DEFAULT_FRAME_SKIP_INTERVAL = 2;
+    private static readonly DEFAULT_FRAME_SKIP_INTERVAL = 1;
 
     #x: number;
     #y: number;
