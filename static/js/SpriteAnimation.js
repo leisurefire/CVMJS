@@ -1,9 +1,11 @@
 import { GEH } from "./Core.js";
 import { level } from "./Level.js";
 /**
- * SpriteAnimation 对象，用于临时动画展示，可池化复用
+ * SpriteAnimation 对象,用于临时动画展示,可池化复用
  */
 export default class SpriteAnimation {
+    /** 默认帧跳过间隔:每2个游戏帧推进1个动画帧,用于控制动画播放速度 */
+    static DEFAULT_FRAME_SKIP_INTERVAL = 2;
     #x;
     #y;
     #src;
@@ -13,9 +15,15 @@ export default class SpriteAnimation {
     frameCallback;
     zIndex;
     isSvg;
+    isWebP = false;
     scale;
-    // 缓存上一帧成功加载的图片，避免 requestDrawImage 偶尔返回 null 时整帧消失
+    // 缓存上一帧成功加载的图片,避免 requestDrawImage 偶尔返回 null 时整帧消失
     _img;
+    _webpFrames;
+    _spriteSlices;
+    /** 帧跳过计数器:用于控制动画播放速度 */
+    _frameSkipCounter = 0;
+    _frameSkipInterval = SpriteAnimation.DEFAULT_FRAME_SKIP_INTERVAL;
     constructor(x, y, src, frames, options) {
         if (x == null || y == null || src == null || frames == null) {
             throw new Error(`Certain parameter(s) not specified.`);
@@ -29,6 +37,7 @@ export default class SpriteAnimation {
         const maxZIndex = level.column_num * level.row_num;
         this.zIndex = Math.min(options?.zIndex ?? maxZIndex - 1, maxZIndex - 1);
         this.isSvg = options?.isSvg ?? false;
+        this.isWebP = options?.isWebP ?? false;
         this.scale = options?.scale ?? 1;
         this._img = undefined;
     }
@@ -45,23 +54,60 @@ export default class SpriteAnimation {
         const maxZIndex = level.column_num * level.row_num;
         this.zIndex = Math.min(options?.zIndex ?? maxZIndex - 1, maxZIndex - 1);
         this.isSvg = options?.isSvg ?? false;
+        this.isWebP = options?.isWebP ?? false;
         this.scale = options?.scale ?? 1;
         this.#tick = 0;
-        this._img = undefined; // 清空缓存的图片，确保从头加载新动画
+        this._img = undefined;
+        this._webpFrames = undefined;
+        this._spriteSlices = undefined;
+        this._frameSkipCounter = 0;
         return this;
     }
     /** acquire 生命周期钩子 */
     onAcquire() { }
     /** release 生命周期钩子 */
     onRelease() { }
+    /**
+     * 推进动画帧
+     * 使用帧跳过计数器控制动画速度,避免动画播放过快
+     * @returns true 表示动画完成,false 表示继续播放
+     */
+    #advanceFrame() {
+        this._frameSkipCounter++;
+        if (this._frameSkipCounter >= this._frameSkipInterval) {
+            this._frameSkipCounter = 0;
+            if (this.#tick === this.#frames - 1) {
+                this.frameCallback?.();
+                return true;
+            }
+            this.#tick++;
+        }
+        return false;
+    }
     render(ctx) {
+        // 模式1: WebP帧数组
+        if (this._webpFrames) {
+            const frame = this._webpFrames[this.#tick];
+            if (!frame)
+                return false;
+            ctx.drawImage(frame, this.#x, this.#y, frame.width * this.scale, frame.height * this.scale);
+            return this.#advanceFrame();
+        }
+        // 模式2: 精灵图切片
+        if (this._spriteSlices) {
+            const slice = this._spriteSlices[this.#tick];
+            if (!slice)
+                return false;
+            ctx.drawImage(slice, this.#x, this.#y);
+            return this.#advanceFrame();
+        }
+        // 模式3: SVG序列 / 模式4: 传统精灵图
         const rawImg = GEH.requestDrawImage(this.isSvg ? `${this.#src}/${this.#tick}.svg` : this.#src);
         if (rawImg) {
             this._img = rawImg;
         }
         const img = this._img;
         if (!img) {
-            // 图片尚未加载完成，保持当前帧（不自增 tick）
             return false;
         }
         if (this.isSvg) {
@@ -77,12 +123,7 @@ export default class SpriteAnimation {
             const offsetY = img.height;
             ctx.drawImage(img, offsetX * this.#tick, 0, offsetX, offsetY, this.#x, this.#y, offsetX, offsetY);
         }
-        if (this.#tick === this.#frames - 1) {
-            this.frameCallback?.();
-            return true;
-        }
-        this.#tick++;
-        return false;
+        return this.#advanceFrame();
     }
 }
 /**
@@ -125,8 +166,17 @@ export class SpriteAnimationManager {
     /**
      * 创建并播放动画
      */
-    playAnimation(x, y, src, frames, options) {
+    async playAnimation(x, y, src, frames, options) {
+        const resource = await GEH.requestAnimationResource(src, frames, options).catch(() => null);
         const animation = this.acquireAnimation(x, y, src, frames, options);
+        if (Array.isArray(resource)) {
+            if (src.endsWith('.webp') || options?.isWebP) {
+                animation._webpFrames = resource;
+            }
+            else {
+                animation._spriteSlices = resource;
+            }
+        }
         const targetStack = this._animationStack[animation.zIndex];
         if (targetStack) {
             targetStack.push(animation);
