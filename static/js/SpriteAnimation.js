@@ -5,7 +5,7 @@ import { level } from "./Level.js";
  */
 export default class SpriteAnimation {
     /** 默认帧跳过间隔:每2个游戏帧推进1个动画帧,用于控制动画播放速度 */
-    static DEFAULT_FRAME_SKIP_INTERVAL = 2;
+    static DEFAULT_FRAME_SKIP_INTERVAL = 1;
     #x;
     #y;
     #src;
