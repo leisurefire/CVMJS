@@ -11,7 +11,7 @@ const BULLET_STACK_MAX_SIZE = 999;
 export let level = {};
 level = null;
 class Level {
-    static NAME = "测试关卡";
+    static NAME = "Beta 关卡";
     static TIME = 0;
     static TYPE = "通关战";
     static WAVES = 4;
@@ -258,16 +258,23 @@ class Level {
     }
     async LoadAssets() {
         const assetsToLoad = [];
+        const normalizeAssetPath = (raw) => {
+            if (raw.startsWith("http://") || raw.startsWith("https://")) {
+                return raw;
+            }
+            const cleanPath = raw.startsWith("/") ? raw.slice(1) : raw;
+            return EventHandler.getStaticPath(cleanPath);
+        };
         const currentConstructor = this.constructor;
-        for (const [_, value] of currentConstructor.SRC) {
-            assetsToLoad.push(value);
+        for (const [, value] of currentConstructor.SRC) {
+            assetsToLoad.push(normalizeAssetPath(value));
         }
         for (let i = 0; i < this.#Cards.length; i++) {
             const card = getFoodDetails(this.#Cards[i].type);
             const assets = card.assets;
             if (assets) {
                 for (const asset of assets) {
-                    const src = `/images/foods/${card.name}/${asset}.png`;
+                    const src = normalizeAssetPath(`/images/foods/${card.name}/${asset}.png`);
                     assetsToLoad.push(src);
                 }
             }
@@ -276,7 +283,7 @@ class Level {
             const mouse = getMouseDetails(this.#MouseType[i]);
             const assets = mouse.assets;
             for (let j = 0; j < assets.length; j++) {
-                const src = `/images/mice/${mouse.eName}/${assets[j]}.png`;
+                const src = normalizeAssetPath(`/images/mice/${mouse.eName}/${assets[j]}.png`);
                 assetsToLoad.push(src);
             }
         }

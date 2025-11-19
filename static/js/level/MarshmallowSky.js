@@ -70,7 +70,7 @@ export default class MarshmallowSky extends Level {
         const button = document.createElement('button');
         button.style.bottom = '1rem';
         button.style.right = '1rem';
-        button.innerText = '进行测试';
+        button.innerText = '产生空洞';
         button.addEventListener("click", this.cloudCavityGenerate);
         this.Battlefield.appendChild(button);
         GEH.requestBackMusicChange(9);
