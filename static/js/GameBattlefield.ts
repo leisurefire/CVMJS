@@ -428,7 +428,7 @@ export class GameBattlefield extends HTMLElement {
                 height: 27px;
                 border-radius: 0;
                 background-color: transparent;
-                background-image: url("/images/flag.svg");
+                background-image: url("${EventHandler.getStaticPath('images/flag.svg')}");
                 background-size: cover;
                 transform: scale(0.96);
             }
@@ -498,7 +498,7 @@ export class GameBattlefield extends HTMLElement {
                 height: 52px;
                 border-radius: 52px;
                 background-color: rgba(255,255,255,.64);
-                background-image: url("/images/shovel.svg");
+                background-image: url("${EventHandler.getStaticPath('images/shovel.svg')}");
                 background-size: 38%;
                 background-position: center;
                 background-repeat: no-repeat;
@@ -516,7 +516,7 @@ export class GameBattlefield extends HTMLElement {
                 height: 3.25rem;
                 border-radius: 50%;
                 background-color: rgba(255,255,255,.64);
-                background-image: url("/images/exit.svg");
+                background-image: url("${EventHandler.getStaticPath('images/exit.svg')}");
                 background-position: center;
                 background-size: 61%;
                 background-repeat: no-repeat;
@@ -583,7 +583,7 @@ export class GameBattlefield extends HTMLElement {
                 left: 0.375rem;
                 width: 2.5rem;
                 height: 2.5rem;
-                background-image: url("/images/sunbar.svg");
+                background-image: url("${EventHandler.getStaticPath('images/sunbar.svg')}");
                 background-position: center bottom;
                 background-repeat: no-repeat;
                 border-radius: 50%;
