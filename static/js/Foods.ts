@@ -1180,7 +1180,7 @@ class HugeStove extends Stove {
 	static generate(x: number, y: number, star: number, skillLevel: number) {
 		const food = level.Foods[y * level.column_num + x];
 
-		if (!food) {
+		if (!food || food.layer_1?.constructor === Character) {
 			return false;
 		}
 
