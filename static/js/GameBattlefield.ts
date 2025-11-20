@@ -69,7 +69,7 @@ export class Sun {
         }
     }
 
-    behavior(ctx: CanvasRenderingContext2D) {
+    behavior(ctx: IRenderer | CanvasRenderingContext2D) {
         if (this.tick === 9) {
             this.loopTimes++;
         }

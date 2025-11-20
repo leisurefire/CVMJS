@@ -6,6 +6,7 @@ import { Mouse, getMouseDetails } from "./Mice.js";
 import { Bullet, BulletCtor, BulletSpawnOptions, acquireBullet, releaseBullet } from "./Bullets.js";
 import SpriteAnimation, { SpriteAnimationManager } from "./SpriteAnimation.js";
 import { Sun, MapGrid, GameBattlefield } from "./GameBattlefield.js";
+import type { IRenderer } from "./renderer/IRenderer.js";
 const BULLET_STACK_MAX_SIZE = 999;
 
 export let level: any = {};
@@ -736,7 +737,7 @@ export default class Level {
         return bullet;
     }
 
-    #requestSunBehavior(ctx: CanvasRenderingContext2D) {
+    #requestSunBehavior(ctx: IRenderer | CanvasRenderingContext2D) {
         this.#autoCollectInterval = this.#autoCollectInterval - 50;
         const { x, y } = this.Battlefield.Cursor;
         for (let i = this.#Sun.length - 1; i >= 0; i--) {
@@ -875,7 +876,7 @@ export default class Level {
             this.Battlefield.playCountDownAnimation(elapsed);
         }
     }
-    #requestUpdateBullets(ctx: CanvasRenderingContext2D) {
+    #requestUpdateBullets(ctx: IRenderer | CanvasRenderingContext2D) {
         for (let i = 0; i < this.#Bullets.length; i++) {
             const bullet = this.#Bullets[i];
             // 超出栈容量时将伤害合并并回收
@@ -979,7 +980,7 @@ export default class Level {
         this.levelTimer = requestAnimationFrame(this.#frameLoop);
     }
 
-    #requestRenderFog(ctx: CanvasRenderingContext2D) {
+    #requestRenderFog(ctx: IRenderer | CanvasRenderingContext2D) {
         if (!this.#LightDEG) return;
         let offsetX = 24;
         if (this.#FogBlowTag) {
@@ -1006,18 +1007,20 @@ export default class Level {
                 if (this.#LightDEG[i] === 1) {
                     effect = "opacity";
                     opacity = 0.64;
-                }
-                const fog = GEH.requestDrawImage(fogSrc!, effect, opacity);
-                if (fog) {
-                    ctx.drawImage(fog,
-                        this.column_start + (x - 1) * (this.column_gap - 4) + offsetX,
-                        this.row_start + (y - 1) * (this.row_gap + 8));
-                }
-                else {
-                    const ori = GEH.requestDrawImage(fogSrc!);
-                    if (ori) ctx.drawImage(ori,
-                        this.column_start + (x - 1) * (this.column_gap - 4) + offsetX,
-                        this.row_start + (y - 1) * (this.row_gap + 8));
+                    const fog = GEH.requestDrawImage(fogSrc!, effect, opacity);
+                    if (fog) {
+                        const dx = this.column_start + (x - 1) * (this.column_gap - 4) + offsetX;
+                        const dy = this.row_start + (y - 1) * (this.row_gap + 8);
+                        ctx.drawImage(fog, dx, dy, fog.width, fog.height);
+                    }
+                    else {
+                        const ori = GEH.requestDrawImage(fogSrc!);
+                        if (ori) {
+                            const dx = this.column_start + (x - 1) * (this.column_gap - 4) + offsetX;
+                            const dy = this.row_start + (y - 1) * (this.row_gap + 8);
+                            ctx.drawImage(ori, dx, dy, ori.width, ori.height);
+                        }
+                    }
                 }
             }
         }

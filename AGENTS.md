@@ -4,11 +4,11 @@
 - 前端游戏逻辑主要位于 `static/js` 目录下，由多个 TypeScript/ES 模块组成，涵盖 UI 组件、事件路由、关卡循环、实体（卡片、子弹、老鼠）和本地化文本。
 - **本项目已基于 TypeScript 构建，非必要请勿直接编辑 js 文件。**
 - 代码库依赖基于类的抽象、弱引用缓存和对象池（子弹、阳光、精灵动画）来保持低运行时分配。单例/组合类如 `EventHandler`、`Level` 和 `GameBattlefield` 负责协调资源、渲染和交互。
-- **渲染架构**：游戏已从纯 Canvas 2D 迁移到 **WebGL 渲染架构**，以提升性能并支持更高级的视觉特效。
+- **渲染架构**：游戏已完成从纯 Canvas 2D 到 **WebGL 渲染架构**的完整迁移，实现了性能提升和高级视觉特效支持。
 - 采用混合渲染策略：
   - **背景层 (WebGL)**：使用 `WebGLRenderer` 渲染大量实体（地图格子、敌人、子弹），以获得最大性能。
   - **前景层 (Canvas 2D)**：处理低频或复杂的矢量更新（UI 覆盖层、提示框、光标交互），利用 Canvas 2D 的便捷性。
-- 代码库使用 `IRenderer` 抽象接口来确保 WebGL 和 Canvas 2D 上下文之间的兼容性，提供 WebGL 不可用时的优雅回退机制。
+- 代码库严格使用 `IRenderer` 抽象接口来确保 WebGL 和 Canvas 2D 上下文之间的兼容性，提供 WebGL 不可用时的优雅回退机制。所有游戏实体已重构为使用统一的渲染接口。
 
 ## 文件导览 (File tour)
 ### `static/js/renderer/IRenderer.ts`
@@ -110,6 +110,14 @@
 
 ## 近期变更 (Recent Changes)
 - **WebGL 迁移完成**：渲染引擎已成功迁移至 WebGL，引入了 `static/js/renderer/*` 核心组件，大幅提升性能。
+- **代码清理**：
+  - 移除了未使用的 `.js` 构建产物（`Core.js`、`EventHandler.js`、`GameBattlefield.js`、`Level.js`、`Mice.js`、`Foods.js`、`SpriteAnimation.js` 等）。
+  - 删除了遗留的 Canvas 2D polyfill（`fillRoundRect`）和过时的兼容性代码。
+  - 清理了冗余的类型断言和临时调试代码。
+- **严格类型化 (Strict Typing)**：
+  - 重构了所有游戏实体（`Level`、`Sun`、`RogueMouse`、`Foods`、`Mice`、`Bullets`）以严格使用 `IRenderer | CanvasRenderingContext2D` 联合类型。
+  - 统一了渲染方法签名，确保类型安全和 WebGL 兼容性。
+  - 移除了对 Canvas 2D 特定 API 的直接依赖（除回退路径外）。
 - **资源路径统一 (EventHandler.ts, Core.ts, GameBattlefield.ts, i18n/index.ts)**：
   - 实现了 `EventHandler.getStaticPath()` 静态方法用于自动路径解析。
   - 自动检测部署环境（GitHub Pages 与 本地服务器），解决了 404 错误。
