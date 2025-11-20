@@ -2260,7 +2260,7 @@ class RogueMouse extends Mouse {
                     this.tick = this.stateLength - 1;
                     this.y -= 40;
                     if (this.target) {
-                        const ctx = level.Battlefield.ctxBG as CanvasRenderingContext2D;
+                        const ctx = level.Battlefield.ctxBG as IRenderer | CanvasRenderingContext2D;
                         if (this.target.layer_0) {
                             this.target.layer_0.y -= 40;
                             const img = GEH.requestDrawImage(this.target.layer_0.inside!);

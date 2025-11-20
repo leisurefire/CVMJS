@@ -2,22 +2,6 @@
 import { i18n, i18nLoadPromise } from "./i18n-preload.js";
 import EventHandler, { getLevelDetails } from "./EventHandler.js";
 export const GEH = new EventHandler();
-if (typeof CanvasRenderingContext2D !== "undefined" && !CanvasRenderingContext2D.prototype.fillRoundRect) {
-    CanvasRenderingContext2D.prototype.fillRoundRect = function (x, y, width, height, radius) {
-        this.beginPath();
-        this.moveTo(x + radius, y);
-        this.lineTo(x + width - radius, y);
-        this.arcTo(x + width, y, x + width, y + radius, radius);
-        this.lineTo(x + width, y + height - radius);
-        this.arcTo(x + width, y + height, x + width - radius, y + height, radius);
-        this.lineTo(x + radius, y + height);
-        this.arcTo(x, y + height, x, y + height - radius, radius);
-        this.lineTo(x, y + radius);
-        this.arcTo(x, y, x + radius, y, radius);
-        this.closePath();
-        this.fill();
-    };
-}
 export class MaterialButton extends HTMLElement {
     // private state
     #text = "";

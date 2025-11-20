@@ -922,15 +922,20 @@ class Level {
                 if (this.#LightDEG[i] === 1) {
                     effect = "opacity";
                     opacity = 0.64;
-                }
-                const fog = GEH.requestDrawImage(fogSrc, effect, opacity);
-                if (fog) {
-                    ctx.drawImage(fog, this.column_start + (x - 1) * (this.column_gap - 4) + offsetX, this.row_start + (y - 1) * (this.row_gap + 8));
-                }
-                else {
-                    const ori = GEH.requestDrawImage(fogSrc);
-                    if (ori)
-                        ctx.drawImage(ori, this.column_start + (x - 1) * (this.column_gap - 4) + offsetX, this.row_start + (y - 1) * (this.row_gap + 8));
+                    const fog = GEH.requestDrawImage(fogSrc, effect, opacity);
+                    if (fog) {
+                        const dx = this.column_start + (x - 1) * (this.column_gap - 4) + offsetX;
+                        const dy = this.row_start + (y - 1) * (this.row_gap + 8);
+                        ctx.drawImage(fog, dx, dy, fog.width, fog.height);
+                    }
+                    else {
+                        const ori = GEH.requestDrawImage(fogSrc);
+                        if (ori) {
+                            const dx = this.column_start + (x - 1) * (this.column_gap - 4) + offsetX;
+                            const dy = this.row_start + (y - 1) * (this.row_gap + 8);
+                            ctx.drawImage(ori, dx, dy, ori.width, ori.height);
+                        }
+                    }
                 }
             }
         }
