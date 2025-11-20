@@ -1083,7 +1083,7 @@ class HugeStove extends Stove {
     static cover = [Stove];
     static generate(x, y, star, skillLevel) {
         const food = level.Foods[y * level.column_num + x];
-        if (!food) {
+        if (!food || food.layer_1?.constructor === Character) {
             return false;
         }
         if (this.cover.includes(food.layer_1?.constructor)) {
