@@ -1,6 +1,6 @@
 "use strict";
 import { i18n, i18nLoadPromise } from "./i18n-preload.js";
-import EventHandler, { getLevelDetails } from "./EventHandler.js";
+import EventHandler, { getLevelDetails } from "./eventhandler/EventHandler.js";
 export const GEH = new EventHandler();
 export class MaterialButton extends HTMLElement {
     // private state

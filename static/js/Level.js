@@ -1,5 +1,5 @@
 var _a;
-import EventHandler from "./EventHandler.js";
+import EventHandler from "./eventhandler/EventHandler.js";
 import { i18n } from "./i18n/index.js";
 import { Cat, Character, Crab, getFoodDetails, Plate, RatNest } from "./Foods.js";
 import { GEH, ToastBox } from "./Core.js";

@@ -1,4 +1,4 @@
-import EventHandler from '../EventHandler.js';
+import EventHandler from '../eventhandler/EventHandler.js';
 
 // ---- Types ----
 type I18nPrimitive = string | number | boolean;
