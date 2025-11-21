@@ -98,7 +98,7 @@ export const getLevelDetails = async (type: number) => {
 
 // 受限音效节流：每个 origin 分音效名限流
 const restrictedAudioPlaybackTime: WeakMap<any, Map<string, number>> = new WeakMap();
-const restrictedAudio = new Set(['ken']); // 老鼠啃食更新是100ms，一只老鼠放两次很吵
+const restrictedAudio = new Set(['ken', 'jiubeideng']); // 老鼠啃食更新是100ms，一只老鼠放两次很吵
 
 // Sun 音效连击追踪
 let sunLastPlayTime = 0;
