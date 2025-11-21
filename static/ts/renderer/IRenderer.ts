@@ -116,6 +116,13 @@ export interface IRenderer {
     getCanvas(): HTMLCanvasElement;
 
     /**
+     * 调整画布大小
+     * @param width 新宽度
+     * @param height 新高度
+     */
+    resize(width: number, height: number): void;
+
+    /**
      * 释放渲染器资源
      */
     dispose(): void;

@@ -5,12 +5,6 @@ import { Stone } from "./Bullets.js";
 import { TubeIn } from "./Foods.js";
 import { level } from "./Level.js";
 import { i18n } from "./i18n-preload.js";
-/**
- * 类型守卫函数：判断ctx是否为IRenderer
- */
-function isIRenderer(ctx) {
-    return typeof ctx.setGlobalAlpha === "function";
-}
 export class Mouse {
     // ===== 基础属性 =====
     ctx = level.Battlefield.ctxBG;

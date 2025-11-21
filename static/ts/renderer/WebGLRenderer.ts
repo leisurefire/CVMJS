@@ -152,6 +152,14 @@ export class WebGLRenderer implements IRenderer {
         return this.canvas;
     }
 
+    resize(width: number, height: number): void {
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.gl.viewport(0, 0, width, height);
+        this.currentState.matrix = this.createIdentityMatrix();
+        this.updateMatrix();
+    }
+
     dispose(): void {
         this.batcher.flush();
         this.batcher.dispose();

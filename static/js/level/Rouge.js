@@ -12,6 +12,7 @@ export default class Rouge extends Level {
     constructor(level = 7, pivot = 0) {
         super(2000);
         this.level = level;
+        this.PrePlant(0, 1, 1);
         this.StartWaveCreate(pivot);
     }
 
