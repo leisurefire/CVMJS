@@ -62,6 +62,9 @@ class Level {
     #HugeWaveTag = 0; //当前是第几大波
     #HugeWave = [];
     #Sun = []; //火苗模块
+    get Suns() {
+        return this.#Sun;
+    }
     #SunNum = 50; //火苗数
     #lastSunNumDisplay = null;
     get SunNum() {
@@ -94,6 +97,9 @@ class Level {
     }
     Guardians = [];
     #Bullets = [];
+    get Bullets() {
+        return this.#Bullets;
+    }
     #Foods = Array.from({ length: this.row_num * this.column_num }, () => new MapGrid());
     get Foods() {
         return this.#Foods;
@@ -108,11 +114,26 @@ class Level {
         return this.#AirLane;
     }
     #FogColNum = -1;
+    get FogColNum() {
+        return this.#FogColNum;
+    }
+    set FogColNum(value) {
+        this.#FogColNum = value;
+    }
     #LightDEG;
+    get LightDEG() {
+        return this.#LightDEG;
+    }
     get #FogBlowTag() {
         return this.#FogBlowInterval > 0;
     }
     #FogBlowInterval = 0;
+    get FogBlowInterval() {
+        return this.#FogBlowInterval;
+    }
+    set FogBlowInterval(value) {
+        this.#FogBlowInterval = value;
+    }
     #CurrentWaveFullHealth = 0;
     #CurrentWaveNum = 0;
     #SummonRemainingTime = 2000;
@@ -133,8 +154,20 @@ class Level {
     _bulletPool = new Map();
     _sunPool = [];
     _summonQueue = [];
+    get sunPoolSize() {
+        return this._sunPool.length;
+    }
     // 动画管理器（独立管理所有动画相关逻辑）
     _animationManager;
+    get autoCollectInterval() {
+        return this.#autoCollectInterval;
+    }
+    set autoCollectInterval(value) {
+        this.#autoCollectInterval = value;
+    }
+    get animationManager() {
+        return this._animationManager;
+    }
     // 对象池方法: 获取或创建 Sun 实例
     // Sun 对象池与 SpriteAnimation 对象池辅助方法
     acquireSun(x, y, num, animation) {
@@ -778,7 +811,19 @@ class Level {
         if (ctx) {
             ctx.clearRect(0, 0, this.Battlefield.FrequentCanvas.width, this.Battlefield.FrequentCanvas.height);
             this.#requestUpdateBullets(ctx);
-            this.#requestRenderFog(ctx);
+            if (this.#LightDEG) {
+                const currentConstructor = this.constructor;
+                const fogSrc = currentConstructor.SRC.get("fog");
+                if (fogSrc) {
+                    this.Battlefield.renderFog(ctx, fogSrc, this.#LightDEG, this.#FogColNum, this.#FogBlowInterval, this.fogBlowAnimation, this.fogBlowAnimationLength);
+                }
+                if (this.fogBlowAnimation > 0) {
+                    this.fogBlowAnimation -= elapsed;
+                }
+                if (this.#FogBlowInterval > 0) {
+                    this.#FogBlowInterval -= elapsed;
+                }
+            }
             this.#requestSunBehavior(ctx);
             const { x, y, origin, picked } = this.Battlefield.Cursor;
             if (picked && origin) {
@@ -895,50 +940,6 @@ class Level {
     gameEventsHandlerFunc() {
         // start the bound frame loop
         this.levelTimer = requestAnimationFrame(this.#frameLoop);
-    }
-    #requestRenderFog(ctx) {
-        if (!this.#LightDEG)
-            return;
-        let offsetX = 24;
-        if (this.#FogBlowTag) {
-            this.#FogBlowInterval -= 50;
-            if (this.fogBlowAnimation > 0) {
-                offsetX += ((this.fogBlowAnimationLength - this.fogBlowAnimation) / this.fogBlowAnimationLength) * 2048;
-                this.fogBlowAnimation -= 50;
-            }
-            else
-                return;
-        }
-        const fogSrc = _a.SRC.get("fog");
-        for (let i = 0; i < this.#LightDEG.length; i++) {
-            const x = i % (this.column_num + 1);
-            const y = Math.floor(i / (this.column_num + 1));
-            if (x < this.column_num + 1 - this.#FogColNum) {
-                continue;
-            }
-            if (this.#LightDEG[i] < 2) {
-                let effect = null;
-                let opacity = null;
-                if (this.#LightDEG[i] === 1) {
-                    effect = "opacity";
-                    opacity = 0.64;
-                    const fog = GEH.requestDrawImage(fogSrc, effect, opacity);
-                    if (fog) {
-                        const dx = this.column_start + (x - 1) * (this.column_gap - 4) + offsetX;
-                        const dy = this.row_start + (y - 1) * (this.row_gap + 8);
-                        ctx.drawImage(fog, dx, dy, fog.width, fog.height);
-                    }
-                    else {
-                        const ori = GEH.requestDrawImage(fogSrc);
-                        if (ori) {
-                            const dx = this.column_start + (x - 1) * (this.column_gap - 4) + offsetX;
-                            const dy = this.row_start + (y - 1) * (this.row_gap + 8);
-                            ctx.drawImage(ori, dx, dy, ori.width, ori.height);
-                        }
-                    }
-                }
-            }
-        }
     }
     fogSet(colNum = 0) {
         if (!this.#LightDEG) {

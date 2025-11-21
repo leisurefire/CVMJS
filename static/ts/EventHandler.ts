@@ -100,9 +100,16 @@ export const getLevelDetails = async (type: number) => {
 const restrictedAudioPlaybackTime: WeakMap<any, Map<string, number>> = new WeakMap();
 const restrictedAudio = new Set(['ken']); // 老鼠啃食更新是100ms，一只老鼠放两次很吵
 
+// Sun 音效连击追踪
+let sunLastPlayTime = 0;
+let sunPitchOffset = 0;
+const SUN_COMBO_WINDOW = 1000; // 1秒内算连击
+const SUN_PITCH_STEP = 0.1; // 每次增加0.1倍速
+const SUN_MAX_PITCH = 2.0; // 最大2倍速
+
 let audioCtx: (AudioContext | null) = null;
 const effectBuffers = new Map<string, AudioBuffer>();
-async function playSfxWebAudio(name: string, volume = 1) {
+async function playSfxWebAudio(name: string, volume = 1, playbackRate = 1.0) {
     try {
         // @ts-ignore
         audioCtx ??= new (window as any).AudioContext();
@@ -117,6 +124,7 @@ async function playSfxWebAudio(name: string, volume = 1) {
         const gain = audioCtx!.createGain();
         gain.gain.value = volume;
         src.buffer = buf;
+        src.playbackRate.value = playbackRate;
         src.connect(gain).connect(audioCtx!.destination);
         src.start();
     } catch (e) {
@@ -567,10 +575,25 @@ export default class EventHandler {
                 perOrigin.set(name, now);
             }
 
+            // Sun 音效特殊处理：连击时提高音调
+            let playbackRate = 1.0;
+            if (name === 'sun') {
+                const timeSinceLastSun = now - sunLastPlayTime;
+                if (timeSinceLastSun <= SUN_COMBO_WINDOW) {
+                    // 在连击窗口内，增加音调
+                    sunPitchOffset = Math.min(sunPitchOffset + SUN_PITCH_STEP, SUN_MAX_PITCH - 1.0);
+                } else {
+                    // 超出连击窗口，重置音调
+                    sunPitchOffset = 0;
+                }
+                playbackRate = 1.0 + sunPitchOffset;
+                sunLastPlayTime = now;
+            }
+
             // 优先 WebAudio 播放短音效
             const webAudioEnabled = (this.#config?.webAudio ?? true);
             if (webAudioEnabled && (window as any).AudioContext) {
-                playSfxWebAudio(name, this.effectVolume);
+                playSfxWebAudio(name, this.effectVolume, playbackRate);
             }
         } catch (error) {
             ToastBox(`Cannot play this audio: ${error}`);
@@ -1052,23 +1075,9 @@ export default class EventHandler {
     }
 
     #resize = () => {
-
-        this.scale = document.documentElement.clientHeight / 600;	//提供缩放比例参数
+        this.scale = document.documentElement.clientHeight / 600;
         if (level?.Battlefield) {
-            const ctxBG = level.Battlefield.ctxBG;
-            if (ctxBG) {
-                ctxBG.setTransform(1, 0, 0, 1, 0, 0);
-                ctxBG.scale(this.scale, this.scale);
-            }
-            const ctxFG = level.Battlefield.ctxFG;
-            if (ctxFG) {
-                ctxFG.setTransform(1, 0, 0, 1, 0, 0);
-                ctxFG.scale(this.scale, this.scale);
-            }
-
-            level.Battlefield.SunBar.style.left = `${140 * this.scale}px`;
-            level.Battlefield.Shovel.style.left = `${140 * this.scale + 136}px`
-            level.Battlefield.Cards.style.transform = `scale(${this.scale})`;
+            level.Battlefield.resize(this.scale);
         }
     }
 

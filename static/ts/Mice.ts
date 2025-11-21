@@ -8,13 +8,6 @@ import { MapGrid } from "./GameBattlefield.js";
 import { i18n } from "./i18n-preload.js";
 import type { IRenderer } from "./renderer/IRenderer.js";
 
-/**
- * 类型守卫函数：判断ctx是否为IRenderer
- */
-function isIRenderer(ctx: IRenderer | CanvasRenderingContext2D): ctx is IRenderer {
-    return typeof (ctx as IRenderer).setGlobalAlpha === "function";
-}
-
 export class Mouse {
     // ===== 基础属性 =====
     ctx = level.Battlefield.ctxBG as IRenderer | CanvasRenderingContext2D;

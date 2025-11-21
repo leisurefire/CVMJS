@@ -66,6 +66,9 @@ export default class Level {
     #HugeWave: number[] = [];
 
     #Sun: Sun[] = []; 				   	//火苗模块
+    get Suns() {
+        return this.#Sun;
+    }
     #SunNum = 50; 				//火苗数
     #lastSunNumDisplay: string | null = null;
     get SunNum() {
@@ -99,6 +102,9 @@ export default class Level {
     }
     Guardians: Cat[] | Crab[] = [];
     #Bullets: Bullet[] = [];
+    get Bullets() {
+        return this.#Bullets;
+    }
     #Foods = Array.from({ length: this.row_num * this.column_num }, () => new MapGrid());
     get Foods() {
         return this.#Foods;
@@ -113,11 +119,26 @@ export default class Level {
         return this.#AirLane;
     }
     #FogColNum = -1;
+    get FogColNum() {
+        return this.#FogColNum;
+    }
+    set FogColNum(value: number) {
+        this.#FogColNum = value;
+    }
     #LightDEG: Int8Array | undefined;
+    get LightDEG() {
+        return this.#LightDEG;
+    }
     get #FogBlowTag() {
         return this.#FogBlowInterval > 0;
     }
     #FogBlowInterval = 0;
+    get FogBlowInterval() {
+        return this.#FogBlowInterval;
+    }
+    set FogBlowInterval(value: number) {
+        this.#FogBlowInterval = value;
+    }
     #CurrentWaveFullHealth = 0;
     #CurrentWaveNum = 0;
     #SummonRemainingTime = 2000;
@@ -140,8 +161,21 @@ export default class Level {
     private _bulletPool: Map<any, Bullet[]> = new Map();
     private _sunPool: Sun[] = [];
     private _summonQueue: Mouse[] = [];
+    get sunPoolSize() {
+        return this._sunPool.length;
+    }
     // 动画管理器（独立管理所有动画相关逻辑）
     private _animationManager!: SpriteAnimationManager;
+
+    get autoCollectInterval() {
+        return this.#autoCollectInterval;
+    }
+    set autoCollectInterval(value: number) {
+        this.#autoCollectInterval = value;
+    }
+    get animationManager() {
+        return this._animationManager;
+    }
 
     // 对象池方法: 获取或创建 Sun 实例
     // Sun 对象池与 SpriteAnimation 对象池辅助方法
@@ -155,7 +189,7 @@ export default class Level {
         return sun;
     }
 
-    private releaseSun(sun: Sun) {
+    releaseSun(sun: Sun) {
         try { sun.onRelease(); } catch { }
         this._sunPool.push(sun);
     }
@@ -850,7 +884,19 @@ export default class Level {
         if (ctx) {
             ctx.clearRect(0, 0, this.Battlefield.FrequentCanvas.width, this.Battlefield.FrequentCanvas.height);
             this.#requestUpdateBullets(ctx);
-            this.#requestRenderFog(ctx);
+            if (this.#LightDEG) {
+                const currentConstructor = this.constructor as typeof Level;
+                const fogSrc = currentConstructor.SRC.get("fog");
+                if (fogSrc) {
+                    this.Battlefield.renderFog(ctx, fogSrc, this.#LightDEG, this.#FogColNum, this.#FogBlowInterval, this.fogBlowAnimation, this.fogBlowAnimationLength);
+                }
+                if (this.fogBlowAnimation > 0) {
+                    this.fogBlowAnimation -= elapsed;
+                }
+                if (this.#FogBlowInterval > 0) {
+                    this.#FogBlowInterval -= elapsed;
+                }
+            }
             this.#requestSunBehavior(ctx);
             const { x, y, origin, picked } = this.Battlefield.Cursor;
             if (picked && origin) {
@@ -974,56 +1020,9 @@ export default class Level {
         this.#AirLane = airLaneTemp;
     }
 
-
     gameEventsHandlerFunc() {
         // start the bound frame loop
         this.levelTimer = requestAnimationFrame(this.#frameLoop);
-    }
-
-    #requestRenderFog(ctx: IRenderer | CanvasRenderingContext2D) {
-        if (!this.#LightDEG) return;
-        let offsetX = 24;
-        if (this.#FogBlowTag) {
-            this.#FogBlowInterval -= 50;
-            if (this.fogBlowAnimation > 0) {
-                offsetX += ((this.fogBlowAnimationLength - this.fogBlowAnimation) / this.fogBlowAnimationLength) * 2048;
-                this.fogBlowAnimation -= 50;
-            }
-            else return;
-        }
-        const fogSrc = Level.SRC.get("fog");
-
-        for (let i = 0; i < this.#LightDEG.length; i++) {
-            const x = i % (this.column_num + 1);
-            const y = Math.floor(i / (this.column_num + 1));
-
-            if (x < this.column_num + 1 - this.#FogColNum) {
-                continue;
-            }
-            if (this.#LightDEG[i] < 2) {
-                let effect = null;
-                let opacity = null;
-
-                if (this.#LightDEG[i] === 1) {
-                    effect = "opacity";
-                    opacity = 0.64;
-                    const fog = GEH.requestDrawImage(fogSrc!, effect, opacity);
-                    if (fog) {
-                        const dx = this.column_start + (x - 1) * (this.column_gap - 4) + offsetX;
-                        const dy = this.row_start + (y - 1) * (this.row_gap + 8);
-                        ctx.drawImage(fog, dx, dy, fog.width, fog.height);
-                    }
-                    else {
-                        const ori = GEH.requestDrawImage(fogSrc!);
-                        if (ori) {
-                            const dx = this.column_start + (x - 1) * (this.column_gap - 4) + offsetX;
-                            const dy = this.row_start + (y - 1) * (this.row_gap + 8);
-                            ctx.drawImage(ori, dx, dy, ori.width, ori.height);
-                        }
-                    }
-                }
-            }
-        }
     }
 
     fogSet(colNum = 0) {

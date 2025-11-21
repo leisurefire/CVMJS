@@ -1415,8 +1415,45 @@ export class GameBattlefield extends HTMLElement {
             miceTemp[mouse.row][mouse.column].push(mouse);
         }
     };
-    updateForeground = () => {
-    };
+    renderFog(ctx, fogSrc, lightDEG, fogColNum, fogBlowInterval, fogBlowAnimation, fogBlowAnimationLength) {
+        if (!lightDEG)
+            return;
+        let offsetX = 24;
+        if (fogBlowInterval > 0) {
+            if (fogBlowAnimation > 0) {
+                offsetX += ((fogBlowAnimationLength - fogBlowAnimation) / fogBlowAnimationLength) * 2048;
+            }
+            else
+                return;
+        }
+        for (let i = 0; i < lightDEG.length; i++) {
+            const x = i % (level.column_num + 1);
+            const y = Math.floor(i / (level.column_num + 1));
+            if (x < level.column_num + 1 - fogColNum)
+                continue;
+            const deg = lightDEG[i];
+            if (deg >= 2)
+                continue;
+            const dx = level.column_start + (x - 1) * (level.column_gap - 4) + offsetX;
+            const dy = level.row_start + (y - 1) * (level.row_gap + 8);
+            if (deg === 1) {
+                const fog = GEH.requestDrawImage(fogSrc, "opacity", 0.64);
+                if (fog) {
+                    ctx.drawImage(fog, dx, dy, fog.width, fog.height);
+                }
+                else {
+                    const ori = GEH.requestDrawImage(fogSrc);
+                    if (ori)
+                        ctx.drawImage(ori, dx, dy, ori.width, ori.height);
+                }
+            }
+            else if (deg === 0) {
+                const fog = GEH.requestDrawImage(fogSrc);
+                if (fog)
+                    ctx.drawImage(fog, dx, dy, fog.width, fog.height);
+            }
+        }
+    }
     updateBullets = () => {
     };
     createBossBar = (target) => {
@@ -1428,6 +1465,29 @@ export class GameBattlefield extends HTMLElement {
         this.BossBar.appendChild(this.BossProgress);
         target.progress = this.BossProgress;
     };
+    resize(scale) {
+        const width = document.documentElement.clientWidth;
+        const height = document.documentElement.clientHeight;
+        this.Canvas.width = width;
+        this.Canvas.height = height;
+        this.FrequentCanvas.width = width;
+        this.FrequentCanvas.height = height;
+        if (this.useWebGL && this.renderer) {
+            this.renderer.resize(width, height);
+            this.renderer.scale(scale, scale);
+        }
+        else if (this.ctxBG) {
+            this.ctxBG.setTransform(1, 0, 0, 1, 0, 0);
+            this.ctxBG.scale(scale, scale);
+        }
+        if (this.ctxFG) {
+            this.ctxFG.setTransform(1, 0, 0, 1, 0, 0);
+            this.ctxFG.scale(scale, scale);
+        }
+        this.SunBar.style.left = `${140 * scale}px`;
+        this.Shovel.style.left = `${140 * scale + 136}px`;
+        this.Cards.style.transform = `scale(${scale})`;
+    }
     remove() {
         document.removeEventListener('keydown', this.#shortCutHandler);
         if (this.renderer) {

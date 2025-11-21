@@ -4,12 +4,6 @@ import { Boomerang, Bun, Chocolate, ChocolateDot, CoffeeBubble, Egg, FreezingBun
 import { level } from "./Level.js";
 import { t } from "./i18n/index.js";
 import { CommonMouse } from "./Mice.js";
-/**
- * 类型守卫函数：判断ctx是否为IRenderer
- */
-function isIRenderer(ctx) {
-    return typeof ctx.setGlobalAlpha === "function";
-}
 const specialGenerate = function (x, y, star = 0, skillLevel = 0, type = 0) {
     const food = level.Foods[y * level.column_num + x];
     switch (type) {
