@@ -1,4 +1,4 @@
-import EventHandler from "./EventHandler.js";
+import EventHandler from "./eventhandler/EventHandler.js";
 import { i18n } from "./i18n/index.js";
 import { Character, Plate } from "./Foods.js";
 import { GEH, WarnMessageBox } from "./Core.js";

@@ -1,4 +1,4 @@
-import EventHandler from "./EventHandler.js";
+import EventHandler from "./eventhandler/EventHandler.js";
 import { GEH } from "./Core.js";
 import { Boomerang, Bun, Chocolate, ChocolateDot, CoffeeBubble, Egg, FreezingBun, Missile, SausageAir, SausageLand, SnowEgg, Star, WaterBullet, WineBullet } from "./Bullets.js";
 import { level } from "./Level.js";

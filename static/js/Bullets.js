@@ -1,4 +1,4 @@
-import EventHandler from "./EventHandler.js";
+import EventHandler from "./eventhandler/EventHandler.js";
 import { GEH } from "./Core.js";
 import { level } from "./Level.js";
 /**

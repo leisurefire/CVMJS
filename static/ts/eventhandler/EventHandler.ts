@@ -1,7 +1,7 @@
 "use strict";
-import { i18n } from "./i18n/index.js";
-import { FoodDetails, getFoodDetails } from "./Foods.js";
-import { level } from "./Level.js";
+import { i18n } from "../i18n/index.js";
+import { FoodDetails, getFoodDetails } from "../Foods.js";
+import { level } from "../Level.js";
 
 // 从Core.js导入必要的组件
 import {
@@ -15,7 +15,15 @@ import {
     MaterialSwitch,
     ToastBox,
     WarnMessageBox
-} from "./Core.js";
+} from "../Core.js";
+
+// 导入拆分的类
+import { StoreItem } from "./StoreItem.js";
+import { Card } from "./Card.js";
+import { BackpackCard } from "./BackpackCard.js";
+
+// 重新导出Card类供其他模块使用
+export { Card } from "./Card.js";
 
 // ---- Types ----
 interface IArchiveCard { type: number; star: number; skillLevel: number }
@@ -63,102 +71,99 @@ document.ondragstart = function () {    //禁止对img的拖拽影响观感
 document.oncontextmenu = function () {
     return false;						//做了右键可以放回，需要屏蔽默认右键菜单
 }
-const levels = new Map([
-    [0, "CookieIsland"],
-    [1, "SaladIsland"],
-    [2, "SaladIslandWater"],
-    [3, "MousseIsland"],
-    [4, "ChampagneIsland"],
-    [5, "ChampagneIslandWater"],
-    [6, "Temple"],
-    [7, "PuddingIslandDay"],
-    [8, "PuddingIslandNight"],
-    [9, "CocoaIslandDay"],
-    [10, "CocoaIslandNight"],
-    [11, "CurryIslandDay"],
-    [12, "CurryIslandNight"],
-    [13, "Abyss"],
-    [20, "MarshmallowSky"],
-    [99, "Rouge"],
-]);
-const DataBase = "CVMJSDataBase";
-const levelDetailsCache = new Map<number, Promise<any>>();
+
+
+
+
 export const getLevelDetails = async (type: number) => {
     try {
-        if (!levelDetailsCache.has(type)) {
+        if (!EventHandler.levelDetailsCache.has(type)) {
+            const levelName = EventHandler.LEVELS.get(type);
+            if (!levelName) throw new Error(`Unknown level type: ${type}`);
             // noinspection TypeScriptCheckImport
-            const p = import(`./level/${levels.get(type)}.js`).then(m => m.default);
-            levelDetailsCache.set(type, p);
+            const p = import(`../level/${levelName}.js`).then(m => m.default);
+            EventHandler.levelDetailsCache.set(type, p);
         }
-        return await levelDetailsCache.get(type)!;
+        return await EventHandler.levelDetailsCache.get(type)!;
     } catch (error) {
         ToastBox(`${error}`);
     }
 }
 
-// 受限音效节流：每个 origin 分音效名限流
-const restrictedAudioPlaybackTime: WeakMap<any, Map<string, number>> = new WeakMap();
-const restrictedAudio = new Set(['ken', 'jiubeideng']); // 老鼠啃食更新是100ms，一只老鼠放两次很吵
 
-// Sun 音效连击追踪
-let sunLastPlayTime = 0;
-let sunPitchOffset = 0;
-const SUN_COMBO_WINDOW = 1000; // 1秒内算连击
-const SUN_PITCH_STEP = 0.1; // 每次增加0.1倍速
-const SUN_MAX_PITCH = 2.0; // 最大2倍速
 
-let audioCtx: (AudioContext | null) = null;
-const effectBuffers = new Map<string, AudioBuffer>();
-async function playSfxWebAudio(name: string, volume = 1, playbackRate = 1.0) {
-    try {
-        // @ts-ignore
-        audioCtx ??= new (window as any).AudioContext();
-        let buf = effectBuffers.get(name);
-        if (!buf) {
-            const res = await fetch(EventHandler.getStaticPath(`audio/${name}.mp3`));
-            const arr = await res.arrayBuffer();
-            buf = await audioCtx!.decodeAudioData(arr);
-            effectBuffers.set(name, buf);
-        }
-        const src = audioCtx!.createBufferSource();
-        const gain = audioCtx!.createGain();
-        gain.gain.value = volume;
-        src.buffer = buf;
-        src.playbackRate.value = playbackRate;
-        src.connect(gain).connect(audioCtx!.destination);
-        src.start();
-    } catch (e) {
-        // fallback 在外层继续
-    }
-}
-
-const gameMusic = new Map([
-    [0, "chengzhen"],          //城镇
-    [1, "zhandou_day_1"],      //美味岛日先锋
-    [2, "zhandou_night_1"],    //美味岛夜先锋
-    [3, "zhandou_day_forward_1"], //美味岛日精英
-    [4, null],                 //美味岛夜精英
-    [5, "shendian"],           //美味岛核心关卡先锋
-    [6, null],                 //美味岛核心关卡先锋
-    [7, "boss_day_1"],         //美味岛日Boss
-    [8, null],                 //美味岛夜Boss
-    [9, "zhandou_day_2"],
-    [17, "zhandou_day_3"],     //浮空岛日先锋
-    [99, "zhandou_day_4"],
-]);
-const effectCanvas: OffscreenCanvas | HTMLCanvasElement = (typeof OffscreenCanvas !== 'undefined') ? new OffscreenCanvas(100, 100) as OffscreenCanvas : document.createElement('canvas');
-
-const ctx = (effectCanvas as any).getContext('2d', { willReadFrequently: true });
 
 // IndexedDB 版本控制，资源升级时可选择清空缓存
-const DB_VERSION = 2;
-const DB_STORE = 'ImageBuffer';
 
-// 空闲时预取
-type IdleCb = (deadline: any) => void;
-const idle = (cb: IdleCb) => (window as any).requestIdleCallback ? (window as any).requestIdleCallback(cb as any) : setTimeout(cb as any, 0);
+
 
 export default class EventHandler {
+    // ===== 静态常量 =====
+    static readonly LEVELS = new Map([
+        [0, "CookieIsland"],
+        [1, "SaladIsland"],
+        [2, "SaladIslandWater"],
+        [3, "MousseIsland"],
+        [4, "ChampagneIsland"],
+        [5, "ChampagneIslandWater"],
+        [6, "Temple"],
+        [7, "PuddingIslandDay"],
+        [8, "PuddingIslandNight"],
+        [9, "CocoaIslandDay"],
+        [10, "CocoaIslandNight"],
+        [11, "CurryIslandDay"],
+        [12, "CurryIslandNight"],
+        [13, "Abyss"],
+        [20, "MarshmallowSky"],
+        [99, "Rouge"],
+    ]);
+
+    static readonly GAME_MUSIC = new Map([
+        [0, "chengzhen"],
+        [1, "zhandou_day_1"],
+        [2, "zhandou_night_1"],
+        [3, "zhandou_day_forward_1"],
+        [4, null],
+        [5, "shendian"],
+        [6, null],
+        [7, "boss_day_1"],
+        [8, null],
+        [9, "zhandou_day_2"],
+        [17, "zhandou_day_3"],
+        [99, "zhandou_day_4"],
+    ]);
+
+    static readonly RESTRICTED_AUDIO = new Set(['ken', 'jiubeideng']);
+    static readonly DATABASE_NAME = "CVMJSDataBase";
+    static readonly DB_VERSION = 2;
+    static readonly DB_STORE = 'ImageBuffer';
+
+    // 关卡详情缓存
+    static #levelDetailsCache = new Map<number, Promise<any>>();
+    // 音频相关静态属性
+    static #restrictedAudioPlaybackTime: WeakMap<any, Map<string, number>> = new WeakMap();
+    static #sunLastPlayTime = 0;
+    static #sunPitchOffset = 0;
+    static readonly SUN_COMBO_WINDOW = 1000;
+    static readonly SUN_PITCH_STEP = 0.1;
+    static readonly SUN_MAX_PITCH = 2.0;
+    static #audioCtx: AudioContext | null = null;
+    static #effectBuffers = new Map<string, AudioBuffer>();
+
+    // Canvas 相关静态属性
+    static #effectCanvas: OffscreenCanvas | HTMLCanvasElement = (typeof OffscreenCanvas !== 'undefined')
+        ? new OffscreenCanvas(100, 100) as OffscreenCanvas
+        : document.createElement('canvas');
+    static #ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
+
+    static #getCtx() {
+        if (!EventHandler.#ctx) {
+            EventHandler.#ctx = (EventHandler.#effectCanvas as any).getContext('2d', { willReadFrequently: true });
+        }
+        return EventHandler.#ctx;
+    }
+
+
 
     private _staticBaseUrl: string = "";
 
@@ -289,7 +294,7 @@ export default class EventHandler {
             this.#startTick();
 
             // 空闲时对卡片图像做轻量预热
-            idle(() => {
+            EventHandler.idle(() => {
                 try {
                     const n = Math.min(this.cardBag.length, 12);
                     for (let i = 0; i < n; i++) {
@@ -553,6 +558,41 @@ export default class EventHandler {
         }
     };
 
+
+    // 空闲时预取
+
+    static get levelDetailsCache() {
+        return EventHandler.#levelDetailsCache;
+    }
+
+    static idle(cb: (deadline: any) => void) {
+        return (window as any).requestIdleCallback
+            ? (window as any).requestIdleCallback(cb as any)
+            : setTimeout(cb as any, 0);
+    }
+
+    static async playSfxWebAudio(name: string, volume = 1, playbackRate = 1.0) {
+        try {
+            EventHandler.#audioCtx ??= new (window as any).AudioContext();
+            let buf = EventHandler.#effectBuffers.get(name);
+            if (!buf) {
+                const res = await fetch(EventHandler.getStaticPath(`audio/${name}.mp3`));
+                const arr = await res.arrayBuffer();
+                buf = await EventHandler.#audioCtx!.decodeAudioData(arr);
+                EventHandler.#effectBuffers.set(name, buf);
+            }
+            const src = EventHandler.#audioCtx!.createBufferSource();
+            const gain = EventHandler.#audioCtx!.createGain();
+            gain.gain.value = volume;
+            src.buffer = buf;
+            src.playbackRate.value = playbackRate;
+            src.connect(gain).connect(EventHandler.#audioCtx!.destination);
+            src.start();
+        } catch (e) {
+            // fallback 在外层继续
+        }
+    }
+
     static getPositionX = (x: number) => {		//获得x坐标，浮点型
         return (x - level.column_start) / level.row_gap;
     }
@@ -563,37 +603,37 @@ export default class EventHandler {
 
     requestPlayAudio(name: string, origin: any = null) {
         try {
-            if (origin === null && restrictedAudio.has(name)) return;
+            if (origin === null && EventHandler.RESTRICTED_AUDIO.has(name)) return;
 
             const now = Date.now();
             if (origin !== null) {
-                let perOrigin = restrictedAudioPlaybackTime.get(origin);
-                if (!perOrigin) { perOrigin = new Map<string, number>(); restrictedAudioPlaybackTime.set(origin, perOrigin); }
+                let perOrigin = EventHandler.#restrictedAudioPlaybackTime.get(origin);
+                if (!perOrigin) { perOrigin = new Map<string, number>(); EventHandler.#restrictedAudioPlaybackTime.set(origin, perOrigin); }
                 const last = perOrigin.get(name) || 0;
                 const limit = this.#config?.audioLimitMs ?? 1000;
-                if (now - last < limit && restrictedAudio.has(name)) return;
+                if (now - last < limit && EventHandler.RESTRICTED_AUDIO.has(name)) return;
                 perOrigin.set(name, now);
             }
 
             // Sun 音效特殊处理：连击时提高音调
             let playbackRate = 1.0;
             if (name === 'sun') {
-                const timeSinceLastSun = now - sunLastPlayTime;
-                if (timeSinceLastSun <= SUN_COMBO_WINDOW) {
+                const timeSinceLastSun = now - EventHandler.#sunLastPlayTime;
+                if (timeSinceLastSun <= EventHandler.SUN_COMBO_WINDOW) {
                     // 在连击窗口内，增加音调
-                    sunPitchOffset = Math.min(sunPitchOffset + SUN_PITCH_STEP, SUN_MAX_PITCH - 1.0);
+                    EventHandler.#sunPitchOffset = Math.min(EventHandler.#sunPitchOffset + EventHandler.SUN_PITCH_STEP, EventHandler.SUN_MAX_PITCH - 1.0);
                 } else {
                     // 超出连击窗口，重置音调
-                    sunPitchOffset = 0;
+                    EventHandler.#sunPitchOffset = 0;
                 }
-                playbackRate = 1.0 + sunPitchOffset;
-                sunLastPlayTime = now;
+                playbackRate = 1.0 + EventHandler.#sunPitchOffset;
+                EventHandler.#sunLastPlayTime = now;
             }
 
             // 优先 WebAudio 播放短音效
             const webAudioEnabled = (this.#config?.webAudio ?? true);
             if (webAudioEnabled && (window as any).AudioContext) {
-                playSfxWebAudio(name, this.effectVolume, playbackRate);
+                EventHandler.playSfxWebAudio(name, this.effectVolume, playbackRate);
             }
         } catch (error) {
             ToastBox(`Cannot play this audio: ${error}`);
@@ -602,7 +642,7 @@ export default class EventHandler {
 
 
     requestBackMusicChange(type: number) {
-        const music = gameMusic.get(type);
+        const music = EventHandler.GAME_MUSIC.get(type);
         if (music) {
             try {
                 EventHandler.backgroundMusic.src = EventHandler.getStaticPath(`audio/${music}.mp3`);
@@ -669,8 +709,8 @@ export default class EventHandler {
                 }
             }
 
-            const request = indexedDB.open(DataBase, DB_VERSION);
-            const storeName = DB_STORE;
+            const request = indexedDB.open(EventHandler.DATABASE_NAME, EventHandler.DB_VERSION);
+            const storeName = EventHandler.DB_STORE;
 
             request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
                 const db = (event.target as IDBOpenDBRequest).result;
@@ -793,11 +833,12 @@ export default class EventHandler {
             return EventHandler.#images.get(effectKey);
         }
 
-        effectCanvas.width = img.width;
-        effectCanvas.height = img.height;
+        EventHandler.#effectCanvas.width = img.width;
+        EventHandler.#effectCanvas.height = img.height;
 
+        const ctx = EventHandler.#getCtx();
         if (ctx) {
-            ctx.clearRect(0, 0, effectCanvas.width, effectCanvas.height);
+            ctx.clearRect(0, 0, EventHandler.#effectCanvas.width, EventHandler.#effectCanvas.height);
             switch (effect) {
                 case "damaged":
                     this.#applyDamagedEffect(ctx, img);
@@ -817,7 +858,7 @@ export default class EventHandler {
             }
         }
 
-        const effectImg = await createImageBitmap(effectCanvas);
+        const effectImg = await createImageBitmap(EventHandler.#effectCanvas);
         EventHandler.#images.set(effectKey, effectImg);
         return effectImg;
     }
@@ -889,8 +930,8 @@ export default class EventHandler {
         };
 
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DataBase, DB_VERSION);
-            const storeName = DB_STORE;
+            const request = indexedDB.open(EventHandler.DATABASE_NAME, EventHandler.DB_VERSION);
+            const storeName = EventHandler.DB_STORE;
 
             request.onerror = () => reject(request.error);
             request.onsuccess = async (event) => {
@@ -1394,490 +1435,3 @@ export default class EventHandler {
     }
 }
 
-class StoreItem {
-
-    entity = document.createElement("div");
-    item_img = document.createElement("img");
-    item_text = document.createElement("p");
-    price: number;
-    detail: any;
-
-    constructor(type: number) {
-        this.detail = getFoodDetails(type);
-        this.price = this.detail.price || 900;
-
-        this.item_img.src = EventHandler.getStaticPath(`images/cards/${this.detail.name}.png`);
-        this.item_text.innerText = this.price.toString();
-
-        this.entity.appendChild(this.item_img);
-        this.entity.appendChild(this.item_text);
-
-        const storeBox = document.getElementById('storeBox');
-        if (storeBox) {
-            storeBox.appendChild(this.entity);
-            this.entity.onmouseenter = () => {
-                this.item_img.style.boxShadow = "white 0 0 0 4px";
-                let box_x = document.createElement('div');
-                let box_y = document.createElement('div');
-                box_x.id = 'storeItemBoxX';
-                box_y.id = 'storeItemBoxY';
-                box_x.style.top = (this.entity.offsetTop - 6) + "px";
-                box_x.style.left = (this.entity.offsetLeft) + "px";
-                box_x.style.height = (this.entity.offsetHeight) + "px";
-                box_x.style.opacity = '0';
-
-                box_y.style.width = (this.entity.offsetWidth - 14) + "px";
-                box_y.style.top = (this.entity.offsetTop - 6) + "px";
-                box_y.style.left = (this.entity.offsetLeft) + "px";
-                box_y.style.opacity = '0';
-
-                storeBox.appendChild(box_x);
-                storeBox.appendChild(box_y);
-
-                setTimeout(() => {
-                    box_x.style.left = "24px";
-                    box_y.style.top = '18px';
-                    box_x.style.width = 'calc(100% - 64px)';
-                    box_y.style.height = 'calc(100% - 48px)';
-                    box_x.style.opacity = "1";
-                    box_y.style.opacity = "1";
-                    box_x.style.filter = "blur(0)";
-                    box_y.style.filter = "blur(0)";
-                }, 100);
-            }
-
-            this.entity.onmouseleave = () => {
-                let box_x = document.getElementById('storeItemBoxX');
-                if (box_x) box_x.remove();
-                let box_y = document.getElementById('storeItemBoxY');
-                if (box_y) box_y.remove();
-                this.item_img.style.boxShadow = "transparent 0 0 0 2px";
-            }
-        }
-    }
-}
-
-export class Card extends HTMLElement {
-    speed = 1;
-    name: string | undefined;
-    coolTime: number = 7500;
-    star: number = 0;
-    skillLevel: number = 0;
-    cost: number = 50;
-    #type = 0;
-    #remainTime = 0;
-    #entity = new Image();
-    #details = document.createElement('div');
-    #overlay = document.createElement('div');
-    #style = document.createElement('style');
-    #cost = document.createElement('span');
-
-    constructor(type = 0, star = 0, skill_level = 0) {
-        super();
-        const style = {
-            height: "3.5rem",
-            borderRadius: "0.75rem",
-            overflow: "hidden",
-            boxShadow: "var(--shadow)",
-            position: "relative",
-        }
-        Object.assign(this.style, style);
-        this.type = type;
-        this.star = star;
-        this.skillLevel = skill_level;
-        this.#details.className = "game-card-details";
-        this.attachShadow({ mode: "open" });
-        this.#style.textContent = `
-            :host(.disabled) img{ filter: brightness(50%); }
-            :host(.notenough) span{ color: red; }
-            img{
-                width: 100%;
-                height: 100%;
-            }
-            span{
-                position: absolute;
-                right: 0.75rem;
-                bottom: 0.125rem;
-                font-size: 0.75rem;
-                font-weight: 600;
-            }
-            div{
-                top: 0;
-                left: 0;
-                position: absolute;
-                width: 100%;
-                background-color: rgba(0,0,0,.32);
-            }
-        `
-
-        if (this.shadowRoot) {
-            this.shadowRoot.append(this.#style);
-            this.shadowRoot.append(this.#entity);
-            this.shadowRoot.append(this.#cost);
-            this.shadowRoot.append(this.#overlay);
-        }
-        this.addEventListener('click', this.handleClick);
-        this.addEventListener('mouseenter', this.showDetails);
-        this.addEventListener('mouseleave', this.hideDetails);
-    }
-
-    get type() {
-        return this.#type;
-    }
-
-    set type(value) {
-        try {
-            const detail = getFoodDetails(value);
-            if (detail) {
-                const { name, coolTime, cost } = detail || {};
-                this.name = name;
-                this.coolTime = coolTime;
-                this.cost = cost;
-                this.#cost.textContent = cost.toString();
-                this.#entity.src = EventHandler.getStaticPath(`images/cards/${this.name}.png`);
-            }
-        } catch (error: any) {
-            ToastBox(error);
-        }
-        this.#type = value;
-    }
-
-    get cooling() {
-        return this.#remainTime > 0;
-    }
-
-    get remainTime() {
-        return this.#remainTime;
-    }
-
-    set remainTime(value: number) {
-        if (GEH.debug) {
-            this.#remainTime = 0;
-        }
-        else {
-            value = Math.max(value, 0);
-            const percent = this.coolTime > 0 ? (value / this.coolTime * 100) : 0;
-            if (percent <= 5) {
-                this.#overlay.style.height = `0`;
-            } else {
-                this.#overlay.style.height = `${percent}%`;
-            }
-            this.#remainTime = value;
-        }
-    }
-
-
-    get detailsHTML() {
-        const detail = getFoodDetails(this.type);
-        if (detail) {
-            let text = "";
-            if (level.SunNum >= this.cost) {
-                if (this.cooling) {
-                    text += `<span>${i18n.t("GAME_ERROR_CODE_006")}</span>`;
-                }
-            } else {
-                text += `<span>${i18n.t("GAME_ERROR_CODE_005")}</span>`;
-            }
-            text += `<strong>${detail.cName}</strong><br>${detail.description}`;
-            if (detail.addCost && this.cost - detail.cost > 0) {
-                text += `<br><span>${i18n.t("GAME_ERROR_CODE_007")}(${this.cost - detail.cost})</font>`;
-            }
-            return text;
-        }
-    }
-
-    showDetails = () => {
-        const rect = this.getBoundingClientRect();
-        this.#details.style.left = `calc(${rect.x + rect.width}px + 1rem)`;
-        this.#details.style.top = `calc(${rect.y + rect.height / 2}px)`;
-        this.#details.style.zIndex = `11111`;
-        this.#details.innerHTML = this.detailsHTML || "";
-        level.Battlefield.appendChild(this.#details);
-    }
-
-    hideDetails = () => {
-        this.#details.remove();
-    }
-
-    handleClick = (ev: MouseEvent) => {
-        if (level.Battlefield.Cursor.picked) {
-            return false;
-        }
-        if (level.SunNum < this.cost && !GEH.debug) {
-            level.Battlefield.SunBar.style.animation = `NOT_ENOUGH_SUN 0.64s cubic-bezier(0.4, 0, 0.2, 1)`;
-            return false;
-        }
-        if (this.cooling) {
-            return false;
-        }
-        GEH.requestPlayAudio("naka");
-        const detail = getFoodDetails(this.type);
-        if (detail) {
-            const Handler = {
-                src: EventHandler.getStaticPath(`images/foods/${this.name}/idle.png`),
-                slot: this,
-                offset: detail.offset,
-                frames: detail.idleLength,
-                func: ({ positionX, positionY }: { positionX: number; positionY: number }) => {
-                    if (detail) {
-                        return detail.generate(positionX, positionY, this.star, this.skillLevel);
-                    } else {
-                        return false;
-                    }
-                },
-                successFunc: () => {
-                    this.remainTime = this.coolTime;
-                },
-                failFunc: () => {
-                    level.SunNum += this.cost;
-                }
-            }
-            if (!GEH.debug) {
-                level.SunNum -= this.cost;
-            }
-            level.Battlefield.requestCursorTracking(ev, Handler);
-        }
-    }
-
-    unselect() {
-        this.remainTime = this.coolTime;
-        this.#details.remove();
-    }
-
-    cooldownProcess() {
-        const disabled = !GEH.debug && (level.Battlefield.Cursor.picked || level.SunNum < this.cost || this.cooling);
-        this.classList.toggle('disabled', !!disabled);
-        this.classList.toggle('notenough', !GEH.debug && level.SunNum < this.cost);
-        if (this.cooling) {
-            this.remainTime -= this.speed * 100;
-        }
-    }
-
-}
-
-customElements.define('game-card', Card);
-
-class BackpackCard {
-    entity = document.createElement('img');
-    anim = document.createElement('img');
-    type: number = 0;
-    star: number = 0;
-    skillLevel: number = 0;
-    animInside: HTMLImageElement | undefined;
-    card: Card;
-    animID: number | undefined;
-    src: string = EventHandler.getStaticPath('images/cards/stove.png');
-    details?: HTMLElement;
-    #chosen = false;
-    #bagEntity = document.createElement('img');
-    #animEntity = document.createElement('img');
-
-    constructor(type = 0, star = 0, skillLevel = 0) {
-        this.type = type;
-        this.star = star;
-        this.skillLevel = skillLevel;
-        this.card = new Card(type, star, skillLevel);
-        this.src = EventHandler.getStaticPath(`images/cards/${this.card.name}.png`);
-
-        this.entity.src = this.src;
-        this.#bagEntity.src = this.src;
-        this.anim.src = this.src;
-
-        this.#bagEntity.style.opacity = "0";
-        this.anim.style.position = "absolute";
-
-        this.entity.addEventListener('mouseenter', this.HandleMouseEnter);
-        this.entity.addEventListener('mouseleave', this.HandleMouseLeave);
-        this.entity.addEventListener('click', this.#HandleMouseClick);
-        this.#bagEntity.addEventListener("click", this.#HandleMouseClick)
-    }
-
-    get detail() {
-        return getFoodDetails(this.type);
-    }
-
-    get rect() {
-        return this.entity.getBoundingClientRect();
-    }
-
-    HandleMouseEnter = () => {
-        if (GEH.inCompose || this.#chosen) return;
-        this.details = GEH.requestCardDetailDisplay({
-            x: this.rect.left,
-            y: this.rect.top + this.rect.height
-        }, this.type, this.star, this.skillLevel);
-    }
-
-    HandleMouseLeave = () => {
-        if (this.details) {
-            this.details.remove();
-            this.details = undefined;
-        }
-    }
-
-    unselect() {
-        this.#chosen = false;
-        this.#bagEntity.style.opacity = "0";
-        this.entity.style.filter = "none";
-        this.entity.removeAttribute("selected");
-        this.anim.remove();
-        this.#bagEntity.remove();
-        if (this.animID) {
-            cancelAnimationFrame(this.animID);
-        }
-    }
-
-    #ComposeHandleMouseClick() {
-        const detail = getFoodDetails(this.type);
-        if (detail) {
-            const CInfoName = document.getElementById('CInfoName');
-            if (CInfoName) {
-                CInfoName.innerText = detail.cName;
-            }
-            const InfoDes = document.getElementById("CInfoDes");
-            if (InfoDes) {
-                InfoDes.innerHTML = "";
-                InfoDes.innerHTML += `<a>${EventHandler.icons.get('type')}${detail.category}</a>`;
-                InfoDes.innerHTML += `<a>${EventHandler.icons.get('energy')}${detail.cost + ((detail.addCost) ? "+" : "")}</a>`;
-                InfoDes.innerHTML += `<a>${EventHandler.icons.get('cooltime')}${detail.coolTime / 1000}${i18n.t("SECOND")}</a>`;
-                InfoDes.innerHTML += `<br>`
-                if (detail.special) {
-                    InfoDes.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_007")}</span><span>${detail.special}</span></li>`;
-                }
-                InfoDes.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_008")}</span><span style='color: #006400'>${detail.description}</span></li>`;
-                InfoDes.innerHTML += `<li><span>${i18n.t("GAME_UI_TEXT_009")}</span><span style='color: #ff7f50'>${detail.upgrade}</span></li>`;
-                InfoDes.innerHTML += `<li>${detail.story}</li>`;
-                if (detail.storyContributor) {
-                    InfoDes.innerHTML += "<strong><span style='color: #a9a9a9'>" + `${i18n.t("GAME_UI_TEXT_010")}` + "&ensp;&ensp;" + detail.storyContributor + "</span></strong>";
-                }
-                if (detail.artist) {
-                    InfoDes.innerHTML += "<strong><span style='color: #a9a9a9'>" + `画&ensp;&ensp;&ensp;&ensp;师` + "&ensp;&ensp;" + detail.artist + "</span></strong>";
-                }
-            }
-
-            const idleLength = detail.idleLength || 12;
-            const endLength = detail.endLength || idleLength;
-            const CInfoBack = document.getElementById("CInfoBack");
-            if (CInfoBack) {
-                CInfoBack.style.backgroundImage = `url(${EventHandler.getStaticPath(`images/interface/compose/${detail.type || 0}.png`)})`;
-
-                CInfoBack.innerHTML = "";
-                if (detail.inside) {
-                    this.animInside = document.createElement("img");
-                    this.animInside.src = EventHandler.getStaticPath(`images/foods/${detail.name}/idle_inside.png`);
-                    this.animInside.style.position = "absolute";
-                    this.animInside.style.left = `${detail?.offset[0] + 115}px`;
-                    this.animInside.style.top = `${detail?.offset[1] + 40}px`;
-                    CInfoBack.appendChild(this.animInside);
-                }
-                this.#animEntity.src = EventHandler.getStaticPath(`images/foods/${detail.name}/idle.png`);
-                this.#animEntity.onload = () => {
-                    this.#animEntity.style.objectPosition = "0 0"
-                    this.#animEntity.style.objectFit = "none";
-                    this.#animEntity.style.height = this.#animEntity.height + "px";
-                    this.#animEntity.style.width = this.#animEntity.width / idleLength + "px";
-                    this.#animEntity.style.left = `${detail?.offset[0] + 115}px`;
-                    this.#animEntity.style.top = `${detail?.offset[1] + 40}px`;
-                    CInfoBack.appendChild(this.#animEntity);
-                }
-            }
-            let temp = 0;
-            if ((GEH as any).composeAnimTimer != null) {
-                cancelAnimationFrame((GEH as any).composeAnimTimer);
-                clearInterval((GEH as any).composeAnimTimer);
-            }
-            const frameDuration = 100; // ms per frame
-            let last = performance.now();
-            let acc = 0;
-            const step = (now: number) => {
-                const dt = now - last; last = now; acc += dt;
-                while (acc >= frameDuration) {
-                    this.#animEntity.style.objectPosition = `${-temp * this.#animEntity.offsetWidth}px 0`;
-                    temp = (temp + 1) % endLength;
-                    acc -= frameDuration;
-                }
-                (GEH as any).composeAnimTimer = requestAnimationFrame(step);
-            };
-            (GEH as any).composeAnimTimer = requestAnimationFrame(step);
-
-        }
-    }
-
-    #PrepareGameHandleMouseClick() {
-        const GameCards = GameReadyPage.GameCards;
-        if (this.#chosen) {
-            const pos = GEH.cards.findIndex((card: any) => {
-                return card === this.card;
-            })
-            GEH.cards.splice(pos, 1);
-            this.unselect();
-        } else {
-            if (GEH.cards.length >= GEH.maxCardNum) {
-                ToastBox(`最多携带${GEH.maxCardNum}张卡片`);
-                return false;
-            } else {
-                GameCards.appendChild(this.#bagEntity);
-                const detail = getFoodDetails(this.type);
-                if (detail) {
-                    this.card.cost = detail.cost;
-                }
-                GameReadyPage.appendChild(this.anim);
-                this.anim.style.zIndex = "11111";
-                this.anim.style.position = "fixed";
-                this.anim.style.top = this.rect.top + "px";
-
-                this.anim.style.left = this.rect.left + "px";
-                this.anim.style.borderRadius = this.#bagEntity.style.borderRadius;
-                this.anim.height = this.rect.height;
-
-                let top = this.rect.top;
-                let left = this.rect.left;
-                let height = 50;
-                const rect = this.#bagEntity.getBoundingClientRect();
-                const targetTop = rect.top;
-                const targetLeft = rect.left;
-                const targetHeight = this.#bagEntity.offsetHeight;
-                const speed = 16;
-                const speedX = (left - targetLeft) / speed;
-                const speedY = (top - targetTop) / speed;
-                const scaleY = (height - targetHeight) / speed;
-                let times = 0;
-                const animation = (() => {
-                    this.animID = requestAnimationFrame(() => {
-                        times++;
-                        top -= speedY;
-                        left -= speedX;
-                        height -= scaleY;
-                        this.anim.style.top = top + "px";
-                        this.anim.style.left = left + "px";
-                        this.anim.style.height = height + "px";
-                        if (times >= speed) {
-                            if (this.animID) {
-                                cancelAnimationFrame(this.animID);
-                            }
-                            this.anim.remove();
-                            this.#bagEntity.style.opacity = "1";
-                            return;
-                        }
-                        animation();
-                    })
-                })
-                animation();
-                GEH.cards.push((this.card as any));
-                this.entity.setAttribute("selected", "");
-                this.entity.style.filter = "brightness(64%)";
-                this.#chosen = true;
-            }
-        }
-    }
-
-    #HandleMouseClick = () => {
-        GEH.requestPlayAudio("naka");
-        if (this.details) this.details.remove();
-        if (GEH.inCompose) {
-            this.#ComposeHandleMouseClick();
-        } else {
-            this.#PrepareGameHandleMouseClick();
-        }
-    }
-}

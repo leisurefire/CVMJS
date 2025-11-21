@@ -1,5 +1,5 @@
-import EventHandler from "./EventHandler.js";
-import { Card } from "./EventHandler.js";
+import EventHandler from "./eventhandler/EventHandler.js";
+import { Card } from "./eventhandler/EventHandler.js";
 import { GEH } from "./Core.js";
 import {
 	Boomerang,

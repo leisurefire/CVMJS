@@ -1,5 +1,4 @@
 import { GEH } from "../Core.js";
-import EventHandler from "../EventHandler.js";
 import Level, { level } from "../Level.js";
 
 export default class Abyss extends Level {
