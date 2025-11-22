@@ -7,6 +7,7 @@ import { getMouseDetails } from "./Mice.js";
 import { acquireBullet, releaseBullet } from "./Bullets.js";
 import { SpriteAnimationManager } from "./SpriteAnimation.js";
 import { Sun, MapGrid, GameBattlefield } from "./GameBattlefield.js";
+import { BulletManager } from "./BulletManager.js";
 const BULLET_STACK_MAX_SIZE = 999;
 export let level = {};
 level = null;
@@ -96,9 +97,9 @@ class Level {
         return this.#Cards;
     }
     Guardians = [];
-    #Bullets = [];
+    #BulletManager = new BulletManager();
     get Bullets() {
-        return this.#Bullets;
+        return this.#BulletManager.getBullets();
     }
     #Foods = Array.from({ length: this.row_num * this.column_num }, () => new MapGrid());
     get Foods() {
@@ -113,6 +114,12 @@ class Level {
     get AirLane() {
         return this.#AirLane;
     }
+    // 双缓冲：避免每帧分配 Mice 和 AirLane 数组
+    #MiceBuffer1 = Array.from({ length: this.row_num }, () => Array.from({ length: this.column_num + 1 }, () => []));
+    #MiceBuffer2 = Array.from({ length: this.row_num }, () => Array.from({ length: this.column_num + 1 }, () => []));
+    #AirLaneBuffer1 = Array.from({ length: this.row_num }, () => []);
+    #AirLaneBuffer2 = Array.from({ length: this.row_num }, () => []);
+    #currentMiceBufferIndex = 0; // 0 或 1，用于切换缓冲区
     #FogColNum = -1;
     get FogColNum() {
         return this.#FogColNum;
@@ -159,6 +166,9 @@ class Level {
     }
     // 动画管理器（独立管理所有动画相关逻辑）
     _animationManager;
+    // 空间查询帧缓存（生命周期：单帧）
+    // Spatial query frame cache (lifecycle: single frame)
+    _frameQueryCache = new Map();
     get autoCollectInterval() {
         return this.#autoCollectInterval;
     }
@@ -187,6 +197,98 @@ class Level {
         catch { }
         this._sunPool.push(sun);
     }
+    // ========== 空间查询接口 (Spatial Query Interface) ==========
+    /**
+     * 清空帧缓存（每帧开始时调用）
+     * Clear frame cache (called at the start of each frame)
+     */
+    clearFrameCache() {
+        this._frameQueryCache.clear();
+    }
+    /**
+     * 生成缓存键
+     * Generate cache key for box queries
+     */
+    getBoxKey(r1, r2, c1, c2) {
+        return `${r1},${r2},${c1},${c2}`;
+    }
+    /**
+     * 获取指定格子的老鼠堆栈（只读引用）
+     * 包含边界检查，越界返回空数组
+     * Get mice at specific grid cell (readonly reference)
+     * Returns empty array for out-of-bounds access
+     */
+    getMiceAt(row, col) {
+        if (row < 0 || row >= this.row_num || col < 0 || col >= this.column_num + 1) {
+            return [];
+        }
+        return this.#Mice[row][col];
+    }
+    /**
+     * 获取指定行的所有老鼠格子（只读引用）
+     * 包含边界检查
+     * Get all mice cells in a specific row (readonly reference)
+     */
+    getMiceInRow(row) {
+        if (row < 0 || row >= this.row_num) {
+            return [];
+        }
+        return this.#Mice[row];
+    }
+    /**
+     * 获取矩形区域内的所有老鼠（带缓存）
+     * @param rowStart 起始行（包含）
+     * @param rowEnd 结束行（包含）
+     * @param colStart 起始列（包含）
+     * @param colEnd 结束列（包含）
+     *
+     * 典型用例：各种炸弹、范围攻击、三线射手检测
+     * Get all mice in a rectangular area (with caching)
+     * Typical use case: bombs, area attacks, three-peater detection
+     */
+    getMiceInBox(rowStart, rowEnd, colStart, colEnd) {
+        // 1. 规范化坐标 (Normalize coordinates)
+        const r1 = Math.max(0, rowStart);
+        const r2 = Math.min(this.row_num - 1, rowEnd);
+        const c1 = Math.max(0, colStart);
+        const c2 = Math.min(this.column_num, colEnd); // Mice grid size is column_num + 1
+        if (r1 > r2 || c1 > c2)
+            return [];
+        // 2. 检查缓存 (Check cache)
+        const key = this.getBoxKey(r1, r2, c1, c2);
+        if (this._frameQueryCache.has(key)) {
+            return this._frameQueryCache.get(key);
+        }
+        // 3. 执行查询 (Execute query)
+        const result = [];
+        for (let r = r1; r <= r2; r++) {
+            for (let c = c1; c <= c2; c++) {
+                const cell = this.#Mice[r][c];
+                if (cell && cell.length > 0) {
+                    // 逐个 push 避免大数组 spread 的性能问题
+                    // Push one by one to avoid spread performance issue with large arrays
+                    for (let i = 0; i < cell.length; i++) {
+                        result.push(cell[i]);
+                    }
+                }
+            }
+        }
+        // 4. 写入缓存 (Write to cache)
+        this._frameQueryCache.set(key, result);
+        return result;
+    }
+    /**
+     * 获取特定坐标范围内的老鼠（高层辅助方法）
+     * @param originRow 中心行
+     * @param originCol 中心列
+     * @param rangeRow 行范围半径 (例如 1 代表 row-1 到 row+1)
+     * @param rangeCol 列范围半径
+     *
+     * Get mice within a range centered at specific coordinates (high-level helper)
+     */
+    getMiceInRange(originRow, originCol, rangeRow, rangeCol) {
+        return this.getMiceInBox(originRow - rangeRow, originRow + rangeRow, originCol - rangeCol, originCol + rangeCol);
+    }
     // bound frame loop to avoid per-frame closure allocation
     #frameLoop = (timestamp) => {
         if (this.#PreviousTimestamp === undefined) {
@@ -195,7 +297,7 @@ class Level {
         const elapsed = timestamp - this.#PreviousTimestamp;
         if (GEH.GameEnd) {
             this._animationManager.clear();
-            this.#Bullets.length = 0;
+            this.#BulletManager.clear();
             this.Guardians.length = 0;
             this.#Mice.length = 0;
             this.#Foods.length = 0;
@@ -496,7 +598,7 @@ class Level {
         this.#Foods.length = 0;
         this.#Mice.length = 0;
         this._animationManager.clear();
-        this.#Bullets.length = 0;
+        this.#BulletManager.clear();
         level = null;
     }
     mapMove() { }
@@ -703,7 +805,7 @@ class Level {
      */
     requestSummonBullet(ctor, x = 0, y = 0, dam = 20, angle = 0, parameter_1 = null, parameter_2 = null, options) {
         const bullet = acquireBullet(ctor, x, y, dam, angle, parameter_1, parameter_2, options);
-        this.#Bullets.push(bullet);
+        this.#BulletManager.add(bullet);
         return bullet;
     }
     #requestSunBehavior(ctx) {
@@ -850,68 +952,89 @@ class Level {
         }
     }
     #requestUpdateBullets(ctx) {
-        for (let i = 0; i < this.#Bullets.length; i++) {
-            const bullet = this.#Bullets[i];
-            // 超出栈容量时将伤害合并并回收
+        const bullets = this.#BulletManager.getBulletsUnsafe();
+        const deadIndices = [];
+        for (let i = 0; i < bullets.length; i++) {
+            const bullet = bullets[i];
+            // 超出栈容量时将伤害合并并标记删除
             if (i > BULLET_STACK_MAX_SIZE) {
-                this.#Bullets[Math.floor(Math.random() * BULLET_STACK_MAX_SIZE)].damage += bullet.damage;
-                this.#Bullets.splice(i, 1);
-                releaseBullet(bullet);
-                i--;
+                const targetIdx = Math.floor(Math.random() * BULLET_STACK_MAX_SIZE);
+                bullets[targetIdx].damage += bullet.damage;
+                deadIndices.push(i);
+                continue;
             }
-            else {
-                if (bullet.move()) {
-                    this.#Bullets.splice(i, 1);
-                    releaseBullet(bullet);
-                    i--;
+            // 移动检测
+            if (bullet.move()) {
+                deadIndices.push(i);
+                continue;
+            }
+            // 渲染
+            bullet.createEntity(ctx);
+            // Boost 逻辑维持不变
+            if (bullet.CanBoost
+                && bullet.position !== bullet.birthPosition
+                && bullet.positionX < 9
+                && level.Foods[bullet.positionY * level.column_num + bullet.column]?.layer_1) {
+                const cell = level.Foods[bullet.positionY * level.column_num + bullet.column].layer_1;
+                // canBlockBoost: 阻挡并销毁子弹
+                if (cell.canBlockBoost) {
+                    deadIndices.push(i);
+                    continue;
                 }
-                else {
-                    bullet.createEntity(ctx);
-                    // Boost 逻辑维持不变
-                    if (bullet.CanBoost
-                        && bullet.position !== bullet.birthPosition
-                        && bullet.positionX < 9
-                        && level.Foods[bullet.positionY * level.column_num + bullet.column]?.layer_1) {
-                        const cell = level.Foods[bullet.positionY * level.column_num + bullet.column].layer_1;
-                        if (cell.canBlockBoost) {
-                            this.#Bullets.splice(i, 1);
-                            releaseBullet(bullet);
-                            i--;
-                        }
-                        if (cell.canReverseBoost) {
-                            const outcome = bullet.duplicate();
-                            if (outcome) {
-                                bullet.angle = (bullet.angle + 180) % 360;
-                                bullet.birthPosition = Math.floor(bullet.positionY) * 10 + Math.floor(bullet.positionX);
-                                continue;
-                            }
-                        }
-                        if (cell.canFireBoost) {
-                            const outcome = bullet.fireBoost();
-                            if (outcome) {
-                                GEH.requestPlayAudio("firebullet");
-                                outcome.birthPosition = Math.floor(outcome.positionY) * 10 + Math.floor(outcome.positionX);
-                                this.#Bullets.splice(i, 1);
-                                releaseBullet(bullet);
-                                this.#Bullets.push(outcome);
-                                i--;
-                                continue;
-                            }
-                        }
-                    }
-                    if (bullet.takeDamage()) {
-                        this.#Bullets.splice(i, 1);
-                        releaseBullet(bullet);
-                        i--;
+                // canReverseBoost: 反转子弹角度
+                if (cell.canReverseBoost) {
+                    const outcome = bullet.duplicate();
+                    if (outcome) {
+                        bullet.angle = (bullet.angle + 180) % 360;
+                        bullet.birthPosition = Math.floor(bullet.positionY) * 10 + Math.floor(bullet.positionX);
+                        continue;
                     }
                 }
+                // canFireBoost: 替换为新子弹
+                if (cell.canFireBoost) {
+                    const outcome = bullet.fireBoost();
+                    if (outcome) {
+                        GEH.requestPlayAudio("firebullet");
+                        outcome.birthPosition = Math.floor(outcome.positionY) * 10 + Math.floor(outcome.positionX);
+                        // 使用 BulletManager 的 replaceAt 方法
+                        this.#BulletManager.replaceAt(i, outcome);
+                        continue;
+                    }
+                }
+            }
+            // 伤害检测
+            if (bullet.takeDamage()) {
+                deadIndices.push(i);
+            }
+        }
+        // 批量删除（从后往前，避免索引偏移）
+        for (let i = deadIndices.length - 1; i >= 0; i--) {
+            const idx = deadIndices[i];
+            const bullet = bullets[idx];
+            releaseBullet(bullet);
+            // 使用 swap-and-pop 删除（O(1)）
+            const last = bullets.pop();
+            if (idx < bullets.length) {
+                bullets[idx] = last;
             }
         }
     }
     #requestUpdateBattleGround(elapsed) {
         this.#requestUpdateBackground();
-        const miceTemp = Array.from({ length: this.row_num }, () => Array.from({ length: this.column_num + 1 }, () => []));
-        const airLaneTemp = Array.from({ length: this.row_num }, () => []);
+        // 清空帧缓存（每帧开始时）
+        // Clear frame cache at the start of each frame
+        this.clearFrameCache();
+        // 双缓冲：切换到另一个缓冲区并清空
+        this.#currentMiceBufferIndex = 1 - this.#currentMiceBufferIndex;
+        const miceTemp = this.#currentMiceBufferIndex === 0 ? this.#MiceBuffer1 : this.#MiceBuffer2;
+        const airLaneTemp = this.#currentMiceBufferIndex === 0 ? this.#AirLaneBuffer1 : this.#AirLaneBuffer2;
+        // 清空缓冲区（复用数组，只清空内容）
+        for (let i = 0; i < this.row_num; i++) {
+            for (let j = 0; j < this.column_num + 1; j++) {
+                miceTemp[i][j].length = 0;
+            }
+            airLaneTemp[i].length = 0;
+        }
         for (let i = 0; i < this.row_num; i++) {
             const guardian = this.Guardians[i];
             if (guardian != null) {

@@ -7,6 +7,7 @@ import { Bullet, BulletCtor, BulletSpawnOptions, acquireBullet, releaseBullet } 
 import SpriteAnimation, { SpriteAnimationManager } from "./SpriteAnimation.js";
 import { Sun, MapGrid, GameBattlefield } from "./GameBattlefield.js";
 import type { IRenderer } from "./renderer/IRenderer.js";
+import { BulletManager } from "./BulletManager.js";
 const BULLET_STACK_MAX_SIZE = 999;
 
 export let level: any = {};
@@ -101,9 +102,9 @@ export default class Level {
         return this.#Cards;
     }
     Guardians: Cat[] | Crab[] = [];
-    #Bullets: Bullet[] = [];
+    #BulletManager = new BulletManager();
     get Bullets() {
-        return this.#Bullets;
+        return this.#BulletManager.getBullets();
     }
     #Foods = Array.from({ length: this.row_num * this.column_num }, () => new MapGrid());
     get Foods() {
@@ -118,6 +119,12 @@ export default class Level {
     get AirLane() {
         return this.#AirLane;
     }
+    // 双缓冲：避免每帧分配 Mice 和 AirLane 数组
+    #MiceBuffer1: Mouse[][][] = Array.from({ length: this.row_num }, () => Array.from({ length: this.column_num + 1 }, () => [] as Mouse[]));
+    #MiceBuffer2: Mouse[][][] = Array.from({ length: this.row_num }, () => Array.from({ length: this.column_num + 1 }, () => [] as Mouse[]));
+    #AirLaneBuffer1: Mouse[][][] = Array.from({ length: this.row_num }, () => [] as Mouse[][]);
+    #AirLaneBuffer2: Mouse[][][] = Array.from({ length: this.row_num }, () => [] as Mouse[][]);
+    #currentMiceBufferIndex = 0;  // 0 或 1，用于切换缓冲区
     #FogColNum = -1;
     get FogColNum() {
         return this.#FogColNum;
@@ -167,6 +174,10 @@ export default class Level {
     // 动画管理器（独立管理所有动画相关逻辑）
     private _animationManager!: SpriteAnimationManager;
 
+    // 空间查询帧缓存（生命周期：单帧）
+    // Spatial query frame cache (lifecycle: single frame)
+    private _frameQueryCache: Map<string, Mouse[]> = new Map();
+
     get autoCollectInterval() {
         return this.#autoCollectInterval;
     }
@@ -194,6 +205,113 @@ export default class Level {
         this._sunPool.push(sun);
     }
 
+    // ========== 空间查询接口 (Spatial Query Interface) ==========
+
+    /**
+     * 清空帧缓存（每帧开始时调用）
+     * Clear frame cache (called at the start of each frame)
+     */
+    clearFrameCache() {
+        this._frameQueryCache.clear();
+    }
+
+    /**
+     * 生成缓存键
+     * Generate cache key for box queries
+     */
+    private getBoxKey(r1: number, r2: number, c1: number, c2: number): string {
+        return `${r1},${r2},${c1},${c2}`;
+    }
+
+    /**
+     * 获取指定格子的老鼠堆栈（只读引用）
+     * 包含边界检查，越界返回空数组
+     * Get mice at specific grid cell (readonly reference)
+     * Returns empty array for out-of-bounds access
+     */
+    getMiceAt(row: number, col: number): readonly Mouse[] {
+        if (row < 0 || row >= this.row_num || col < 0 || col >= this.column_num + 1) {
+            return [];
+        }
+        return this.#Mice[row][col];
+    }
+
+    /**
+     * 获取指定行的所有老鼠格子（只读引用）
+     * 包含边界检查
+     * Get all mice cells in a specific row (readonly reference)
+     */
+    getMiceInRow(row: number): readonly Mouse[][] {
+        if (row < 0 || row >= this.row_num) {
+            return [];
+        }
+        return this.#Mice[row];
+    }
+
+    /**
+     * 获取矩形区域内的所有老鼠（带缓存）
+     * @param rowStart 起始行（包含）
+     * @param rowEnd 结束行（包含）
+     * @param colStart 起始列（包含）
+     * @param colEnd 结束列（包含）
+     * 
+     * 典型用例：各种炸弹、范围攻击、三线射手检测
+     * Get all mice in a rectangular area (with caching)
+     * Typical use case: bombs, area attacks, three-peater detection
+     */
+    getMiceInBox(rowStart: number, rowEnd: number, colStart: number, colEnd: number): Mouse[] {
+        // 1. 规范化坐标 (Normalize coordinates)
+        const r1 = Math.max(0, rowStart);
+        const r2 = Math.min(this.row_num - 1, rowEnd);
+        const c1 = Math.max(0, colStart);
+        const c2 = Math.min(this.column_num, colEnd); // Mice grid size is column_num + 1
+
+        if (r1 > r2 || c1 > c2) return [];
+
+        // 2. 检查缓存 (Check cache)
+        const key = this.getBoxKey(r1, r2, c1, c2);
+        if (this._frameQueryCache.has(key)) {
+            return this._frameQueryCache.get(key)!;
+        }
+
+        // 3. 执行查询 (Execute query)
+        const result: Mouse[] = [];
+        for (let r = r1; r <= r2; r++) {
+            for (let c = c1; c <= c2; c++) {
+                const cell = this.#Mice[r][c];
+                if (cell && cell.length > 0) {
+                    // 逐个 push 避免大数组 spread 的性能问题
+                    // Push one by one to avoid spread performance issue with large arrays
+                    for (let i = 0; i < cell.length; i++) {
+                        result.push(cell[i]);
+                    }
+                }
+            }
+        }
+
+        // 4. 写入缓存 (Write to cache)
+        this._frameQueryCache.set(key, result);
+        return result;
+    }
+
+    /**
+     * 获取特定坐标范围内的老鼠（高层辅助方法）
+     * @param originRow 中心行
+     * @param originCol 中心列
+     * @param rangeRow 行范围半径 (例如 1 代表 row-1 到 row+1)
+     * @param rangeCol 列范围半径
+     * 
+     * Get mice within a range centered at specific coordinates (high-level helper)
+     */
+    getMiceInRange(originRow: number, originCol: number, rangeRow: number, rangeCol: number): Mouse[] {
+        return this.getMiceInBox(
+            originRow - rangeRow,
+            originRow + rangeRow,
+            originCol - rangeCol,
+            originCol + rangeCol
+        );
+    }
+
     // bound frame loop to avoid per-frame closure allocation
     #frameLoop = (timestamp: number) => {
         if (this.#PreviousTimestamp === undefined) {
@@ -203,7 +321,7 @@ export default class Level {
         if (GEH.GameEnd) {
 
             this._animationManager.clear();
-            this.#Bullets.length = 0;
+            this.#BulletManager.clear();
             this.Guardians.length = 0;
             this.#Mice.length = 0;
             this.#Foods.length = 0;
@@ -518,7 +636,7 @@ export default class Level {
         this.#Foods.length = 0;
         this.#Mice.length = 0;
         this._animationManager.clear();
-        this.#Bullets.length = 0;
+        this.#BulletManager.clear();
         level = null;
     }
 
@@ -767,7 +885,7 @@ export default class Level {
         options?: BulletSpawnOptions<T>
     ): T {
         const bullet = acquireBullet(ctor, x, y, dam, angle, parameter_1, parameter_2, options);
-        this.#Bullets.push(bullet);
+        this.#BulletManager.add(bullet);
         return bullet;
     }
 
@@ -923,59 +1041,81 @@ export default class Level {
         }
     }
     #requestUpdateBullets(ctx: IRenderer | CanvasRenderingContext2D) {
-        for (let i = 0; i < this.#Bullets.length; i++) {
-            const bullet = this.#Bullets[i];
-            // 超出栈容量时将伤害合并并回收
+        const bullets = this.#BulletManager.getBulletsUnsafe();
+        const deadIndices: number[] = [];
+        
+        for (let i = 0; i < bullets.length; i++) {
+            const bullet = bullets[i];
+            
+            // 超出栈容量时将伤害合并并标记删除
             if (i > BULLET_STACK_MAX_SIZE) {
-                this.#Bullets[Math.floor(Math.random() * BULLET_STACK_MAX_SIZE)].damage += bullet.damage;
-                this.#Bullets.splice(i, 1);
-                releaseBullet(bullet);
-                i--;
-            } else {
-                if (bullet.move()) {
-                    this.#Bullets.splice(i, 1);
-                    releaseBullet(bullet);
-                    i--;
-                } else {
-                    bullet.createEntity(ctx);
-                    // Boost 逻辑维持不变
-                    if (bullet.CanBoost
-                        && bullet.position !== bullet.birthPosition
-                        && bullet.positionX < 9
-                        && level.Foods[bullet.positionY * level.column_num + bullet.column]?.layer_1) {
-                        const cell = level.Foods[bullet.positionY * level.column_num + bullet.column].layer_1!;
-                        if (cell.canBlockBoost) {
-                            this.#Bullets.splice(i, 1);
-                            releaseBullet(bullet);
-                            i--;
-                        }
-                        if (cell.canReverseBoost) {
-                            const outcome = bullet.duplicate();
-                            if (outcome) {
-                                bullet.angle = (bullet.angle + 180) % 360;
-                                bullet.birthPosition = Math.floor(bullet.positionY) * 10 + Math.floor(bullet.positionX);
-                                continue;
-                            }
-                        }
-                        if (cell.canFireBoost) {
-                            const outcome = bullet.fireBoost();
-                            if (outcome) {
-                                GEH.requestPlayAudio("firebullet");
-                                (outcome as Bullet).birthPosition = Math.floor((outcome as Bullet).positionY) * 10 + Math.floor((outcome as Bullet).positionX);
-                                this.#Bullets.splice(i, 1);
-                                releaseBullet(bullet);
-                                this.#Bullets.push(outcome);
-                                i--;
-                                continue;
-                            }
-                        }
-                    }
-                    if (bullet.takeDamage()) {
-                        this.#Bullets.splice(i, 1);
-                        releaseBullet(bullet);
-                        i--;
+                const targetIdx = Math.floor(Math.random() * BULLET_STACK_MAX_SIZE);
+                bullets[targetIdx].damage += bullet.damage;
+                deadIndices.push(i);
+                continue;
+            }
+            
+            // 移动检测
+            if (bullet.move()) {
+                deadIndices.push(i);
+                continue;
+            }
+            
+            // 渲染
+            bullet.createEntity(ctx);
+            
+            // Boost 逻辑维持不变
+            if (bullet.CanBoost
+                && bullet.position !== bullet.birthPosition
+                && bullet.positionX < 9
+                && level.Foods[bullet.positionY * level.column_num + bullet.column]?.layer_1) {
+                const cell = level.Foods[bullet.positionY * level.column_num + bullet.column].layer_1!;
+                
+                // canBlockBoost: 阻挡并销毁子弹
+                if (cell.canBlockBoost) {
+                    deadIndices.push(i);
+                    continue;
+                }
+                
+                // canReverseBoost: 反转子弹角度
+                if (cell.canReverseBoost) {
+                    const outcome = bullet.duplicate();
+                    if (outcome) {
+                        bullet.angle = (bullet.angle + 180) % 360;
+                        bullet.birthPosition = Math.floor(bullet.positionY) * 10 + Math.floor(bullet.positionX);
+                        continue;
                     }
                 }
+                
+                // canFireBoost: 替换为新子弹
+                if (cell.canFireBoost) {
+                    const outcome = bullet.fireBoost();
+                    if (outcome) {
+                        GEH.requestPlayAudio("firebullet");
+                        (outcome as Bullet).birthPosition = Math.floor((outcome as Bullet).positionY) * 10 + Math.floor((outcome as Bullet).positionX);
+                        // 使用 BulletManager 的 replaceAt 方法
+                        this.#BulletManager.replaceAt(i, outcome);
+                        continue;
+                    }
+                }
+            }
+            
+            // 伤害检测
+            if (bullet.takeDamage()) {
+                deadIndices.push(i);
+            }
+        }
+        
+        // 批量删除（从后往前，避免索引偏移）
+        for (let i = deadIndices.length - 1; i >= 0; i--) {
+            const idx = deadIndices[i];
+            const bullet = bullets[idx];
+            releaseBullet(bullet);
+            
+            // 使用 swap-and-pop 删除（O(1)）
+            const last = bullets.pop()!;
+            if (idx < bullets.length) {
+                bullets[idx] = last;
             }
         }
     }
@@ -983,14 +1123,22 @@ export default class Level {
     #requestUpdateBattleGround(elapsed: number) {
         this.#requestUpdateBackground();
 
-        const miceTemp: Mouse[][][] = Array.from(
-            { length: this.row_num },
-            () => Array.from({ length: this.column_num + 1 }, () => [] as Mouse[])
-        );
-        const airLaneTemp: Mouse[][][] = Array.from(
-            { length: this.row_num },
-            () => [] as Mouse[][]
-        );
+        // 清空帧缓存（每帧开始时）
+        // Clear frame cache at the start of each frame
+        this.clearFrameCache();
+
+        // 双缓冲：切换到另一个缓冲区并清空
+        this.#currentMiceBufferIndex = 1 - this.#currentMiceBufferIndex;
+        const miceTemp = this.#currentMiceBufferIndex === 0 ? this.#MiceBuffer1 : this.#MiceBuffer2;
+        const airLaneTemp = this.#currentMiceBufferIndex === 0 ? this.#AirLaneBuffer1 : this.#AirLaneBuffer2;
+        
+        // 清空缓冲区（复用数组，只清空内容）
+        for (let i = 0; i < this.row_num; i++) {
+            for (let j = 0; j < this.column_num + 1; j++) {
+                miceTemp[i][j].length = 0;
+            }
+            airLaneTemp[i].length = 0;
+        }
 
         for (let i = 0; i < this.row_num; i++) {
 
