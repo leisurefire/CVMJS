@@ -223,8 +223,18 @@ export class Food {
     CreateUnderlayAnim(width = 72, height = 36) {
         const shadow = GEH.requestDrawImage(Food.SHADOW_IMAGE);
         if (shadow) {
-            const shadowX = (this.column + 0.5) * level.row_gap + level.column_start - width / 2 + 4;
-            const shadowY = (this.row + 1) * level.column_gap + level.row_start - height;
+            // 基准位置：基于 column 和 row
+            const baseX = (this.column + 0.5) * level.row_gap + level.column_start;
+            const baseY = (this.row + 1) * level.column_gap + level.row_start;
+            // 计算偏移量：当前 x/y 与基准位置的差值
+            const currentConstructor = this.constructor;
+            const expectedX = level.column_start + this.column * level.row_gap + currentConstructor.offset[0];
+            const expectedY = level.row_start + this.row * level.column_gap + currentConstructor.offset[1] + (this.type ? -10 : 0);
+            const offsetX = this.x - expectedX;
+            const offsetY = this.y - expectedY;
+            // 最终位置：基准位置 + 偏移量
+            const shadowX = baseX - width / 2 + 4 + offsetX;
+            const shadowY = baseY - height + offsetY;
             this.ctx.drawImage(shadow, shadowX, shadowY, width, height);
         }
     }
@@ -233,8 +243,18 @@ export class Food {
             const star = GEH.requestDrawImage(this.starAnim);
             if (star) {
                 const { width, height } = star;
-                const x = (this.column + 0.5) * level.row_gap + level.column_start - width / this.starAnimLength / 2 + 4;
-                const y = (this.row + 1) * level.column_gap + level.row_start - height * 1.5 + (this.type ? -10 : 0) + this.starAnimOffset;
+                // 基准位置：基于 column 和 row
+                const baseX = (this.column + 0.5) * level.row_gap + level.column_start;
+                const baseY = (this.row + 1) * level.column_gap + level.row_start;
+                // 计算偏移量：当前 x/y 与基准位置的差值
+                const currentConstructor = this.constructor;
+                const expectedX = level.column_start + this.column * level.row_gap + currentConstructor.offset[0];
+                const expectedY = level.row_start + this.row * level.column_gap + currentConstructor.offset[1] + (this.type ? -10 : 0);
+                const offsetX = this.x - expectedX;
+                const offsetY = this.y - expectedY;
+                // 最终位置：基准位置 + 偏移量
+                const x = baseX - width / this.starAnimLength / 2 + 4 + offsetX;
+                const y = baseY - height * 1.5 + (this.type ? -10 : 0) + this.starAnimOffset + offsetY;
                 this.ctx.drawImage(star, width / this.starAnimLength * this.starAnimTick, 0, width / this.starAnimLength, height, x, y, width / this.starAnimLength, height);
                 this.starAnimTick = (this.starAnimTick + 1) % this.starAnimLength;
             }

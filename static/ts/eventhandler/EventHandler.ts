@@ -114,7 +114,7 @@ export default class EventHandler {
         [11, "CurryIslandDay"],
         [12, "CurryIslandNight"],
         [13, "Abyss"],
-        [14, "FennelRaft"],
+        [33, "FennelRaft"],
         [20, "MarshmallowSky"],
         [99, "Rouge"],
     ]);
@@ -457,6 +457,14 @@ export default class EventHandler {
                         }
                     });
                 }
+                getLevelDetails(33).then((detail) => {
+                    if (detail) {
+                        const button = new MaterialButton(detail.NAME, () => {
+                            GameReadyPage.initialize(33);
+                        }, false);
+                        flip.appendChild(button);
+                    }
+                });
                 getLevelDetails(20).then((detail) => {
                     if (detail) {
                         const button = new MaterialButton(detail.NAME, () => {
