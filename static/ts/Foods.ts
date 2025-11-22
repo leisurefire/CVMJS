@@ -399,7 +399,7 @@ export class Character extends Food {
 	}
 
 	attackCheck() {
-		return level.Mice[this.row]?.some((mouse: Mouse[]) => mouse != null && mouse.length > 0) ?? false;
+		return level.getMiceInRow(this.row).some((mouse: Mouse[]) => mouse != null && mouse.length > 0);
 	}
 
 	fire() {
@@ -527,7 +527,7 @@ class BunShooter extends Food {
 	}
 
 	attackCheck() {
-		return (level.Mice[this.row] ?? []).some((mouse: Mouse[]) => mouse && mouse.length > 0);
+		return level.getMiceInRow(this.row).some((mouse: Mouse[]) => mouse && mouse.length > 0);
 	}
 
 	fire() {
@@ -810,10 +810,9 @@ class RatClip extends Food {
 
 	explode() {
 		GEH.requestPlayAudio("jiazibao");
-		if (level.Mice[this.row][this.column] != null) {
-			for (let i = 0; level.Mice[this.row][this.column] != null && i < level.Mice[this.row][this.column].length; i++) {
-				level.Mice[this.row][this.column][i].getBlast(this.damage);
-			}
+		const mice = level.getMiceAt(this.row, this.column);
+		for (let i = 0; i < mice.length; i++) {
+			mice[i].getBlast(this.damage);
 		}
 	}
 }
@@ -1571,14 +1570,9 @@ class CokeBomb extends Food {
 
 	remove() {
 		GEH.requestPlayAudio("pijiubao");
-		for (let i = this.row - 1; i <= this.row + 1; i++) {
-			if (level.Mice[i] != null) {
-				for (let j = this.column - 1; j <= this.column + 1; j++) {
-					for (let k = 0; level.Mice[i][j] != null && k < level.Mice[i][j].length; k++) {
-						level.Mice[i][j][k].getBlast(this.damage);
-					}
-				}
-			}
+		const mice = level.getMiceInRange(this.row, this.column, 1, 1);
+		for (let i = 0; i < mice.length; i++) {
+			mice[i].getBlast(this.damage);
 		}
 		document.body.style.animation = "none";
 		super.remove();
@@ -1802,28 +1796,8 @@ class WineRack extends BunShooter {
 	}
 
 	attackCheck() {
-		if (level.Mice[this.row] != null) {
-			for (let i = 0; i < level.Mice[this.row].length; i++) {
-				if (level.Mice[this.row][i] != null && level.Mice[this.row][i].length > 0) {
-					return true;
-				}
-			}
-		}
-		if (level.Mice[this.row - 1] != null) {
-			for (let i = 0; i < level.Mice[this.row - 1].length; i++) {
-				if (level.Mice[this.row - 1][i] != null && level.Mice[this.row - 1][i].length > 0) {
-					return true;
-				}
-			}
-		}
-		if (level.Mice[this.row + 1] != null) {
-			for (let i = 0; i < level.Mice[this.row + 1].length; i++) {
-				if (level.Mice[this.row + 1][i] != null && level.Mice[this.row + 1][i].length > 0) {
-					return true;
-				}
-			}
-		}
-		return false;
+		// 检测上中下三行是否有老鼠
+		return level.getMiceInBox(this.row - 1, this.row + 1, 0, level.column_num).length > 0;
 	}
 
 	fire() {
@@ -2005,44 +1979,17 @@ class RotaryCoffeePot extends Food {
 	}
 
 	attackCheck() {
-		if (level.Mice[this.row] != null) {
-			for (let i = Math.max(0, this.column - 1); i < Math.min(level.Mice[this.row].length, this.column + 2); i++) {
-				if (level.Mice[this.row][i] != null && level.Mice[this.row][i].length > 0) {
-					return true;
-				}
-			}
-		}
-		if (level.Mice[this.row - 1] != null) {
-			for (let i = Math.max(0, this.column - 1); i < Math.min(level.Mice[this.row - 1].length, this.column + 2); i++) {
-				if (level.Mice[this.row - 1][i] != null && level.Mice[this.row - 1][i].length > 0) {
-					return true;
-				}
-			}
-		}
-		if (level.Mice[this.row + 1] != null) {
-			for (let i = Math.max(0, this.column - 1); i < Math.min(level.Mice[this.row + 1].length, this.column + 2); i++) {
-				if (level.Mice[this.row + 1][i] != null && level.Mice[this.row + 1][i].length > 0) {
-					return true;
-				}
-			}
-		}
-		return false;
+		// 检测3x3范围内是否有老鼠
+		return level.getMiceInRange(this.row, this.column, 1, 1).length > 0;
 	}
 
 	fire() {
 		GEH.requestPlayAudio("kafeihu");
 		level?.createSpriteAnimation(this.x - 24, this.y - 54, "/images/bullets/bubble_circle.png", 12);
-		for (let i = Math.max(0, this.row - 1); i <= Math.min(this.row + 1, level.row_num - 1); i++) {
-			if (level.Mice[i] != null) {
-				for (let j = Math.max(0, this.column - 1); j <= Math.min(this.column + 1, level.column_num); j++) {
-					if (level.Mice[i][j] != null) {
-						for (let k = 0; level.Mice[i][j] != null && k < level.Mice[i][j].length; k++) {
-							if (level.Mice[i][j][k].attackable && level.Mice[i][j][k].canBeThrown) {
-								level.Mice[i][j][k].getThrown(this.damage * 2);
-							}
-						}
-					}
-				}
+		const mice = level.getMiceInRange(this.row, this.column, 1, 1);
+		for (let i = 0; i < mice.length; i++) {
+			if (mice[i].attackable && mice[i].canBeThrown) {
+				mice[i].getThrown(this.damage * 2);
 			}
 		}
 	}

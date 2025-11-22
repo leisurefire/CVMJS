@@ -1303,7 +1303,19 @@ export class GameBattlefield extends HTMLElement {
             })
         }
     }
-    private drawEntity(renderer: IRenderer | CanvasRenderingContext2D, src: string, width: number, height: number, tick: number, x: number, y: number, effect: string | null = null) {
+    private drawEntity(
+        renderer: IRenderer | CanvasRenderingContext2D, 
+        src: string, 
+        width: number, 
+        height: number, 
+        tick: number, 
+        x: number, 
+        y: number, 
+        effect: string | null = null,
+        fallbackSrc?: string,      // 新增: 回退图片路径
+        fallbackTick?: number      // 新增: 回退帧索引
+    ) {
+        // 1. 尝试请求当前帧的图像 (WebP 动画优先)
         if (src.endsWith('.webp') && !effect) {
             const frame = GEH.getWebPFrame(src, tick);
             if (frame) {
@@ -1311,10 +1323,35 @@ export class GameBattlefield extends HTMLElement {
                 return;
             }
         }
-        const img = GEH.requestDrawImage(src, effect);
+
+        // 2. 尝试请求当前图像资源
+        let img = GEH.requestDrawImage(src, effect);
+        let currentTick = tick;
+
+        // 3. 如果当前图像未加载，且存在回退方案，则尝试使用回退图像
+        if (!img && fallbackSrc !== undefined && fallbackTick !== undefined) {
+            // 避免重复查找相同的未加载资源
+            if (src !== fallbackSrc) {
+                // 尝试 WebP 回退
+                if (fallbackSrc.endsWith('.webp') && !effect) {
+                    const fallbackFrame = GEH.getWebPFrame(fallbackSrc, fallbackTick);
+                    if (fallbackFrame) {
+                        renderer.drawImage(fallbackFrame, x, y, width, height);
+                        return;
+                    }
+                }
+                // 尝试普通图像回退
+                img = GEH.requestDrawImage(fallbackSrc, effect);
+                if (img) {
+                    currentTick = fallbackTick; // 使用旧状态对应的帧索引
+                }
+            }
+        }
+
+        // 4. 执行绘制
         if (img) {
             if (img.width >= width * 2 || (img.width > width && src.endsWith('.png'))) {
-                renderer.drawImage(img, width * tick, 0, width, height, x, y, width, height);
+                renderer.drawImage(img, width * currentTick, 0, width, height, x, y, width, height);
             } else {
                 renderer.drawImage(img, x, y, width, height);
             }
@@ -1326,8 +1363,13 @@ export class GameBattlefield extends HTMLElement {
         if (mapGrid && renderer) {
             const { layer_0, layer_1, layer_2 } = mapGrid;
             if (layer_2) {
+                // 记录更新前的旧状态
+                const prevEntity = layer_2.entity;
+                const prevTick = layer_2.tick;
+                // 更新状态
                 layer_2.behavior();
-                this.drawEntity(renderer, layer_2.entity, layer_2.width, layer_2.height, layer_2.tick, layer_2.x, layer_2.y);
+                // 绘制时传入回退参数
+                this.drawEntity(renderer, layer_2.entity, layer_2.width, layer_2.height, layer_2.tick, layer_2.x, layer_2.y, null, prevEntity, prevTick);
                 if (layer_2) {
                     layer_2.CreateOverlayAnim();
                 }
@@ -1351,20 +1393,30 @@ export class GameBattlefield extends HTMLElement {
                 }
             }
             if (layer_1) {
+                // 记录更新前的旧状态
+                const prevEntity = layer_1.entity;
+                const prevTick = layer_1.tick;
+                // 更新状态
                 layer_1.behavior();
                 if (layer_1) {
                     if (layer_1.remainTime != null) {
                         layer_1.remainTime -= 100;
                     }
-                    this.drawEntity(renderer, layer_1.entity!, layer_1.width, layer_1.height, layer_1.tick, layer_1.x, layer_1.y);
+                    // 绘制时传入回退参数
+                    this.drawEntity(renderer, layer_1.entity!, layer_1.width, layer_1.height, layer_1.tick, layer_1.x, layer_1.y, null, prevEntity, prevTick);
                     if (layer_1) {
                         layer_1.CreateOverlayAnim();
                     }
                 }
             }
             if (layer_0) {
+                // 记录更新前的旧状态
+                const prevEntity = layer_0.entity;
+                const prevTick = layer_0.tick;
+                // 更新状态
                 layer_0.behavior();
-                this.drawEntity(renderer, layer_0.entity, layer_0.width, layer_0.height, layer_0.tick, layer_0.x, layer_0.y);
+                // 绘制时传入回退参数
+                this.drawEntity(renderer, layer_0.entity, layer_0.width, layer_0.height, layer_0.tick, layer_0.x, layer_0.y, null, prevEntity, prevTick);
                 if (layer_0) {
                     layer_0.CreateOverlayAnim();
                 }
@@ -1374,6 +1426,10 @@ export class GameBattlefield extends HTMLElement {
     updateEnemies = (mouse: Mouse, elapsed: number, miceTemp: Mouse[][][], airLaneTemp: Mouse[][][]) => {
         const renderer = this.useWebGL ? this.renderer : this.ctxBG;
         if (mouse) {
+            // 记录更新前的旧状态（在 behaviorAnim 之前）
+            const prevEntity = mouse.entity;
+            const prevTick = Math.floor(mouse.tick);
+            
             if (mouse.state === "die" || mouse.state === "explode") {
                 if (mouse === this.#OverallFront) {
                     this.#OverallFront = null;
@@ -1422,7 +1478,8 @@ export class GameBattlefield extends HTMLElement {
                 effect = "damaged";
             }
             if (renderer) {
-                this.drawEntity(renderer, mouse.entity, mouse.width, mouse.height, Math.floor(mouse.tick), mouse.x, mouse.y, effect);
+                // 绘制时传入回退参数
+                this.drawEntity(renderer, mouse.entity, mouse.width, mouse.height, Math.floor(mouse.tick), mouse.x, mouse.y, effect, prevEntity, prevTick);
             }
 
             if (mouse.CanUpdateEntity) {

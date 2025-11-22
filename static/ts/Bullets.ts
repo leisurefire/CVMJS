@@ -110,25 +110,22 @@ export class Bullet {
     }
 
     takeDamage() {
-        if (level.Mice[this.positionY] == null) {
-            return false;
-        }
-        else {
-            if (level.Mice[this.positionY][this.column]) {
-                for (let i = 0; i < level.Mice[this.positionY][this.column].length; i++) {
-                    if (this.hitCheck(level.Mice[this.positionY][this.column][i])) {
-                        return this.hit(this.target);
-                    }
-                }
-            }
-            if (level.Mice[this.positionY][this.column - 1]) {
-                for (let i = 0; i < level.Mice[this.positionY][this.column - 1].length; i++) {
-                    if (this.hitCheck(level.Mice[this.positionY][this.column - 1][i])) {
-                        return this.hit(this.target);
-                    }
-                }
+        // 检测当前列的老鼠
+        const miceAtColumn = level.getMiceAt(this.positionY, this.column);
+        for (let i = 0; i < miceAtColumn.length; i++) {
+            if (this.hitCheck(miceAtColumn[i])) {
+                return this.hit(this.target);
             }
         }
+        
+        // 检测前一列的老鼠
+        const miceAtPrevColumn = level.getMiceAt(this.positionY, this.column - 1);
+        for (let i = 0; i < miceAtPrevColumn.length; i++) {
+            if (this.hitCheck(miceAtPrevColumn[i])) {
+                return this.hit(this.target);
+            }
+        }
+        
         return false;
     }
 
@@ -337,11 +334,17 @@ class MissilePrototype extends Bullet {
         }
 
         const laneIndex = this.positionY;
-        if (laneIndex >= 0 && level.Mice[laneIndex]) {
-            for (let i = Math.floor(this.positionX); i < level.Mice[laneIndex].length; i++) {
-                const miceStack = level.Mice[laneIndex][i];
-                if (miceStack != null) {
-                    miceStack.forEach(this.getFront);
+        if (laneIndex >= 0) {
+            const miceInRow = level.getMiceInRow(laneIndex);
+            for (let i = Math.floor(this.positionX); i < miceInRow.length; i++) {
+                const miceStack = miceInRow[i];
+                if (miceStack != null && miceStack.length > 0) {
+                    for (let j = 0; j < miceStack.length; j++) {
+                        const result = this.getFront(miceStack[j]);
+                        if (result) {
+                            break;
+                        }
+                    }
                     if (this.front != null) {
                         break;
                     }
@@ -574,14 +577,12 @@ export class FireBullet extends BunPrototype {
             return null;
         } else {
             this.createHitAnim();
-            if (level.Mice[this.positionY] == null || level.Mice[this.positionY][Math.floor(this.positionX)] == null) {
-
-            } else {
-                for (let mouseElement of level.Mice[this.positionY][Math.floor(this.positionX)]) {
-                    if (this.hitCheck(mouseElement)) {
-                        if (mouseElement !== target) {
-                            mouseElement.getBlast(Math.floor(this.damage / 5));
-                        }
+            const miceAtPosition = level.getMiceAt(this.positionY, Math.floor(this.positionX));
+            for (let i = 0; i < miceAtPosition.length; i++) {
+                const mouseElement = miceAtPosition[i];
+                if (this.hitCheck(mouseElement)) {
+                    if (mouseElement !== target) {
+                        mouseElement.getBlast(Math.floor(this.damage / 5));
                     }
                 }
             }
@@ -1010,20 +1011,12 @@ export class Egg extends MissilePrototype {
         } else {
             target.getThrown(this.damage);
             this.createHitAnim();
-            let column = Math.floor(this.positionX);
-            for (let i = Math.max(0, this.positionY - 1); i < Math.min(level.row_num, this.positionY + 2); i++) {
-                if (level.Mice[i] != null) {
-                    for (let j = Math.max(0, column - 1); j < Math.max(level.column_num, column + 2); j++) {
-                        if (level.Mice[i][j] != null) {
-                            for (let k = 0; k < level.Mice[i][j].length; k++) {
-                                if (level.Mice[i][j][k] !== target
-                                    && level.Mice[i][j][k].attackable
-                                    && level.Mice[i][j][k].canBeThrown) {
-                                    level.Mice[i][j][k].getThrown(Math.floor(this.damage * 0.2))
-                                }
-                            }
-                        }
-                    }
+            const column = Math.floor(this.positionX);
+            const miceInRange = level.getMiceInRange(this.positionY, column, 1, 1);
+            for (let i = 0; i < miceInRange.length; i++) {
+                const mouse = miceInRange[i];
+                if (mouse !== target && mouse.attackable && mouse.canBeThrown) {
+                    mouse.getThrown(Math.floor(this.damage * 0.2));
                 }
             }
             return this.target;
@@ -1066,21 +1059,13 @@ export class SnowEgg extends MissilePrototype {
             target.getThrown(this.damage);
             target.getFreezing();
             this.createHitAnim();
-            let column = Math.floor(this.positionX);
-            for (let i = Math.max(0, this.positionY - 1); i < Math.min(level.row_num, this.positionY + 2); i++) {
-                if (level.Mice[i] != null) {
-                    for (let j = Math.max(0, column - 1); j < Math.max(level.column_num, column + 2); j++) {
-                        if (level.Mice[i][j] != null) {
-                            for (let k = 0; k < level.Mice[i][j].length; k++) {
-                                if (level.Mice[i][j][k] !== target
-                                    && level.Mice[i][j][k].attackable
-                                    && level.Mice[i][j][k].canBeThrown) {
-                                    level.Mice[i][j][k].getThrown(Math.floor(this.damage * 0.2))
-                                    level.Mice[i][j][k].getFreezing();
-                                }
-                            }
-                        }
-                    }
+            const column = Math.floor(this.positionX);
+            const miceInRange = level.getMiceInRange(this.positionY, column, 1, 1);
+            for (let i = 0; i < miceInRange.length; i++) {
+                const mouse = miceInRange[i];
+                if (mouse !== target && mouse.attackable && mouse.canBeThrown) {
+                    mouse.getThrown(Math.floor(this.damage * 0.2));
+                    mouse.getFreezing();
                 }
             }
             return this.target;
