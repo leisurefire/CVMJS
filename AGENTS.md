@@ -85,6 +85,13 @@
 ### `static/js/language/Chinese.ts`
 - 集中管理 UI 字符串、提示、错误代码和其他本地化文本，便于复用。
 
+### `static/js/level/*.js` (关卡目录)
+- **重要说明**：`level` 目录内的 JavaScript 文件因为结构简单，**不依赖 TypeScript 编译**。
+- 这些关卡文件是独立编写的纯 ES6 模块，直接继承 `Level` 基类并实现特定的游戏机制。
+- 关卡通过 `EventHandler.LEVELS` Map 动态加载，使用 `import()` 实现按需加载。
+- 示例关卡：`CookieIsland.js`、`Temple.js`、`FennelRaft.js` 等。
+- 如需基于 TypeScript 开发复杂关卡，可以在 `static/ts/` 中创建，编译后手动移动到 `level/` 目录。
+
 ## 关系与架构 (Relationships / Architecture)
 - **Core** → **EventHandler** → **Level**/**GameBattlefield** 构成了从 UI 入口到游戏循环的主管线。
 - **渲染器抽象**：`WebGLRenderer` 实现了 `IRenderer`。游戏逻辑与 `IRenderer` 交互，使得实体逻辑对具体的渲染后端透明。
