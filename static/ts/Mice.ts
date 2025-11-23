@@ -1,12 +1,12 @@
 //注意，老鼠的行数（.y）属性不是实时变化的，请在尝试移动其位置后改变它的.y属性，否则子弹检测不到
-import EventHandler from "./eventhandler/EventHandler.js";
+import EventHandler from "./event_handler/EventHandler.js";
 import { GEH } from "./Core.js";
 import { Stone } from "./Bullets.js";
 import { Food, TubeIn } from "./Foods.js";
 import { level } from "./Level.js";
-import { MapGrid } from "./GameBattlefield.js";
+import MapGrid from "./battlefield/MapGrid.js";
 import { i18n } from "./i18n-preload.js";
-import type { IRenderer } from "./renderer/IRenderer.js";
+import type IRenderer from "./renderer/IRenderer.js";
 
 export class Mouse {
     // ===== 基础属性 =====

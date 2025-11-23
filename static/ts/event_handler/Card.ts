@@ -4,7 +4,7 @@ import { i18n } from "../i18n/index.js";
 import { GEH } from "../Core.js";
 import { level } from "../Level.js";
 
-export class Card extends HTMLElement {
+export default class Card extends HTMLElement {
     speed = 1;
     name: string | undefined;
     coolTime: number = 7500;
@@ -230,5 +230,3 @@ export class Card extends HTMLElement {
         return base + path;
     }
 }
-
-customElements.define('game-card', Card);

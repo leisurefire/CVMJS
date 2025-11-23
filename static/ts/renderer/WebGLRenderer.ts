@@ -4,7 +4,8 @@
  * 实现IRenderer接口,提供与Canvas 2D兼容的API
  */
 
-import type { IRenderer, RenderEffects } from "./IRenderer.js";
+import type IRenderer from "./IRenderer.js";
+import type { RenderEffects } from "./IRenderer.js"
 import { TextureManager } from "./TextureManager.js";
 import { SpriteBatcher } from "./SpriteBatcher.js";
 import { createProgram, VERTEX_SHADER, FRAGMENT_SHADER } from "./shaders.js";

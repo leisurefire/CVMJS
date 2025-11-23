@@ -1,13 +1,15 @@
 var _a;
-import EventHandler from "./eventhandler/EventHandler.js";
+import EventHandler from "./event_handler/EventHandler.js";
 import { i18n } from "./i18n/index.js";
 import { Cat, Character, Crab, getFoodDetails, Plate, RatNest } from "./Foods.js";
 import { GEH, ToastBox } from "./Core.js";
 import { getMouseDetails } from "./Mice.js";
 import { acquireBullet, releaseBullet } from "./Bullets.js";
 import { SpriteAnimationManager } from "./SpriteAnimation.js";
-import { Sun, MapGrid, GameBattlefield } from "./GameBattlefield.js";
-import { BulletManager } from "./BulletManager.js";
+import GameBattlefield from "./battlefield/GameBattlefield.js";
+import MapGrid from "./battlefield/MapGrid.js";
+import Sun from "./battlefield/Sun.js";
+import BulletManager from "./battlefield/BulletManager.js";
 const BULLET_STACK_MAX_SIZE = 999;
 export let level = {};
 level = null;

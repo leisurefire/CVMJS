@@ -1,5 +1,5 @@
 //注意，老鼠的行数（.y）属性不是实时变化的，请在尝试移动其位置后改变它的.y属性，否则子弹检测不到
-import EventHandler from "./eventhandler/EventHandler.js";
+import EventHandler from "./event_handler/EventHandler.js";
 import { GEH } from "./Core.js";
 import { Stone } from "./Bullets.js";
 import { TubeIn } from "./Foods.js";

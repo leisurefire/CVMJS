@@ -1,5 +1,5 @@
-import EventHandler from "./eventhandler/EventHandler.js";
-import { Card } from "./eventhandler/EventHandler.js";
+import EventHandler from "./event_handler/EventHandler.js";
+import Card from "./event_handler/Card.js";
 import { GEH } from "./Core.js";
 import {
 	Boomerang,
@@ -14,11 +14,10 @@ import {
 	WineBullet
 } from "./Bullets.js";
 import { level } from "./Level.js";
-import { MapGrid } from "./GameBattlefield.js";
+import MapGrid from "./battlefield/MapGrid.js";
 import { t } from "./i18n/index.js";
-
 import { Mouse, CommonMouse } from "./Mice.js";
-import type { IRenderer } from "./renderer/IRenderer.js";
+import type IRenderer from "./renderer/IRenderer.js";
 
 const specialGenerate = function (x: number, y: number, star = 0, skillLevel = 0, type = 0) {
 	const food = level.Foods[y * level.column_num + x];

@@ -1,6 +1,6 @@
+import type IRenderer from "./renderer/IRenderer.js";
 import { GEH } from "./Core.js";
 import { level } from "./Level.js";
-import type { IRenderer } from "./renderer/IRenderer.js";
 
 /**
  * 类型守卫:判断ctx是否为IRenderer

@@ -1,8 +1,15 @@
 "use strict";
 import { i18n, i18nLoadPromise } from "./i18n-preload.js";
-import EventHandler, { getLevelDetails } from "./eventhandler/EventHandler.js";
+import EventHandler, { getLevelDetails } from "./event_handler/EventHandler.js";
 
 export const GEH = new EventHandler();
+
+document.ondragstart = function () {    //禁止对img的拖拽影响观感
+  return false;
+}
+document.oncontextmenu = function () {
+  return false;						//做了右键可以放回，需要屏蔽默认右键菜单
+}
 
 // Helper type for optional icon option
 type IconOption = { icon?: string | null } | null;

@@ -1,4 +1,4 @@
-import EventHandler from '../eventhandler/EventHandler.js';
+import EventHandler from '../event_handler/EventHandler.js';
 // ---- I18n Module ----
 class I18nModule {
     static instance;

@@ -20,7 +20,7 @@ export interface RenderEffects {
  * 渲染器接口
  * 提供与Canvas 2D Context兼容的绘制方法
  */
-export interface IRenderer {
+export default interface IRenderer {
     /**
      * 绘制图像(9参数重载)
      * @param image 图像源

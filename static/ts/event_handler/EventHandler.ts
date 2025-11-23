@@ -19,11 +19,7 @@ import {
 
 // 导入拆分的类
 import { StoreItem } from "./StoreItem.js";
-import { Card } from "./Card.js";
 import { BackpackCard } from "./BackpackCard.js";
-
-// 重新导出Card类供其他模块使用
-export { Card } from "./Card.js";
 
 // ---- Types ----
 interface IArchiveCard { type: number; star: number; skillLevel: number }
@@ -65,16 +61,6 @@ class LruCache<K, V> {
     has(key: K) { return this.map.has(key); }
 }
 
-document.ondragstart = function () {    //禁止对img的拖拽影响观感
-    return false;
-}
-document.oncontextmenu = function () {
-    return false;						//做了右键可以放回，需要屏蔽默认右键菜单
-}
-
-
-
-
 export const getLevelDetails = async (type: number) => {
     try {
         if (!EventHandler.levelDetailsCache.has(type)) {
@@ -90,13 +76,7 @@ export const getLevelDetails = async (type: number) => {
     }
 }
 
-
-
-
 // IndexedDB 版本控制，资源升级时可选择清空缓存
-
-
-
 export default class EventHandler {
     // ===== 静态常量 =====
     static readonly LEVELS = new Map([

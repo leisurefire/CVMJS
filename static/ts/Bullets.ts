@@ -1,8 +1,8 @@
-import EventHandler from "./eventhandler/EventHandler.js";
+import EventHandler from "./event_handler/EventHandler.js";
 import { GEH } from "./Core.js";
 import { level } from "./Level.js";
 import { Mouse } from "./Mice";
-import type { IRenderer } from "./renderer/IRenderer.js";
+import type IRenderer from "./renderer/IRenderer.js";
 
 /**
  * 类型守卫函数：判断ctx是否为IRenderer
@@ -117,7 +117,7 @@ export class Bullet {
                 return this.hit(this.target);
             }
         }
-        
+
         // 检测前一列的老鼠
         const miceAtPrevColumn = level.getMiceAt(this.positionY, this.column - 1);
         for (let i = 0; i < miceAtPrevColumn.length; i++) {
@@ -125,7 +125,7 @@ export class Bullet {
                 return this.hit(this.target);
             }
         }
-        
+
         return false;
     }
 

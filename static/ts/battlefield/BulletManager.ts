@@ -1,5 +1,5 @@
-import { Bullet, releaseBullet } from "./Bullets.js";
-import type { IRenderer } from "./renderer/IRenderer.js";
+import { Bullet, releaseBullet } from "../Bullets.js";
+import type IRenderer from "../renderer/IRenderer.js";
 
 /**
  * BulletManager - 高效管理子弹的生命周期
@@ -14,7 +14,7 @@ import type { IRenderer } from "./renderer/IRenderer.js";
  * - 从后往前删除，避免索引偏移问题
  * - 预期提升 30-50% 子弹更新性能
  */
-export class BulletManager {
+export default class BulletManager {
     private bullets: Bullet[] = [];
     private deadMask: boolean[] = [];  // 复用数组标记死亡状态
 

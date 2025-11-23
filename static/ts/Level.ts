@@ -1,13 +1,16 @@
-import EventHandler, { Card } from "./eventhandler/EventHandler.js";
+import EventHandler from "./event_handler/EventHandler.js";
+import Card from "./event_handler/Card.js"
 import { i18n } from "./i18n/index.js";
 import { Cat, Character, Crab, Food, getFoodDetails, Plate, RatNest } from "./Foods.js";
-import { GEH, ToastBox, WarnMessageBox } from "./Core.js";
+import { GEH, ToastBox } from "./Core.js";
 import { Mouse, getMouseDetails } from "./Mice.js";
 import { Bullet, BulletCtor, BulletSpawnOptions, acquireBullet, releaseBullet } from "./Bullets.js";
-import SpriteAnimation, { SpriteAnimationManager } from "./SpriteAnimation.js";
-import { Sun, MapGrid, GameBattlefield } from "./GameBattlefield.js";
-import type { IRenderer } from "./renderer/IRenderer.js";
-import { BulletManager } from "./BulletManager.js";
+import { SpriteAnimationManager } from "./SpriteAnimation.js";
+import GameBattlefield from "./battlefield/GameBattlefield.js";
+import MapGrid from "./battlefield/MapGrid.js";
+import Sun from "./battlefield/Sun.js";
+import BulletManager from "./battlefield/BulletManager.js";
+import type IRenderer from "./renderer/IRenderer.js";
 const BULLET_STACK_MAX_SIZE = 999;
 
 export let level: any = {};
@@ -1043,10 +1046,10 @@ export default class Level {
     #requestUpdateBullets(ctx: IRenderer | CanvasRenderingContext2D) {
         const bullets = this.#BulletManager.getBulletsUnsafe();
         const deadIndices: number[] = [];
-        
+
         for (let i = 0; i < bullets.length; i++) {
             const bullet = bullets[i];
-            
+
             // 超出栈容量时将伤害合并并标记删除
             if (i > BULLET_STACK_MAX_SIZE) {
                 const targetIdx = Math.floor(Math.random() * BULLET_STACK_MAX_SIZE);
@@ -1054,29 +1057,29 @@ export default class Level {
                 deadIndices.push(i);
                 continue;
             }
-            
+
             // 移动检测
             if (bullet.move()) {
                 deadIndices.push(i);
                 continue;
             }
-            
+
             // 渲染
             bullet.createEntity(ctx);
-            
+
             // Boost 逻辑维持不变
             if (bullet.CanBoost
                 && bullet.position !== bullet.birthPosition
                 && bullet.positionX < 9
                 && level.Foods[bullet.positionY * level.column_num + bullet.column]?.layer_1) {
                 const cell = level.Foods[bullet.positionY * level.column_num + bullet.column].layer_1!;
-                
+
                 // canBlockBoost: 阻挡并销毁子弹
                 if (cell.canBlockBoost) {
                     deadIndices.push(i);
                     continue;
                 }
-                
+
                 // canReverseBoost: 反转子弹角度
                 if (cell.canReverseBoost) {
                     const outcome = bullet.duplicate();
@@ -1086,7 +1089,7 @@ export default class Level {
                         continue;
                     }
                 }
-                
+
                 // canFireBoost: 替换为新子弹
                 if (cell.canFireBoost) {
                     const outcome = bullet.fireBoost();
@@ -1099,19 +1102,19 @@ export default class Level {
                     }
                 }
             }
-            
+
             // 伤害检测
             if (bullet.takeDamage()) {
                 deadIndices.push(i);
             }
         }
-        
+
         // 批量删除（从后往前，避免索引偏移）
         for (let i = deadIndices.length - 1; i >= 0; i--) {
             const idx = deadIndices[i];
             const bullet = bullets[idx];
             releaseBullet(bullet);
-            
+
             // 使用 swap-and-pop 删除（O(1)）
             const last = bullets.pop()!;
             if (idx < bullets.length) {
@@ -1131,7 +1134,7 @@ export default class Level {
         this.#currentMiceBufferIndex = 1 - this.#currentMiceBufferIndex;
         const miceTemp = this.#currentMiceBufferIndex === 0 ? this.#MiceBuffer1 : this.#MiceBuffer2;
         const airLaneTemp = this.#currentMiceBufferIndex === 0 ? this.#AirLaneBuffer1 : this.#AirLaneBuffer2;
-        
+
         // 清空缓冲区（复用数组，只清空内容）
         for (let i = 0; i < this.row_num; i++) {
             for (let j = 0; j < this.column_num + 1; j++) {

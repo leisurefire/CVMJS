@@ -8,8 +8,6 @@ import { GameReadyPage, GEH, MaterialButton, MaterialCard, MaterialIconButton, M
 // 导入拆分的类
 import { StoreItem } from "./StoreItem.js";
 import { BackpackCard } from "./BackpackCard.js";
-// 重新导出Card类供其他模块使用
-export { Card } from "./Card.js";
 // ---- Small LRU Cache for images ----
 class LruCache {
     max;
@@ -38,12 +36,6 @@ class LruCache {
     }
     has(key) { return this.map.has(key); }
 }
-document.ondragstart = function () {
-    return false;
-};
-document.oncontextmenu = function () {
-    return false; //做了右键可以放回，需要屏蔽默认右键菜单
-};
 export const getLevelDetails = async (type) => {
     try {
         if (!EventHandler.levelDetailsCache.has(type)) {
