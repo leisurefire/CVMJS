@@ -79,6 +79,7 @@ class EventHandler {
         [12, "CurryIslandNight"],
         [13, "Abyss"],
         [33, "FennelRaft"],
+        [35, "CuminBridge"],
         [20, "MarshmallowSky"],
         [99, "Rouge"],
     ]);

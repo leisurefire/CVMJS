@@ -1304,13 +1304,13 @@ export class GameBattlefield extends HTMLElement {
         }
     }
     private drawEntity(
-        renderer: IRenderer | CanvasRenderingContext2D, 
-        src: string, 
-        width: number, 
-        height: number, 
-        tick: number, 
-        x: number, 
-        y: number, 
+        renderer: IRenderer | CanvasRenderingContext2D,
+        src: string,
+        width: number,
+        height: number,
+        tick: number,
+        x: number,
+        y: number,
         effect: string | null = null,
         fallbackSrc?: string,      // 新增: 回退图片路径
         fallbackTick?: number      // 新增: 回退帧索引
@@ -1429,7 +1429,7 @@ export class GameBattlefield extends HTMLElement {
             // 记录更新前的旧状态（在 behaviorAnim 之前）
             const prevEntity = mouse.entity;
             const prevTick = Math.floor(mouse.tick);
-            
+
             if (mouse.state === "die" || mouse.state === "explode") {
                 if (mouse === this.#OverallFront) {
                     this.#OverallFront = null;
